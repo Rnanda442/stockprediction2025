@@ -1,0 +1,35 @@
+# secrets / credentials
+robinhood_token.txt
+robinhood_token-Copy1.txt
+config/robinhood_token.txt
+config/robinhood_token-Copy1.txt
+.env
+*.env
+
+# databases
+*.db
+*.sqlite
+*.sqlite3
+
+# generated data / outputs
+*.csv
+*.xlsx
+*.html
+*.png
+*.svg
+analytics/
+data/
+
+# checkpoints / cache
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+__pycache__/
+*.pyc
+
+# logs
+logs/
+
+# VS Code / OS
+.vscode/
+.DS_Store
+Thumbs.db
