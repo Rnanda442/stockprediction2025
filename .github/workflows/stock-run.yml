@@ -30,7 +30,14 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install robin-stocks jupyter nbconvert
+          pip install \
+            robin-stocks \
+            pandas \
+            requests \
+            openpyxl \
+            python-dotenv \
+            jupyter \
+            nbconvert
 
       - name: Run notebook
         run: |
@@ -47,4 +54,3 @@ jobs:
           fi
           git commit -m "Automated stock pipeline output update"
           git push
-      
