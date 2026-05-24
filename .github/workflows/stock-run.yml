@@ -30,18 +30,24 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install \
+          python -m pip install \
             robin-stocks \
             pandas \
+            numpy \
             requests \
+            matplotlib \
             openpyxl \
             python-dotenv \
+            tqdm \
+            torch \
             jupyter \
-            nbconvert
+            nbconvert \
+            ipykernel
+          python -m ipykernel install --user --name python3
 
       - name: Run notebook
         run: |
-          jupyter nbconvert --to notebook --execute notebook/2025summerstock-Copy6.ipynb --inplace
+          python -m jupyter nbconvert --to notebook --execute notebook/2025summerstock-Copy6.ipynb --inplace --ExecutePreprocessor.kernel_name=python3
 
       - name: Commit generated updates
         run: |
