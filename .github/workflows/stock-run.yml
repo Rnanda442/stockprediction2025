@@ -39,15 +39,15 @@ jobs:
             openpyxl \
             python-dotenv \
             tqdm \
-            torch \
             jupyter \
             nbconvert \
+            nbclient \
             ipykernel
           python -m ipykernel install --user --name python3
 
       - name: Run notebook
         run: |
-          python -m jupyter nbconvert --to notebook --execute notebook/2025summerstock-Copy6.ipynb --inplace --ExecutePreprocessor.kernel_name=python3
+          python scripts/run_notebook_with_progress.py notebook/2025summerstock-Copy6.ipynb --kernel-name python3
 
       - name: Commit generated updates
         run: |
