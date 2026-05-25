@@ -49,6 +49,10 @@ jobs:
         run: |
           python scripts/run_notebook_with_progress.py notebook/2025summerstock-Copy6.ipynb --kernel-name python3
 
+      - name: Validate generated outputs
+        run: |
+          python scripts/validate_pipeline_outputs.py
+
       - name: Upload analysis outputs
         uses: actions/upload-artifact@v4
         with:
