@@ -45,9 +45,28 @@ jobs:
             ipykernel
           python -m ipykernel install --user --name python3
 
+      - name: Restore generated databases
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            *.db
+            data/*.db
+          key: stock-dbs-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            stock-dbs-${{ github.ref_name }}-
+
       - name: Run notebook
         run: |
           python scripts/run_notebook_with_progress.py notebook/2025summerstock-Copy6.ipynb --kernel-name python3
+
+      - name: Save generated databases
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            *.db
+            data/*.db
+          key: stock-dbs-${{ github.ref_name }}-${{ github.run_id }}
 
       - name: Validate generated outputs
         run: |
