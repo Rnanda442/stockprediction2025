@@ -50,7 +50,6 @@ jobs:
         with:
           path: |
             *.db
-            data/*.db
           key: stock-dbs-${{ github.ref_name }}-${{ github.run_id }}
           restore-keys: |
             stock-dbs-${{ github.ref_name }}-
@@ -68,20 +67,20 @@ jobs:
         run: |
           python scripts/inspect_pipeline_state.py
 
-      - name: Save generated databases
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            *.db
-            data/*.db
-          key: stock-dbs-${{ github.ref_name }}-${{ github.run_id }}
-
       - name: Validate generated outputs
         run: |
           python scripts/validate_pipeline_outputs.py
 
+      - name: Save generated databases
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            *.db
+          key: stock-dbs-${{ github.ref_name }}-${{ github.run_id }}
+
       - name: Upload analysis outputs
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: stock-analysis-outputs

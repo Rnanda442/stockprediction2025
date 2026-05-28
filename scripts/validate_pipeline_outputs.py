@@ -1,10 +1,13 @@
 import csv
 import sqlite3
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+EXPECTED_SPANS = ("year", "5year")
+MAX_DATA_AGE_DAYS = 10
 
 
 def fail(message):
@@ -57,6 +60,60 @@ def check_table(relative_db, table, min_rows=1):
     return True
 
 
+def parse_db_datetime(value):
+    if not value:
+        return None
+    text = str(value).replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        try:
+            parsed = datetime.strptime(str(value).split("+")[0], "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            return None
+    if parsed.tzinfo is not None:
+        parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+    return parsed
+
+
+def check_span_table(relative_db, table, required_spans=EXPECTED_SPANS):
+    path = ROOT / relative_db
+    if not path.exists():
+        return fail(f"{relative_db} is missing")
+
+    with sqlite3.connect(path) as conn:
+        try:
+            rows = conn.execute(
+                f"""SELECT span, COUNT(*) AS rows, MAX(begins_at) AS max_dt
+                    FROM "{table}"
+                    GROUP BY span"""
+            ).fetchall()
+        except sqlite3.Error as exc:
+            return fail(f"{relative_db}:{table} span check failed: {exc}")
+
+    by_span = {row[0]: row for row in rows}
+    ok = True
+    for span, count, max_dt in rows:
+        print(f"{relative_db}:{table}:{span}: rows={count} max={max_dt}")
+
+    for span in required_spans:
+        row = by_span.get(span)
+        if not row or row[1] < 1:
+            ok = fail(f"{relative_db}:{table} is missing populated span '{span}'") and ok
+            continue
+        latest = parse_db_datetime(row[2])
+        if latest is None:
+            ok = fail(f"{relative_db}:{table}:{span} has unreadable latest date {row[2]!r}") and ok
+            continue
+        age_days = (datetime.now(timezone.utc).replace(tzinfo=None) - latest).days
+        if age_days > MAX_DATA_AGE_DAYS:
+            ok = fail(
+                f"{relative_db}:{table}:{span} latest date is {row[2]} "
+                f"({age_days} days old; max {MAX_DATA_AGE_DAYS})"
+            ) and ok
+    return ok
+
+
 def main():
     checks = [
         check_csv(
@@ -88,6 +145,8 @@ def main():
         check_table("vectorized.db", "VectorizedFeatures", min_rows=1),
         check_table("vectorized.db", "FeatureSummary", min_rows=1),
         check_table("vectorized.db", "WinnerUniverse", min_rows=1),
+        check_span_table("historicals.db", "HistoricalPrices"),
+        check_span_table("vectorized.db", "VectorizedFeatures"),
     ]
 
     if not all(checks):

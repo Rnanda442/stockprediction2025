@@ -5,6 +5,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DB_NAMES = ("filtered_tickers.db", "historicals.db", "vectorized.db", "full_features.db")
+SPAN_TABLES = {
+    "historicals.db": ("HistoricalPrices",),
+    "vectorized.db": ("VectorizedFeatures",),
+}
+EXPECTED_SPANS = ("week", "month", "3month", "year", "5year")
 DB_ROOTS = (
     ROOT,
     ROOT / "data",
@@ -50,6 +55,36 @@ def table_summaries(path):
         return [f"unreadable({exc})"]
 
 
+def span_summaries(path, db_name):
+    summaries = []
+    for table in SPAN_TABLES.get(db_name, ()):
+        try:
+            with sqlite3.connect(path) as conn:
+                rows = conn.execute(
+                    f"""SELECT span, COUNT(*) AS rows, MIN(begins_at), MAX(begins_at)
+                        FROM "{table}"
+                        GROUP BY span
+                        ORDER BY span"""
+                ).fetchall()
+        except sqlite3.Error as exc:
+            summaries.append(f"{table}: span check failed ({exc})")
+            continue
+
+        by_span = {row[0]: row for row in rows}
+        missing = [span for span in EXPECTED_SPANS if span not in by_span or by_span[span][1] == 0]
+        if missing:
+            summaries.append(f"{table}: missing spans={','.join(missing)}")
+        for span in EXPECTED_SPANS:
+            row = by_span.get(span)
+            if not row:
+                continue
+            _, count, min_dt, max_dt = row
+            summaries.append(
+                f"{table}: {span} rows={count} min={min_dt} max={max_dt}"
+            )
+    return summaries
+
+
 def print_db_state():
     print("Database state:")
     for root in DB_ROOTS:
@@ -67,6 +102,8 @@ def print_db_state():
                 continue
             summaries = "; ".join(table_summaries(path))
             print(f"    {name}: {fmt_size(path.stat().st_size)}; {summaries}")
+            for summary in span_summaries(path, name):
+                print(f"      {summary}")
 
 
 def print_csv_state():
