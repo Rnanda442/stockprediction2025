@@ -55,9 +55,18 @@ jobs:
           restore-keys: |
             stock-dbs-${{ github.ref_name }}-
 
+      - name: Inspect restored pipeline state
+        run: |
+          python scripts/inspect_pipeline_state.py
+
       - name: Run notebook
         run: |
-          python scripts/run_notebook_with_progress.py notebook/2025summerstock-Copy6.ipynb --kernel-name python3
+          python scripts/run_notebook_with_progress.py notebook/2025summerstock-Copy6.ipynb --kernel-name python3 --executed-output logs/executed-notebook.ipynb
+
+      - name: Inspect generated pipeline state
+        if: always()
+        run: |
+          python scripts/inspect_pipeline_state.py
 
       - name: Save generated databases
         if: always()
@@ -84,6 +93,7 @@ jobs:
             vector_analysis_results.csv
             checkpoint_filtered.csv
             checkpoint_rejected.csv
+            logs/executed-notebook.ipynb
 
       - name: Commit generated updates
         run: |

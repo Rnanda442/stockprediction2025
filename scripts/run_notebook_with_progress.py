@@ -45,6 +45,11 @@ def main():
     parser = argparse.ArgumentParser(description="Execute a notebook with GitHub Actions-friendly cell progress.")
     parser.add_argument("notebook", type=Path)
     parser.add_argument("--kernel-name", default="python3")
+    parser.add_argument(
+        "--executed-output",
+        type=Path,
+        help="Write the executed notebook to this path instead of overwriting the source notebook.",
+    )
     args = parser.parse_args()
 
     nb = nbformat.read(args.notebook, as_version=4)
@@ -61,8 +66,10 @@ def main():
     try:
         client.execute()
     finally:
-        nbformat.write(executed, args.notebook)
-        print(f"Notebook saved to {args.notebook}")
+        output_path = args.executed_output or args.notebook
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        nbformat.write(executed, output_path)
+        print(f"Executed notebook saved to {output_path}")
         print(f"Total notebook runtime: {time.monotonic() - start:.1f}s", flush=True)
 
 
