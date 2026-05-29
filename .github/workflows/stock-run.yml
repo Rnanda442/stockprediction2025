@@ -45,7 +45,7 @@ jobs:
             ipykernel
           python -m ipykernel install --user --name python3
 
-      - name: Restore generated databases
+      - name: Restore legacy root database cache
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -54,7 +54,26 @@ jobs:
           restore-keys: |
             stock-dbs-${{ github.ref_name }}-
 
+      - name: Restore generated databases
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            *.db
+            data/*.db
+            notebook/stockprediction2025/data/*.db
+          key: stock-dbs-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            stock-dbs-${{ github.ref_name }}-
+
       - name: Inspect restored pipeline state
+        run: |
+          python scripts/inspect_pipeline_state.py
+
+      - name: Normalize restored databases
+        run: |
+          python scripts/promote_pipeline_databases.py
+
+      - name: Inspect normalized pipeline state
         run: |
           python scripts/inspect_pipeline_state.py
 
@@ -77,6 +96,8 @@ jobs:
         with:
           path: |
             *.db
+            data/*.db
+            notebook/stockprediction2025/data/*.db
           key: stock-dbs-${{ github.ref_name }}-${{ github.run_id }}
 
       - name: Upload analysis outputs
