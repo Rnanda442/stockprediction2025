@@ -15,7 +15,7 @@ def fail(message):
     return False
 
 
-def check_csv(relative_path, required_columns, min_rows=1, nonblank_columns=None):
+def check_csv(relative_path, required_columns, min_rows=1, max_rows=None, nonblank_columns=None):
     path = ROOT / relative_path
     if not path.exists():
         return fail(f"{relative_path} is missing")
@@ -26,6 +26,8 @@ def check_csv(relative_path, required_columns, min_rows=1, nonblank_columns=None
     print(f"{relative_path}: rows={len(rows)} size={path.stat().st_size}")
     if len(rows) < min_rows:
         return fail(f"{relative_path} has {len(rows)} rows; expected at least {min_rows}")
+    if max_rows is not None and len(rows) > max_rows:
+        return fail(f"{relative_path} has {len(rows)} rows; expected at most {max_rows}")
 
     missing = [column for column in required_columns if column not in (rows[0].keys() if rows else [])]
     if missing:
@@ -126,6 +128,7 @@ def main():
             "analytics/winners_shortlist.csv",
             required_columns=["Ticker", "trend_slope_60d", "ret_60d", "AvgDollarVol"],
             min_rows=1,
+            max_rows=5,
             nonblank_columns=["Ticker", "trend_slope_60d", "ret_60d", "AvgDollarVol"],
         ),
         check_csv(

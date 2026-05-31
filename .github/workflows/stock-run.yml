@@ -8,13 +8,19 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: stock-pipeline-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
+    timeout-minutes: 360
     env:
       ROBINHOOD_USERNAME: ${{ secrets.ROBINHOOD_USERNAME }}
       ROBINHOOD_PASSWORD: ${{ secrets.ROBINHOOD_PASSWORD }}
       PYTHONUNBUFFERED: "1"
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
     steps:
       - name: Checkout repository
@@ -84,6 +90,16 @@ jobs:
       - name: Track shortlist performance
         run: |
           python scripts/track_shortlist_history.py
+          {
+            echo "## Latest shortlist"
+            echo '```csv'
+            cat analytics/winners_shortlist.csv
+            echo '```'
+            echo "## Forward-return evaluation"
+            echo '```csv'
+            cat analytics/shortlist_performance_summary.csv
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Inspect generated pipeline state
         if: always()
