@@ -20,6 +20,8 @@ CSV_PATHS = (
     "checkpoint_rejected.csv",
     "vector_analysis_results.csv",
     "analytics/winners_shortlist.csv",
+    "analytics/shortlist_history.csv",
+    "analytics/shortlist_performance_summary.csv",
     "analytics/flipcorr_winners_5y.csv",
 )
 

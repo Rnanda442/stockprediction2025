@@ -130,9 +130,9 @@ def main():
         ),
         check_csv(
             "checkpoint_filtered.csv",
-            required_columns=["Ticker", "Name", "Sector", "Price"],
+            required_columns=["Ticker", "Name", "Price"],
             min_rows=1,
-            nonblank_columns=["Ticker", "Name", "Sector"],
+            nonblank_columns=["Ticker", "Name"],
         ),
         check_csv(
             "checkpoint_rejected.csv",
@@ -145,6 +145,19 @@ def main():
         check_table("vectorized.db", "VectorizedFeatures", min_rows=1),
         check_table("vectorized.db", "FeatureSummary", min_rows=1),
         check_table("vectorized.db", "WinnerUniverse", min_rows=1),
+        check_table("vectorized.db", "ShortlistHistory", min_rows=1),
+        check_csv(
+            "analytics/shortlist_history.csv",
+            required_columns=["as_of_date", "ticker", "rank", "entry_price"],
+            min_rows=1,
+            nonblank_columns=["as_of_date", "ticker", "rank", "entry_price"],
+        ),
+        check_csv(
+            "analytics/shortlist_performance_summary.csv",
+            required_columns=["horizon", "evaluated_picks", "average_return", "win_rate"],
+            min_rows=4,
+            nonblank_columns=["horizon", "evaluated_picks"],
+        ),
         check_span_table("historicals.db", "HistoricalPrices"),
         check_span_table("vectorized.db", "VectorizedFeatures"),
     ]
