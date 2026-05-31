@@ -149,6 +149,10 @@ def main():
         check_table("vectorized.db", "FeatureSummary", min_rows=1),
         check_table("vectorized.db", "WinnerUniverse", min_rows=1),
         check_table("vectorized.db", "ShortlistHistory", min_rows=1),
+        check_table("dashboard_data.db", "FeatureSummary", min_rows=1),
+        check_table("dashboard_data.db", "LatestShortlist", min_rows=1),
+        check_table("dashboard_data.db", "RecentPrices", min_rows=1),
+        check_table("dashboard_data.db", "PipelineHealth", min_rows=1),
         check_csv(
             "analytics/shortlist_history.csv",
             required_columns=["as_of_date", "ticker", "rank", "entry_price"],

@@ -4,7 +4,13 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DB_NAMES = ("filtered_tickers.db", "historicals.db", "vectorized.db", "full_features.db")
+DB_NAMES = (
+    "filtered_tickers.db",
+    "historicals.db",
+    "vectorized.db",
+    "dashboard_data.db",
+    "full_features.db",
+)
 SPAN_TABLES = {
     "historicals.db": ("HistoricalPrices",),
     "vectorized.db": ("VectorizedFeatures",),

@@ -10,6 +10,7 @@ config/robinhood_token-Copy1.txt
 *.db
 *.sqlite
 *.sqlite3
+*.db-journal
 
 # generated data / outputs
 *.csv

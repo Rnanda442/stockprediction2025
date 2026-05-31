@@ -101,6 +101,10 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Export dashboard database
+        run: |
+          python scripts/export_dashboard_data.py
+
       - name: Inspect generated pipeline state
         if: always()
         run: |
@@ -133,6 +137,7 @@ jobs:
             vector_analysis_results.csv
             checkpoint_filtered.csv
             checkpoint_rejected.csv
+            dashboard_data.db
             logs/executed-notebook.ipynb
 
       - name: Commit generated updates
