@@ -23,6 +23,7 @@ data/
 
 # checkpoints / cache
 .auth-cache/
+.dashboard-sync/
 .tokens/
 .ipynb_checkpoints/
 */.ipynb_checkpoints/

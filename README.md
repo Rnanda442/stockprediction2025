@@ -11,14 +11,23 @@ python -m pip install -r requirements-dashboard.txt
 python scripts/export_dashboard_data.py
 ```
 
-Start the private dashboard:
+Sync the latest successful GitHub Actions output and start the private
+dashboard:
 
 ```powershell
-$env:DASHBOARD_PASSWORD="choose-a-local-password"
-streamlit run dashboard/app.py
+.\start_dashboard.cmd
 ```
 
-Open `http://localhost:8501`.
+The launcher prompts for a password, downloads the latest
+`stock-analysis-outputs` artifact, refreshes `dashboard_data.db`, and prints the
+local and LAN URLs. Keep that terminal window open while using the dashboard.
+You can also double-click `start_dashboard.cmd` in File Explorer.
+
+To start from the existing local database without downloading an artifact:
+
+```powershell
+.\scripts\start_dashboard.ps1 -SkipSync
+```
 
 The dashboard includes:
 
