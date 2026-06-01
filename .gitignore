@@ -22,6 +22,8 @@ analytics/
 data/
 
 # checkpoints / cache
+.auth-cache/
+.tokens/
 .ipynb_checkpoints/
 */.ipynb_checkpoints/
 __pycache__/

@@ -19,6 +19,7 @@ jobs:
     env:
       ROBINHOOD_USERNAME: ${{ secrets.ROBINHOOD_USERNAME }}
       ROBINHOOD_PASSWORD: ${{ secrets.ROBINHOOD_PASSWORD }}
+      ROBINHOOD_SESSION_KEY: ${{ secrets.ROBINHOOD_SESSION_KEY }}
       PYTHONUNBUFFERED: "1"
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
@@ -71,6 +72,18 @@ jobs:
           restore-keys: |
             stock-dbs-${{ github.ref_name }}-
 
+      - name: Restore encrypted Robinhood session
+        uses: actions/cache/restore@v4
+        with:
+          path: .auth-cache
+          key: robinhood-session-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            robinhood-session-${{ github.ref_name }}-
+
+      - name: Decrypt Robinhood session
+        run: |
+          python scripts/sync_robinhood_session.py restore
+
       - name: Inspect restored pipeline state
         run: |
           python scripts/inspect_pipeline_state.py
@@ -118,6 +131,18 @@ jobs:
       - name: Validate generated outputs
         run: |
           python scripts/validate_pipeline_outputs.py
+
+      - name: Encrypt Robinhood session
+        if: always()
+        run: |
+          python scripts/sync_robinhood_session.py save
+
+      - name: Save encrypted Robinhood session
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .auth-cache
+          key: robinhood-session-${{ github.ref_name }}-${{ github.run_id }}
 
       - name: Save generated databases
         if: success()

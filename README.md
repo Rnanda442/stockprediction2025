@@ -36,3 +36,19 @@ The dashboard includes:
 The scheduled GitHub Action exports `dashboard_data.db` as part of its
 `stock-analysis-outputs` artifact. The dashboard reads this compact database
 only; it never modifies pipeline databases.
+
+## Robinhood Session Reuse
+
+Set the `ROBINHOOD_SESSION_KEY` GitHub Actions secret to a Fernet key. The
+workflow uses it to cache an encrypted Robinhood session between runs. Raw
+Robinhood tokens stay inside the runner and are never committed or uploaded as
+artifacts.
+
+Generate a key:
+
+```powershell
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+The first run after setup may still require Robinhood device approval. Later
+runs reuse the encrypted session until Robinhood expires or revokes it.
