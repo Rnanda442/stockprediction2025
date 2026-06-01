@@ -1,3 +1,4 @@
+import os
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,9 +14,9 @@ LATEST_CSV = ROOT / "analytics" / "latest_watchlist.csv"
 HISTORY_CSV = ROOT / "analytics" / "watchlist_history.csv"
 SUMMARY_CSV = ROOT / "analytics" / "watchlist_performance_summary.csv"
 SPAN = "5year"
-WATCHLIST_LIMIT = 50
+WATCHLIST_LIMIT = int(os.getenv("PIPELINE_WATCHLIST_LIMIT", "50"))
 HORIZONS = (1, 5, 20, 60)
-PERSISTENCE_BONUS = 0.04
+PERSISTENCE_BONUS = float(os.getenv("PIPELINE_PERSISTENCE_BONUS", "0.04"))
 
 
 def create_table(conn):

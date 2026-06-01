@@ -157,6 +157,93 @@ def stock_universe():
     )
 
 
+def stock_universe_dates():
+    frame = query(
+        """
+        SELECT DISTINCT as_of_date
+        FROM StockUniverseSnapshot
+        ORDER BY as_of_date
+        """
+    )
+    return frame["as_of_date"].tolist()
+
+
+def stock_universe_snapshot(as_of_date):
+    return query(
+        """
+        WITH dates AS (
+          SELECT
+            ? AS selected_date,
+            (SELECT MAX(as_of_date) FROM StockUniverseSnapshot WHERE as_of_date < ?) AS previous_date,
+            (SELECT MAX(as_of_date) FROM StockUniverseSnapshot
+             WHERE as_of_date < (
+               SELECT MAX(as_of_date) FROM StockUniverseSnapshot WHERE as_of_date < ?
+             )) AS earlier_date
+        ),
+        current AS (
+          SELECT * FROM StockUniverseSnapshot WHERE as_of_date=(SELECT selected_date FROM dates)
+        ),
+        previous AS (
+          SELECT * FROM StockUniverseSnapshot WHERE as_of_date=(SELECT previous_date FROM dates)
+        ),
+        earlier AS (
+          SELECT * FROM StockUniverseSnapshot WHERE as_of_date=(SELECT earlier_date FROM dates)
+        )
+        SELECT current.ticker, current.status, current.reason, current.coordinate_mode,
+               current.x, current.y, current.z, current.Leader_Score,
+               current.Trend_Score, current.Vol_60d, current.DollarVol_20d,
+               current.Total_Return,
+               CASE WHEN previous.ticker IS NOT NULL THEN
+                 sqrt(
+                   (current.x - previous.x) * (current.x - previous.x) +
+                   (current.y - previous.y) * (current.y - previous.y) +
+                   (current.z - previous.z) * (current.z - previous.z)
+                 )
+               END AS movement_speed,
+               CASE WHEN previous.ticker IS NOT NULL AND earlier.ticker IS NOT NULL THEN
+                 sqrt(
+                   (current.x - previous.x) * (current.x - previous.x) +
+                   (current.y - previous.y) * (current.y - previous.y) +
+                   (current.z - previous.z) * (current.z - previous.z)
+                 ) -
+                 sqrt(
+                   (previous.x - earlier.x) * (previous.x - earlier.x) +
+                   (previous.y - earlier.y) * (previous.y - earlier.y) +
+                   (previous.z - earlier.z) * (previous.z - earlier.z)
+                 )
+               END AS movement_acceleration
+        FROM current
+        LEFT JOIN previous ON previous.ticker=current.ticker
+        LEFT JOIN earlier ON earlier.ticker=current.ticker
+        ORDER BY current.status, current.ticker
+        """,
+        (as_of_date, as_of_date, as_of_date),
+    )
+
+
+def stock_universe_trails(tickers, end_date, trail_dates):
+    if not tickers:
+        return pd.DataFrame(columns=["as_of_date", "ticker", "x", "y", "z"])
+    placeholders = ",".join("?" for _ in tickers)
+    return query(
+        f"""
+        SELECT as_of_date, ticker, x, y, z
+        FROM StockUniverseSnapshot
+        WHERE ticker IN ({placeholders})
+          AND as_of_date <= ?
+          AND as_of_date IN (
+            SELECT DISTINCT as_of_date
+            FROM StockUniverseSnapshot
+            WHERE as_of_date <= ?
+            ORDER BY as_of_date DESC
+            LIMIT ?
+          )
+        ORDER BY ticker, as_of_date
+        """,
+        (*tickers, end_date, end_date, trail_dates),
+    )
+
+
 def stock_universe_snapshot_count():
     frame = query("SELECT COUNT(DISTINCT as_of_date) AS snapshots FROM StockUniverseSnapshot")
     return int(frame.iloc[0]["snapshots"])

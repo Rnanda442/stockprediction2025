@@ -33,7 +33,12 @@ The dashboard includes:
 
 - latest five-stock shortlist
 - ranked 50-stock swing-trade watchlist with confidence and holding-window guidance
+- plain-English guide to the pipeline and core variables
+- interactive historical Research Lab with adjustable slices and assumptions
+- Monte Carlo scenario fan and walk-forward signal evaluation
+- guarded GitHub Actions rerun controls for cloud pipeline parameters
 - interactive 3D stock-universe map with visible filter outcomes
+- time-aware 3D map snapshots with date scrolling, trails, speed, and acceleration
 - visual opportunity map for comparing signal strength, volatility, and liquidity
 - rebased price race for the latest shortlist
 - forward-return evaluation over 1, 5, 20, and 60 trading sessions
@@ -61,3 +66,15 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 
 The first run after setup may still require Robinhood device approval. Later
 runs reuse the encrypted session until Robinhood expires or revokes it.
+
+## Research Lab And Cloud Controls
+
+Use **Research Lab** for fast local experimentation. Its history-slice,
+Monte Carlo, Sharpe-style, and walk-forward controls recalculate immediately
+from the compact dashboard database.
+
+Use **Pipeline Controls** only when you want to start a full GitHub Actions run.
+Those controls can change the ranked-watchlist size, persistence bonus,
+focused-shortlist size, liquidity floor, volatility ceiling, and behavioral
+similarity settings. A confirmed rerun refreshes data and rebuilds the cloud
+artifact; it does not place trades.

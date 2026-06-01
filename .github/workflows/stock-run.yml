@@ -2,6 +2,39 @@ name: Run Stock Pipeline
 
 on:
   workflow_dispatch:
+    inputs:
+      watchlist_limit:
+        description: Ranked watchlist size
+        required: false
+        default: "50"
+      persistence_bonus:
+        description: Score bonus for ideas that remain ranked
+        required: false
+        default: "0.04"
+      shortlist_limit:
+        description: Focused shortlist size
+        required: false
+        default: "5"
+      min_avg_dollar_vol:
+        description: Minimum shortlist dollar-volume liquidity
+        required: false
+        default: "2000000"
+      max_vol_60d:
+        description: Maximum shortlist 60d volatility
+        required: false
+        default: "0.08"
+      sim_min:
+        description: Minimum behavioral similarity
+        required: false
+        default: "0.60"
+      sim_cap:
+        description: Maximum behavioral similarity
+        required: false
+        default: "0.88"
+      top_n_per_ticker:
+        description: Similar neighbors retained per ticker
+        required: false
+        default: "3"
   schedule:
     - cron: "0 13 * * 1-5" # 13:00 UTC weekdays
 
@@ -20,6 +53,14 @@ jobs:
       ROBINHOOD_USERNAME: ${{ secrets.ROBINHOOD_USERNAME }}
       ROBINHOOD_PASSWORD: ${{ secrets.ROBINHOOD_PASSWORD }}
       ROBINHOOD_SESSION_KEY: ${{ secrets.ROBINHOOD_SESSION_KEY }}
+      PIPELINE_WATCHLIST_LIMIT: ${{ inputs.watchlist_limit || '50' }}
+      PIPELINE_PERSISTENCE_BONUS: ${{ inputs.persistence_bonus || '0.04' }}
+      PIPELINE_SHORTLIST_LIMIT: ${{ inputs.shortlist_limit || '5' }}
+      PIPELINE_MIN_AVG_DOLLAR_VOL: ${{ inputs.min_avg_dollar_vol || '2000000' }}
+      PIPELINE_MAX_VOL_60D: ${{ inputs.max_vol_60d || '0.08' }}
+      PIPELINE_SIM_MIN: ${{ inputs.sim_min || '0.60' }}
+      PIPELINE_SIM_CAP: ${{ inputs.sim_cap || '0.88' }}
+      PIPELINE_TOP_N_PER_TICKER: ${{ inputs.top_n_per_ticker || '3' }}
       PYTHONUNBUFFERED: "1"
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 

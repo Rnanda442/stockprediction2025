@@ -1,9 +1,12 @@
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
+from dashboard import actions
 from dashboard.auth import require_login
 from dashboard import data
+from dashboard import research
 
 
 st.set_page_config(
@@ -26,6 +29,11 @@ def render_overview():
     short = data.shortlist()
     st.title("Stock Research Dashboard")
     st.caption("Research signals only. This is not investment advice.")
+    st.info(
+        "Start with Ranked Watchlist for the daily research funnel, use Research Lab "
+        "to test one ticker across historical slices, and use 3D Stock Universe to "
+        "explore similarities and filter outcomes."
+    )
 
     cols = st.columns(4)
     cols[0].metric("Latest market date", health.get("latest_market_date", "—")[:10])
@@ -176,6 +184,217 @@ def render_watchlist():
     )
 
 
+def render_guide():
+    st.title("How This Research App Works")
+    st.caption("A readable map of the pipeline, the variables, and the limits of the analysis.")
+
+    st.subheader("Research flow")
+    st.markdown(
+        """
+        1. **Baseline filters** remove symbols with invalid quotes, insufficient liquidity,
+           excessive volatility, or other data-quality problems.
+        2. **Feature engineering** calculates recent returns, trend slope, trend fit,
+           volatility, momentum, liquidity, drawdown, and related measurements.
+        3. **Similarity analysis** compares how stocks move and helps identify behaviorally
+           related candidates.
+        4. **Ranked watchlist** scores the broader candidate pool and keeps 50 ideas for
+           forward-return tracking.
+        5. **Focused shortlist** highlights a smaller research set after additional
+           liquidity, momentum, and volatility checks.
+        6. **Feedback loop** records future 1d, 5d, 20d, and 60d returns so later versions
+           can compare heuristics against trained models.
+        """
+    )
+
+    st.subheader("Core variables")
+    variables = pd.DataFrame(
+        [
+            ("Leader score", "Current ranking alias built from trend strength relative to volatility."),
+            ("Trend score", "Trend slope divided by volatility. Higher means stronger movement relative to noise."),
+            ("Trend slope", "Direction and steepness of the recent fitted price trend."),
+            ("Trend fit", "How closely prices follow that fitted trend. Higher means a steadier trend."),
+            ("60d volatility", "Standard deviation of recent daily returns. Higher means a bumpier path."),
+            ("Risk-adjusted momentum", "Recent return divided by recent volatility."),
+            ("Dollar volume", "Average traded dollar value. Used as a liquidity proxy."),
+            ("Max drawdown", "Largest decline from a prior peak inside the measured window."),
+            ("Sharpe-style ratio", "Annualized average return divided by annualized volatility, with a configurable risk-free rate."),
+            ("3D coordinates", "Compressed feature-space coordinates for exploration. They are not predictions by themselves."),
+            ("3D movement speed", "Distance traveled between saved feature-space snapshots."),
+            ("3D movement acceleration", "Change in feature-space speed between saved snapshots."),
+        ],
+        columns=["Variable", "What it means"],
+    )
+    st.dataframe(variables, hide_index=True, use_container_width=True)
+
+    st.subheader("Important limits")
+    st.warning(
+        "The confidence score is a transparent heuristic score, not a calibrated probability. "
+        "Monte Carlo scenarios describe what could happen if historical return behavior persisted; "
+        "they do not know future news, earnings surprises, or market regime shifts."
+    )
+
+
+def render_research_lab():
+    st.title("Research Lab")
+    st.caption(
+        "Change the historical slice and assumptions locally. These controls rerun instantly "
+        "against the dashboard database and do not place trades."
+    )
+    available = data.tickers()
+    if not available:
+        st.info("No ticker summaries are available.")
+        return
+
+    controls = st.columns(3)
+    ticker = controls[0].selectbox("Ticker", available)
+    history_days = controls[1].slider("History slice (trading days)", 80, 400, 252, 10)
+    risk_free_rate = controls[2].slider("Risk-free rate", 0.0, 0.10, 0.0, 0.005)
+
+    prices = research.prepare_prices(data.ticker_prices(ticker), history_days)
+    if len(prices) < 30:
+        st.info("Not enough recent price history is available for this ticker.")
+        return
+
+    metrics = research.historical_metrics(prices, risk_free_rate)
+    cols = st.columns(5)
+    cols[0].metric("Slice return", percent(metrics["total_return"]))
+    cols[1].metric("Annualized return", percent(metrics["annual_return"]))
+    cols[2].metric("Annualized volatility", percent(metrics["annual_volatility"]))
+    cols[3].metric("Sharpe-style ratio", f"{metrics['sharpe']:.2f}")
+    cols[4].metric("Max drawdown", percent(metrics["max_drawdown"]))
+
+    st.subheader("Scrollable historical slice")
+    st.caption("Move the history slider to test how conclusions change when the visible past changes.")
+    st.line_chart(prices.set_index("begins_at")["close_price"])
+
+    st.subheader("Monte Carlo scenario fan")
+    simulation_controls = st.columns(2)
+    horizon_days = simulation_controls[0].slider("Scenario horizon (trading days)", 5, 90, 20, 5)
+    simulations = simulation_controls[1].slider("Simulation paths", 200, 3000, 1000, 100)
+    quantiles, terminal = research.monte_carlo_paths(prices, horizon_days, simulations)
+    if not quantiles.empty:
+        scenario_lines = quantiles.melt("day", var_name="scenario", value_name="price")
+        st.plotly_chart(
+            px.line(
+                scenario_lines,
+                x="day",
+                y="price",
+                color="scenario",
+                title=f"{ticker}: simulated price percentiles",
+            ),
+            use_container_width=True,
+        )
+        cols = st.columns(4)
+        cols[0].metric("Current price", f"${terminal['current_price']:,.2f}")
+        cols[1].metric("Median scenario", f"${terminal['median_price']:,.2f}")
+        cols[2].metric("10%-90% range", f"${terminal['p10_price']:,.2f} - ${terminal['p90_price']:,.2f}")
+        cols[3].metric("Scenarios above today", percent(terminal["probability_up"]))
+
+    st.subheader("Walk-forward slice test")
+    st.caption(
+        "For each historical date, use only the trailing training window, generate a simple "
+        "signal, and then inspect the later return. This avoids training on future information."
+    )
+    walk = st.columns(3)
+    training_days = walk[0].slider("Training window", 40, min(252, max(40, len(prices) - 20)), 60, 10)
+    holding_days = walk[1].slider("Forward holding window", 1, 60, 20, 1)
+    momentum_days = walk[2].slider("Momentum lookback", 5, 60, 20, 5)
+    thresholds = st.columns(2)
+    minimum_momentum = thresholds[0].slider("Minimum trailing momentum", -0.20, 0.50, 0.05, 0.01)
+    minimum_sharpe = thresholds[1].slider("Minimum trailing Sharpe-style ratio", -2.0, 4.0, 0.5, 0.1)
+
+    signals = research.walk_forward_signals(
+        prices,
+        training_days,
+        holding_days,
+        momentum_days,
+        minimum_momentum,
+        minimum_sharpe,
+    )
+    summary = research.signal_summary(signals)
+    cols = st.columns(4)
+    cols[0].metric("Historical signals", f"{summary['signals']:,}")
+    cols[1].metric("Average later return", percent(summary["average_forward_return"]))
+    cols[2].metric("Median later return", percent(summary["median_forward_return"]))
+    cols[3].metric("Historical win rate", percent(summary["win_rate"]))
+    if not signals.empty:
+        chart = signals.copy()
+        chart["Signal"] = chart["signal"].map({True: "signal", False: "no signal"})
+        st.plotly_chart(
+            px.scatter(
+                chart,
+                x="date",
+                y="forward_return",
+                color="Signal",
+                hover_data=["price", "momentum", "trailing_sharpe"],
+                title=f"{ticker}: later {holding_days}d return from each historical slice",
+            ),
+            use_container_width=True,
+        )
+
+
+def render_pipeline_controls():
+    st.title("Pipeline Controls")
+    st.caption(
+        "Start a full GitHub Actions research run with validated settings. This is slower "
+        "than Research Lab because it refreshes data and rebuilds the cloud outputs."
+    )
+    st.warning(
+        "A cloud rerun uses Robinhood and GitHub Actions resources. It does not place trades. "
+        "Use Research Lab first for quick experimentation."
+    )
+    with st.expander("What these controls change", expanded=True):
+        st.markdown(
+            """
+            - **Watchlist size:** number of ranked ideas saved for feedback tracking.
+            - **Persistence bonus:** small score bonus for ideas that stayed ranked, reducing churn.
+            - **Shortlist size:** maximum focused picks shown on the overview.
+            - **Minimum dollar volume:** liquidity floor for focused shortlist candidates.
+            - **Maximum 60d volatility:** risk ceiling for focused shortlist candidates.
+            - **Similarity range:** correlation window used when comparing behavioral neighbors.
+            """
+        )
+
+    with st.form("pipeline_controls"):
+        left, right = st.columns(2)
+        watchlist_limit = left.number_input("Watchlist size", 10, 200, 50, 5)
+        persistence_bonus = left.number_input("Persistence bonus", 0.0, 0.25, 0.04, 0.01, format="%.2f")
+        shortlist_limit = left.number_input("Shortlist size", 1, 30, 5, 1)
+        min_avg_dollar_vol = left.number_input("Minimum dollar volume", 100000, 100000000, 2000000, 100000)
+        max_vol_60d = right.number_input("Maximum 60d volatility", 0.01, 0.50, 0.08, 0.01, format="%.2f")
+        sim_min = right.number_input("Similarity minimum", 0.0, 0.99, 0.60, 0.01, format="%.2f")
+        sim_cap = right.number_input("Similarity cap", 0.01, 1.0, 0.88, 0.01, format="%.2f")
+        top_n_per_ticker = right.number_input("Neighbors per ticker", 1, 20, 3, 1)
+        confirmed = st.checkbox("I understand this starts a full GitHub Actions pipeline run.")
+        submitted = st.form_submit_button("Run pipeline on GitHub", type="primary")
+
+    if submitted:
+        if not confirmed:
+            st.error("Confirm the GitHub Actions rerun before dispatching it.")
+            return
+        if sim_min >= sim_cap:
+            st.error("Similarity minimum must be lower than similarity cap.")
+            return
+        inputs = {
+            "watchlist_limit": int(watchlist_limit),
+            "persistence_bonus": f"{persistence_bonus:.2f}",
+            "shortlist_limit": int(shortlist_limit),
+            "min_avg_dollar_vol": int(min_avg_dollar_vol),
+            "max_vol_60d": f"{max_vol_60d:.2f}",
+            "sim_min": f"{sim_min:.2f}",
+            "sim_cap": f"{sim_cap:.2f}",
+            "top_n_per_ticker": int(top_n_per_ticker),
+        }
+        try:
+            url = actions.dispatch_pipeline(inputs)
+        except Exception as exc:
+            st.error(f"GitHub Actions dispatch failed: {exc}")
+            return
+        st.success("Pipeline dispatched successfully.")
+        if url:
+            st.link_button("Open GitHub Actions run", url)
+
+
 def render_explorer():
     st.title("Ticker Explorer")
     available = data.tickers()
@@ -274,7 +493,12 @@ def render_stock_universe():
         "Explore how stocks behave and see which symbols were filtered out before ranking."
     )
 
-    universe = data.stock_universe()
+    dates = data.stock_universe_dates()
+    if not dates:
+        st.info("No saved stock-universe dates are available. Run the pipeline to initialize them.")
+        return
+    selected_date = st.select_slider("Map date", dates, value=dates[-1])
+    universe = data.stock_universe_snapshot(selected_date)
     if universe.empty:
         st.info("No stock-universe export is available. Run the dashboard export script.")
         return
@@ -284,8 +508,12 @@ def render_stock_universe():
     universe["Dot size"] = universe["DollarVol_20d"].fillna(1).clip(lower=1)
     universe["60d volatility"] = universe["Vol_60d"] * 100
     universe["60d return"] = universe["Total_Return"] * 100
+    universe["Movement speed"] = pd.to_numeric(universe["movement_speed"], errors="coerce").fillna(0)
+    universe["Movement acceleration"] = pd.to_numeric(
+        universe["movement_acceleration"], errors="coerce"
+    ).fillna(0)
 
-    controls = st.columns(3)
+    controls = st.columns(4)
     statuses = controls[0].multiselect(
         "Filter status",
         sorted(universe["Status"].unique()),
@@ -300,6 +528,10 @@ def render_stock_universe():
     size_mode = controls[2].selectbox(
         "Dot size",
         ("Liquidity", "Uniform"),
+    )
+    color_mode = controls[3].selectbox(
+        "Dot color",
+        ("Filter status", "Leader score", "Movement speed"),
     )
 
     visible = universe[universe["Status"].isin(statuses)].copy()
@@ -320,12 +552,17 @@ def render_stock_universe():
     metrics[2].metric("Rejected", f"{rejected:,}")
     metrics[3].metric("Saved map dates", f"{data.stock_universe_snapshot_count():,}")
 
+    color_column = {
+        "Filter status": "Status",
+        "Leader score": "Leader_Score",
+        "Movement speed": "Movement speed",
+    }[color_mode]
     fig = px.scatter_3d(
         visible,
         x="x",
         y="y",
         z="z",
-        color="Status",
+        color=color_column,
         size="Dot size",
         size_max=16,
         hover_name="ticker",
@@ -336,12 +573,15 @@ def render_stock_universe():
             "Trend_Score": ":.3f",
             "60d volatility": ":.2f",
             "60d return": ":.1f",
+            "Movement speed": ":.3f",
+            "Movement acceleration": ":.3f",
             "Dot size": False,
             "x": ":.2f",
             "y": ":.2f",
             "z": ":.2f",
         },
         color_discrete_map={"Passed": "#00cc96", "Rejected": "#ef553b"},
+        color_continuous_scale="Viridis",
         opacity=0.72,
     )
     fig.update_layout(
@@ -354,7 +594,47 @@ def render_stock_universe():
             zaxis_title="Behavior axis Z",
         ),
     )
+    passed_tickers = (
+        visible.loc[visible["status"] == "passed"]
+        .sort_values("Leader_Score", ascending=False)["ticker"]
+        .head(100)
+        .tolist()
+    )
+    trail_tickers = st.multiselect(
+        "Trail tickers",
+        passed_tickers,
+        default=passed_tickers[:5],
+        help="Choose passing stocks to trace across saved map dates.",
+    )
+    trail_dates = 1
+    if len(dates) > 1:
+        trail_dates = st.slider(
+            "Trail length (saved map dates)",
+            1,
+            min(30, len(dates)),
+            min(10, len(dates)),
+        )
+    trails = data.stock_universe_trails(trail_tickers, selected_date, trail_dates)
+    for ticker, trail in trails.groupby("ticker"):
+        if len(trail) < 2:
+            continue
+        fig.add_trace(
+            go.Scatter3d(
+                x=trail["x"],
+                y=trail["y"],
+                z=trail["z"],
+                mode="lines+markers",
+                name=f"{ticker} trail",
+                line=dict(width=5),
+                marker=dict(size=3),
+            )
+        )
     st.plotly_chart(fig, use_container_width=True)
+    if len(dates) < 2:
+        st.info(
+            "One saved map date is available. Trails, movement speed, and acceleration "
+            "will populate automatically as future successful pipeline runs add snapshots."
+        )
 
     st.subheader("How to read this map")
     st.markdown(
@@ -362,7 +642,8 @@ def render_stock_universe():
         - Passing stocks are positioned from compressed technical behavior features.
         - Nearby passing stocks have more similar feature profiles.
         - Rejected stocks remain visible in separate reason-based clouds.
-        - Coordinates are exploratory measurements, not trade predictions yet.
+        - Date scrolling and trails show how compressed feature-space positions change.
+        - Movement speed and acceleration are exploratory model inputs, not predictions yet.
         """
     )
 
@@ -398,6 +679,9 @@ page = st.sidebar.radio(
     "Navigate",
     (
         "Overview",
+        "How It Works",
+        "Research Lab",
+        "Pipeline Controls",
         "Ranked Watchlist",
         "3D Stock Universe",
         "Visual Lab",
@@ -411,6 +695,12 @@ st.sidebar.caption("Private stock research workspace")
 try:
     if page == "Overview":
         render_overview()
+    elif page == "How It Works":
+        render_guide()
+    elif page == "Research Lab":
+        render_research_lab()
+    elif page == "Pipeline Controls":
+        render_pipeline_controls()
     elif page == "Ranked Watchlist":
         render_watchlist()
     elif page == "3D Stock Universe":
