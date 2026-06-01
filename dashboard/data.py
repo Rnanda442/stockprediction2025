@@ -94,6 +94,35 @@ def ticker_prices(ticker):
     )
 
 
+def opportunity_map(limit=150):
+    return query(
+        """
+        SELECT ticker, Leader_Score, Trend_Score, Trend_Slope_60d,
+               Vol_60d, DollarVol_20d, Total_Return
+        FROM FeatureSummary
+        WHERE Leader_Score IS NOT NULL
+          AND Trend_Score IS NOT NULL
+          AND Vol_60d IS NOT NULL
+          AND DollarVol_20d IS NOT NULL
+        ORDER BY Leader_Score DESC
+        LIMIT ?
+        """,
+        (limit,),
+    )
+
+
+def shortlist_prices():
+    return query(
+        """
+        SELECT prices.ticker, prices.begins_at, prices.close_price
+        FROM RecentPrices AS prices
+        INNER JOIN LatestShortlist AS shortlist
+                ON shortlist.ticker = prices.ticker
+        ORDER BY prices.begins_at, prices.ticker
+        """
+    )
+
+
 def span_health():
     return query(
         """

@@ -141,6 +141,68 @@ def render_explorer():
     st.dataframe(summary, hide_index=True, use_container_width=True)
 
 
+def render_visual_lab():
+    st.title("Visual Lab")
+    st.caption("Compare the strongest signals before turning research into a trade idea.")
+
+    candidates = data.opportunity_map()
+    if candidates.empty:
+        st.info("No candidate features are available.")
+        return
+
+    candidates = candidates.copy()
+    candidates["Liquidity"] = candidates["DollarVol_20d"].clip(lower=1)
+    candidates["60d volatility"] = candidates["Vol_60d"] * 100
+    candidates["Leader score"] = candidates["Leader_Score"]
+    candidates["Trend score"] = candidates["Trend_Score"]
+
+    st.subheader("Opportunity constellation")
+    st.caption(
+        "Each point is a stock. Higher is a stronger leader signal; farther right "
+        "means more volatility. Larger points have greater dollar-volume liquidity."
+    )
+    st.scatter_chart(
+        candidates,
+        x="60d volatility",
+        y="Leader score",
+        size="Liquidity",
+        color="Trend score",
+        use_container_width=True,
+    )
+
+    cols = st.columns(2)
+    with cols[0]:
+        st.subheader("Signal leaderboard")
+        leaders = candidates[
+            ["ticker", "Leader_Score", "Trend_Score", "Trend_Slope_60d", "Vol_60d"]
+        ].head(20).set_index("ticker")
+        st.bar_chart(leaders[["Leader_Score", "Trend_Score"]])
+    with cols[1]:
+        st.subheader("How to read the map")
+        st.markdown(
+            """
+            - Look for stocks near the top with manageable volatility.
+            - Larger points are generally easier to enter and exit.
+            - Use the leaderboard to compare signal strength.
+            - Treat the map as a research view, not an automatic trade order.
+            """
+        )
+
+    prices = data.shortlist_prices()
+    if prices.empty:
+        return
+    prices = prices.copy()
+    prices["begins_at"] = pd.to_datetime(prices["begins_at"])
+    paths = prices.pivot(index="begins_at", columns="ticker", values="close_price")
+    paths = paths.ffill().dropna()
+    if paths.empty:
+        return
+    rebased = paths.div(paths.iloc[0]).mul(100)
+    st.subheader("Current shortlist race")
+    st.caption("The latest shortlist rebased to 100 so different stock prices are comparable.")
+    st.line_chart(rebased)
+
+
 def render_health():
     st.title("Pipeline Health")
     health = data.health()
@@ -161,13 +223,15 @@ require_login()
 
 page = st.sidebar.radio(
     "Navigate",
-    ("Overview", "Performance", "Ticker Explorer", "Pipeline Health"),
+    ("Overview", "Visual Lab", "Performance", "Ticker Explorer", "Pipeline Health"),
 )
 st.sidebar.caption("Private stock research workspace")
 
 try:
     if page == "Overview":
         render_overview()
+    elif page == "Visual Lab":
+        render_visual_lab()
     elif page == "Performance":
         render_performance()
     elif page == "Ticker Explorer":
