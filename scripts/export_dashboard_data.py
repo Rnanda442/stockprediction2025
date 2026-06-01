@@ -446,6 +446,22 @@ def export_recent_prices(history, destination):
     return count
 
 
+def export_optional_table(source, destination, table):
+    if not table_exists(source, table):
+        return 0
+    columns = source.execute(f'PRAGMA table_info("{table}")').fetchall()
+    definitions = ", ".join(
+        f'"{column[1]}" {column[2] or "TEXT"}'
+        for column in columns
+    )
+    recreate_table(destination, table, f'CREATE TABLE "{table}" ({definitions})')
+    rows = source.execute(f'SELECT * FROM "{table}"').fetchall()
+    if rows:
+        placeholders = ", ".join("?" for _ in rows[0])
+        destination.executemany(f'INSERT INTO "{table}" VALUES ({placeholders})', rows)
+    return len(rows)
+
+
 def export_health(history, source, destination, counts):
     recreate_table(
         destination,
@@ -510,6 +526,13 @@ def main():
                 source, destination
             ),
             "recent_prices": export_recent_prices(history, destination),
+            "model_evaluation": export_optional_table(source, destination, "ModelEvaluation"),
+            "model_feature_importance": export_optional_table(
+                source, destination, "ModelFeatureImportance"
+            ),
+            "latest_model_predictions": export_optional_table(
+                source, destination, "LatestModelPredictions"
+            ),
         }
         export_health(history, source, destination, counts)
         destination.commit()

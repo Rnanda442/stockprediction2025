@@ -36,6 +36,8 @@ The dashboard includes:
 - plain-English guide to the pipeline and core variables
 - interactive historical Research Lab with adjustable slices and assumptions
 - Monte Carlo scenario fan and walk-forward signal evaluation
+- leakage-controlled 5d, 20d, and 60d logistic model baselines with a held-out time window
+- Model Lab with visible training cutoff, embargo, test range, feature weights, and latest rankings
 - guarded GitHub Actions rerun controls for cloud pipeline parameters
 - interactive 3D stock-universe map with visible filter outcomes
 - time-aware 3D map snapshots with date scrolling, trails, speed, and acceleration

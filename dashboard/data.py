@@ -34,6 +34,14 @@ def query(sql, params=()):
         return pd.read_sql_query(sql, conn, params=params)
 
 
+def table_exists(table):
+    with connect() as conn:
+        return conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+            (table,),
+        ).fetchone() is not None
+
+
 def health():
     frame = query("SELECT metric, value FROM PipelineHealth ORDER BY metric")
     return dict(zip(frame["metric"], frame["value"]))
@@ -257,4 +265,39 @@ def span_health():
         WHERE metric LIKE '%_rows'
         ORDER BY metric
         """
+    )
+
+
+def model_evaluation():
+    if not table_exists("ModelEvaluation"):
+        return pd.DataFrame()
+    return query("SELECT * FROM ModelEvaluation ORDER BY horizon_days")
+
+
+def model_feature_importance(horizon_days):
+    if not table_exists("ModelFeatureImportance"):
+        return pd.DataFrame()
+    return query(
+        """
+        SELECT feature, coefficient, absolute_coefficient
+        FROM ModelFeatureImportance
+        WHERE horizon_days=?
+        ORDER BY absolute_coefficient DESC
+        """,
+        (horizon_days,),
+    )
+
+
+def latest_model_predictions(horizon_days, limit=50):
+    if not table_exists("LatestModelPredictions"):
+        return pd.DataFrame()
+    return query(
+        """
+        SELECT model_rank, ticker, probability_up, as_of_date
+        FROM LatestModelPredictions
+        WHERE horizon_days=?
+        ORDER BY model_rank
+        LIMIT ?
+        """,
+        (horizon_days, limit),
     )

@@ -160,6 +160,9 @@ def main():
         check_table("vectorized.db", "ShortlistHistory", min_rows=1),
         check_table("vectorized.db", "WatchlistHistory", min_rows=1),
         check_table("vectorized.db", "StockUniverseSnapshot", min_rows=1),
+        check_table("vectorized.db", "ModelEvaluation", min_rows=3),
+        check_table("vectorized.db", "ModelFeatureImportance", min_rows=1),
+        check_table("vectorized.db", "LatestModelPredictions", min_rows=1),
         check_table("dashboard_data.db", "FeatureSummary", min_rows=1),
         check_table("dashboard_data.db", "StockUniverse", min_rows=1),
         check_table("dashboard_data.db", "StockUniverseSnapshot", min_rows=1),
@@ -169,6 +172,18 @@ def main():
         check_table("dashboard_data.db", "WatchlistPerformanceSummary", min_rows=4),
         check_table("dashboard_data.db", "RecentPrices", min_rows=1),
         check_table("dashboard_data.db", "PipelineHealth", min_rows=1),
+        check_table("dashboard_data.db", "ModelEvaluation", min_rows=3),
+        check_table("dashboard_data.db", "ModelFeatureImportance", min_rows=1),
+        check_table("dashboard_data.db", "LatestModelPredictions", min_rows=1),
+        check_csv(
+            "analytics/model_evaluation.csv",
+            required_columns=[
+                "horizon_days", "training_end", "embargo_dates", "test_start",
+                "accuracy", "roc_auc", "selected_average_return",
+            ],
+            min_rows=3,
+            nonblank_columns=["horizon_days", "training_end", "embargo_dates", "test_start"],
+        ),
         check_csv(
             "analytics/shortlist_history.csv",
             required_columns=["as_of_date", "ticker", "rank", "entry_price"],

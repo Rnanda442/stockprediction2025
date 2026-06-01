@@ -90,7 +90,8 @@ jobs:
             jupyter \
             nbconvert \
             nbclient \
-            ipykernel
+            ipykernel \
+            scikit-learn
           python -m ipykernel install --user --name python3
 
       - name: Restore legacy root database cache
@@ -159,6 +160,10 @@ jobs:
             cat analytics/shortlist_performance_summary.csv
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build leakage-controlled model baseline
+        run: |
+          python scripts/build_model_baseline.py
 
       - name: Export dashboard database
         run: |

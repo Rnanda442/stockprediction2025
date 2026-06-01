@@ -203,6 +203,8 @@ def render_guide():
            liquidity, momentum, and volatility checks.
         6. **Feedback loop** records future 1d, 5d, 20d, and 60d returns so later versions
            can compare heuristics against trained models.
+        7. **Model Lab** trains only on earlier historical dates, applies a time embargo,
+           and measures the baseline on a later window that was not used for fitting.
         """
     )
 
@@ -221,6 +223,7 @@ def render_guide():
             ("3D coordinates", "Compressed feature-space coordinates for exploration. They are not predictions by themselves."),
             ("3D movement speed", "Distance traveled between saved feature-space snapshots."),
             ("3D movement acceleration", "Change in feature-space speed between saved snapshots."),
+            ("Baseline probability up", "Logistic model estimate trained on earlier dates only. Treat it as a research ranking, not a promise."),
         ],
         columns=["Variable", "What it means"],
     )
@@ -393,6 +396,94 @@ def render_pipeline_controls():
         st.success("Pipeline dispatched successfully.")
         if url:
             st.link_button("Open GitHub Actions run", url)
+
+
+def render_model_lab():
+    st.title("Model Lab")
+    st.caption(
+        "Leakage-controlled historical baselines. Each model trains on earlier dates, "
+        "skips an embargo window, and is scored on a later time window it never saw."
+    )
+    st.warning(
+        "These probabilities are research signals from a baseline model, not guarantees "
+        "or automatic trade instructions. Performance can change in a new market regime."
+    )
+    evaluation = data.model_evaluation()
+    if evaluation.empty:
+        st.info("No model export is available yet. Run the cloud pipeline to build it.")
+        return
+
+    horizon = st.selectbox(
+        "Prediction horizon",
+        evaluation["horizon_days"].astype(int).tolist(),
+        format_func=lambda value: f"{value} trading days",
+    )
+    row = evaluation[evaluation["horizon_days"] == horizon].iloc[0]
+    cols = st.columns(5)
+    cols[0].metric("Held-out accuracy", percent(row["accuracy"]))
+    cols[1].metric("ROC AUC", f"{row['roc_auc']:.3f}")
+    cols[2].metric("Brier score", f"{row['brier_score']:.3f}")
+    cols[3].metric("High-confidence ideas", f"{int(row['selected_rows']):,}")
+    cols[4].metric("High-confidence win rate", percent(row["selected_win_rate"]))
+
+    st.subheader("Time boundary")
+    st.caption(
+        "Training labels end before the embargo. The test period begins afterward, so "
+        "future returns used as labels cannot cross from training into evaluation."
+    )
+    boundary = pd.DataFrame(
+        [
+            ("Training window", row["training_start"], row["training_end"], int(row["training_rows"])),
+            ("Embargo", f"{int(row['embargo_dates'])} trading dates", "Excluded", 0),
+            ("Untouched test window", row["test_start"], row["test_end"], int(row["test_rows"])),
+        ],
+        columns=["Segment", "Start", "End", "Rows"],
+    )
+    st.dataframe(boundary, hide_index=True, use_container_width=True)
+    compare = st.columns(2)
+    compare[0].metric("All test rows: average later return", percent(row["benchmark_average_return"]))
+    compare[1].metric(
+        "Probability >= 60%: average later return",
+        percent(row["selected_average_return"]),
+    )
+
+    st.subheader("Most influential standardized features")
+    importance = data.model_feature_importance(horizon).head(15).copy()
+    if not importance.empty:
+        chart = importance.set_index("feature")["coefficient"].sort_values()
+        st.bar_chart(chart)
+        st.caption(
+            "Positive coefficients push the baseline toward a higher probability of an "
+            "upward return; negative coefficients push it lower. This is descriptive, "
+            "not proof that a feature causes future movement."
+        )
+
+    st.subheader("Latest model research ranking")
+    predictions = data.latest_model_predictions(horizon)
+    if predictions.empty:
+        st.info("No latest model predictions were exported.")
+        return
+    display = predictions.rename(
+        columns={
+            "model_rank": "Rank",
+            "ticker": "Ticker",
+            "probability_up": "Baseline probability up",
+            "as_of_date": "As of",
+        }
+    )
+    display["Baseline probability up"] = display["Baseline probability up"] * 100
+    st.dataframe(
+        display,
+        hide_index=True,
+        use_container_width=True,
+        column_config={
+            "Baseline probability up": st.column_config.ProgressColumn(
+                format="%.1f%%",
+                min_value=0.0,
+                max_value=100.0,
+            ),
+        },
+    )
 
 
 def render_explorer():
@@ -681,6 +772,7 @@ page = st.sidebar.radio(
         "Overview",
         "How It Works",
         "Research Lab",
+        "Model Lab",
         "Pipeline Controls",
         "Ranked Watchlist",
         "3D Stock Universe",
@@ -699,6 +791,8 @@ try:
         render_guide()
     elif page == "Research Lab":
         render_research_lab()
+    elif page == "Model Lab":
+        render_model_lab()
     elif page == "Pipeline Controls":
         render_pipeline_controls()
     elif page == "Ranked Watchlist":
