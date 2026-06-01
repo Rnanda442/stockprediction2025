@@ -23,6 +23,8 @@ Open `http://localhost:8501`.
 The dashboard includes:
 
 - latest five-stock shortlist
+- ranked 50-stock swing-trade watchlist with confidence and holding-window guidance
+- interactive 3D stock-universe map with visible filter outcomes
 - visual opportunity map for comparing signal strength, volatility, and liquidity
 - rebased price race for the latest shortlist
 - forward-return evaluation over 1, 5, 20, and 60 trading sessions

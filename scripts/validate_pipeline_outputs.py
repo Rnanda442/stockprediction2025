@@ -132,6 +132,15 @@ def main():
             nonblank_columns=["Ticker", "trend_slope_60d", "ret_60d", "AvgDollarVol"],
         ),
         check_csv(
+            "analytics/latest_watchlist.csv",
+            required_columns=[
+                "ticker", "rank", "confidence", "recommendation", "suggested_horizon"
+            ],
+            min_rows=1,
+            max_rows=50,
+            nonblank_columns=["ticker", "rank", "confidence", "recommendation"],
+        ),
+        check_csv(
             "checkpoint_filtered.csv",
             required_columns=["Ticker", "Name", "Price"],
             min_rows=1,
@@ -149,8 +158,15 @@ def main():
         check_table("vectorized.db", "FeatureSummary", min_rows=1),
         check_table("vectorized.db", "WinnerUniverse", min_rows=1),
         check_table("vectorized.db", "ShortlistHistory", min_rows=1),
+        check_table("vectorized.db", "WatchlistHistory", min_rows=1),
+        check_table("vectorized.db", "StockUniverseSnapshot", min_rows=1),
         check_table("dashboard_data.db", "FeatureSummary", min_rows=1),
+        check_table("dashboard_data.db", "StockUniverse", min_rows=1),
+        check_table("dashboard_data.db", "StockUniverseSnapshot", min_rows=1),
         check_table("dashboard_data.db", "LatestShortlist", min_rows=1),
+        check_table("dashboard_data.db", "LatestWatchlist", min_rows=1),
+        check_table("dashboard_data.db", "WatchlistHistory", min_rows=1),
+        check_table("dashboard_data.db", "WatchlistPerformanceSummary", min_rows=4),
         check_table("dashboard_data.db", "RecentPrices", min_rows=1),
         check_table("dashboard_data.db", "PipelineHealth", min_rows=1),
         check_csv(

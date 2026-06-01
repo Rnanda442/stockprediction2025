@@ -50,6 +50,29 @@ def shortlist():
     )
 
 
+def watchlist():
+    return query(
+        """
+        SELECT rank, ticker, confidence, recommendation, suggested_horizon,
+               is_persistent, leader_score, trend_score, trend_slope_60d,
+               trend_r2_60d, vol_60d, dollar_vol_20d, total_return
+        FROM LatestWatchlist
+        ORDER BY rank
+        """
+    )
+
+
+def watchlist_performance_summary():
+    return query(
+        """
+        SELECT horizon, evaluated_picks, average_return, win_rate
+        FROM WatchlistPerformanceSummary
+        ORDER BY CASE horizon WHEN '1d' THEN 1 WHEN '5d' THEN 2
+                              WHEN '20d' THEN 3 WHEN '60d' THEN 4 END
+        """
+    )
+
+
 def performance_summary():
     return query(
         """
@@ -121,6 +144,22 @@ def shortlist_prices():
         ORDER BY prices.begins_at, prices.ticker
         """
     )
+
+
+def stock_universe():
+    return query(
+        """
+        SELECT ticker, status, reason, coordinate_mode, x, y, z,
+               Leader_Score, Trend_Score, Vol_60d, DollarVol_20d, Total_Return
+        FROM StockUniverse
+        ORDER BY status, ticker
+        """
+    )
+
+
+def stock_universe_snapshot_count():
+    frame = query("SELECT COUNT(DISTINCT as_of_date) AS snapshots FROM StockUniverseSnapshot")
+    return int(frame.iloc[0]["snapshots"])
 
 
 def span_health():

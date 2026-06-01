@@ -89,8 +89,13 @@ jobs:
 
       - name: Track shortlist performance
         run: |
+          python scripts/track_watchlist_history.py
           python scripts/track_shortlist_history.py
           {
+            echo "## Latest watchlist"
+            echo '```csv'
+            cat analytics/latest_watchlist.csv
+            echo '```'
             echo "## Latest shortlist"
             echo '```csv'
             cat analytics/winners_shortlist.csv

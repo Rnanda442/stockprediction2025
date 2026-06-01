@@ -1,4 +1,5 @@
 import pandas as pd
+import plotly.express as px
 import streamlit as st
 
 from dashboard.auth import require_login
@@ -111,6 +112,70 @@ def render_performance():
     )
 
 
+def render_watchlist():
+    st.title("Ranked Watchlist")
+    st.caption(
+        "A broader swing-trade research set. Confidence is an interpretable heuristic "
+        "score, not a probability or automatic order."
+    )
+    watch = data.watchlist()
+    if watch.empty:
+        st.info("No ranked watchlist is available. Run the pipeline to initialize it.")
+        return
+
+    counts = watch["recommendation"].value_counts()
+    metrics = st.columns(4)
+    metrics[0].metric("Tracked ideas", f"{len(watch):,}")
+    metrics[1].metric("Consider entry", f"{int(counts.get('consider entry', 0)):,}")
+    metrics[2].metric("Research", f"{int(counts.get('research', 0)):,}")
+    metrics[3].metric("Persistent ideas", f"{int(watch['is_persistent'].sum()):,}")
+
+    summary = data.watchlist_performance_summary()
+    if not summary.empty:
+        st.subheader("Watchlist feedback")
+        cols = st.columns(len(summary))
+        for col, row in zip(cols, summary.itertuples(index=False)):
+            col.metric(
+                row.horizon,
+                percent(row.average_return),
+                f"{int(row.evaluated_picks)} evaluated ideas",
+            )
+            col.caption(f"Win rate: {percent(row.win_rate)}")
+
+    st.subheader("Latest ranked ideas")
+    display = watch.rename(
+        columns={
+            "rank": "Rank",
+            "ticker": "Ticker",
+            "confidence": "Confidence",
+            "recommendation": "Guidance",
+            "suggested_horizon": "Holding window",
+            "is_persistent": "Stayed ranked",
+            "leader_score": "Leader score",
+            "trend_score": "Trend score",
+            "trend_slope_60d": "Trend slope",
+            "trend_r2_60d": "Trend fit",
+            "vol_60d": "60d volatility",
+            "dollar_vol_20d": "Dollar volume",
+            "total_return": "Total return",
+        }
+    )
+    display["Stayed ranked"] = display["Stayed ranked"].map({1: "yes", 0: "new"})
+    for column in ("60d volatility", "Total return"):
+        display[column] = display[column] * 100
+    st.dataframe(
+        display,
+        hide_index=True,
+        use_container_width=True,
+        column_config={
+            "Confidence": st.column_config.ProgressColumn(format="%.1f", min_value=0, max_value=100),
+            "60d volatility": st.column_config.NumberColumn(format="%.2f%%"),
+            "Total return": st.column_config.NumberColumn(format="%.1f%%"),
+            "Dollar volume": st.column_config.NumberColumn(format="$%.0f"),
+        },
+    )
+
+
 def render_explorer():
     st.title("Ticker Explorer")
     available = data.tickers()
@@ -203,6 +268,114 @@ def render_visual_lab():
     st.line_chart(rebased)
 
 
+def render_stock_universe():
+    st.title("3D Stock Universe")
+    st.caption(
+        "Explore how stocks behave and see which symbols were filtered out before ranking."
+    )
+
+    universe = data.stock_universe()
+    if universe.empty:
+        st.info("No stock-universe export is available. Run the dashboard export script.")
+        return
+
+    universe = universe.copy()
+    universe["Status"] = universe["status"].str.title()
+    universe["Dot size"] = universe["DollarVol_20d"].fillna(1).clip(lower=1)
+    universe["60d volatility"] = universe["Vol_60d"] * 100
+    universe["60d return"] = universe["Total_Return"] * 100
+
+    controls = st.columns(3)
+    statuses = controls[0].multiselect(
+        "Filter status",
+        sorted(universe["Status"].unique()),
+        default=sorted(universe["Status"].unique()),
+    )
+    reasons = sorted(universe.loc[universe["status"] == "rejected", "reason"].unique())
+    selected_reasons = controls[1].multiselect(
+        "Rejected reasons",
+        reasons,
+        default=reasons,
+    )
+    size_mode = controls[2].selectbox(
+        "Dot size",
+        ("Liquidity", "Uniform"),
+    )
+
+    visible = universe[universe["Status"].isin(statuses)].copy()
+    visible = visible[
+        (visible["status"] != "rejected") | visible["reason"].isin(selected_reasons)
+    ]
+    if visible.empty:
+        st.info("No stocks match the selected filters.")
+        return
+    if size_mode == "Uniform":
+        visible["Dot size"] = 1
+
+    passed = int((visible["status"] == "passed").sum())
+    rejected = int((visible["status"] == "rejected").sum())
+    metrics = st.columns(4)
+    metrics[0].metric("Visible stocks", f"{len(visible):,}")
+    metrics[1].metric("Passed filters", f"{passed:,}")
+    metrics[2].metric("Rejected", f"{rejected:,}")
+    metrics[3].metric("Saved map dates", f"{data.stock_universe_snapshot_count():,}")
+
+    fig = px.scatter_3d(
+        visible,
+        x="x",
+        y="y",
+        z="z",
+        color="Status",
+        size="Dot size",
+        size_max=16,
+        hover_name="ticker",
+        hover_data={
+            "reason": True,
+            "coordinate_mode": True,
+            "Leader_Score": ":.3f",
+            "Trend_Score": ":.3f",
+            "60d volatility": ":.2f",
+            "60d return": ":.1f",
+            "Dot size": False,
+            "x": ":.2f",
+            "y": ":.2f",
+            "z": ":.2f",
+        },
+        color_discrete_map={"Passed": "#00cc96", "Rejected": "#ef553b"},
+        opacity=0.72,
+    )
+    fig.update_layout(
+        height=760,
+        margin=dict(l=0, r=0, t=10, b=0),
+        legend_title_text="Filter outcome",
+        scene=dict(
+            xaxis_title="Behavior axis X",
+            yaxis_title="Behavior axis Y",
+            zaxis_title="Behavior axis Z",
+        ),
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.subheader("How to read this map")
+    st.markdown(
+        """
+        - Passing stocks are positioned from compressed technical behavior features.
+        - Nearby passing stocks have more similar feature profiles.
+        - Rejected stocks remain visible in separate reason-based clouds.
+        - Coordinates are exploratory measurements, not trade predictions yet.
+        """
+    )
+
+    st.subheader("Filter outcomes")
+    outcome_counts = (
+        universe.groupby(["status", "reason"])
+        .size()
+        .reset_index(name="stocks")
+        .sort_values("stocks", ascending=False)
+    )
+    st.dataframe(outcome_counts, hide_index=True, use_container_width=True)
+
+
 def render_health():
     st.title("Pipeline Health")
     health = data.health()
@@ -223,13 +396,25 @@ require_login()
 
 page = st.sidebar.radio(
     "Navigate",
-    ("Overview", "Visual Lab", "Performance", "Ticker Explorer", "Pipeline Health"),
+    (
+        "Overview",
+        "Ranked Watchlist",
+        "3D Stock Universe",
+        "Visual Lab",
+        "Performance",
+        "Ticker Explorer",
+        "Pipeline Health",
+    ),
 )
 st.sidebar.caption("Private stock research workspace")
 
 try:
     if page == "Overview":
         render_overview()
+    elif page == "Ranked Watchlist":
+        render_watchlist()
+    elif page == "3D Stock Universe":
+        render_stock_universe()
     elif page == "Visual Lab":
         render_visual_lab()
     elif page == "Performance":
