@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -24,11 +26,52 @@ def money(value):
     return "—" if pd.isna(value) else f"${value:,.0f}"
 
 
+def health_warnings(health):
+    warnings = []
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    latest_market_date = pd.to_datetime(health.get("latest_market_date"), errors="coerce")
+    exported_at = pd.to_datetime(health.get("exported_at"), errors="coerce", utc=True)
+    latest_shortlist_date = str(health.get("latest_shortlist_date", ""))[:10]
+    market_day = str(health.get("latest_market_date", ""))[:10]
+
+    if pd.isna(latest_market_date):
+        warnings.append("The dashboard does not report a latest market date.")
+    elif (now - latest_market_date.to_pydatetime()).days > 4:
+        warnings.append(f"Market data is stale. The latest stored trading date is {market_day}.")
+
+    if pd.isna(exported_at):
+        warnings.append("The dashboard does not report when its local export was built.")
+    elif (datetime.now(timezone.utc) - exported_at.to_pydatetime()).days > 2:
+        warnings.append(f"The local dashboard export is stale. It was built at {str(exported_at)[:19]}.")
+
+    coverage = pd.to_numeric(health.get("latest_market_coverage"), errors="coerce")
+    if not pd.isna(coverage) and coverage < 0.80:
+        updated = health.get("latest_market_tickers", "0")
+        tracked = health.get("tracked_market_tickers", "0")
+        warnings.append(
+            f"The latest market date covers only {coverage:.1%} of tracked tickers "
+            f"({updated}/{tracked}). Treat rankings as incomplete."
+        )
+
+    if latest_shortlist_date and market_day and latest_shortlist_date != market_day:
+        warnings.append(
+            f"The shortlist date ({latest_shortlist_date}) does not match "
+            f"the latest market date ({market_day})."
+        )
+    return warnings
+
+
+def render_health_warnings(health):
+    for message in health_warnings(health):
+        st.warning(message)
+
+
 def render_overview():
     health = data.health()
     short = data.shortlist()
     st.title("Stock Research Dashboard")
     st.caption("Research signals only. This is not investment advice.")
+    render_health_warnings(health)
     st.info(
         "Start with Ranked Watchlist for the daily research funnel, use Research Lab "
         "to test one ticker across historical slices, and use 3D Stock Universe to "
@@ -751,10 +794,13 @@ def render_stock_universe():
 def render_health():
     st.title("Pipeline Health")
     health = data.health()
-    cols = st.columns(3)
+    render_health_warnings(health)
+    cols = st.columns(4)
     cols[0].metric("Latest market date", health.get("latest_market_date", "—")[:10])
     cols[1].metric("Latest shortlist date", health.get("latest_shortlist_date", "—")[:10])
     cols[2].metric("Dashboard exported", health.get("exported_at", "—")[:19])
+    coverage = pd.to_numeric(health.get("latest_market_coverage"), errors="coerce")
+    cols[3].metric("Latest-date coverage", "—" if pd.isna(coverage) else f"{coverage:.1%}")
 
     st.subheader("Compact database contents")
     st.dataframe(data.span_health(), hide_index=True, use_container_width=True)

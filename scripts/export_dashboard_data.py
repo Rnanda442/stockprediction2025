@@ -475,12 +475,29 @@ def export_health(history, source, destination, counts):
     latest_market_date = history.execute(
         "SELECT MAX(begins_at) FROM HistoricalPrices WHERE span='5year'"
     ).fetchone()[0]
+    tracked_tickers = history.execute(
+        "SELECT COUNT(DISTINCT ticker) FROM HistoricalPrices WHERE span='5year'"
+    ).fetchone()[0]
+    latest_market_tickers = history.execute(
+        """
+        SELECT COUNT(DISTINCT ticker)
+        FROM HistoricalPrices
+        WHERE span='5year' AND begins_at=?
+        """,
+        (latest_market_date,),
+    ).fetchone()[0] if latest_market_date else 0
+    latest_market_coverage = (
+        latest_market_tickers / tracked_tickers if tracked_tickers else 0.0
+    )
     latest_shortlist_date = source.execute(
         "SELECT MAX(begins_at) FROM WinnerUniverse"
     ).fetchone()[0] if table_exists(source, "WinnerUniverse") else None
     values = {
         "exported_at": datetime.now(timezone.utc).isoformat(),
         "latest_market_date": latest_market_date or "",
+        "latest_market_tickers": str(latest_market_tickers),
+        "tracked_market_tickers": str(tracked_tickers),
+        "latest_market_coverage": f"{latest_market_coverage:.6f}",
         "latest_shortlist_date": latest_shortlist_date or "",
         **{f"{key}_rows": str(value) for key, value in counts.items()},
     }

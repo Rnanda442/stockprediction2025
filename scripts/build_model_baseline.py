@@ -93,14 +93,14 @@ def safe_auc(labels, probabilities):
     return float(roc_auc_score(labels, probabilities)) if labels.nunique() > 1 else np.nan
 
 
-def latest_predictions(model, frame, horizon):
+def latest_predictions(model, frame, horizon, features):
     latest = (
         frame.sort_values(["ticker", "begins_at"])
         .groupby("ticker", as_index=False)
-        .tail(1)[["begins_at", "ticker", *FEATURES]]
+        .tail(1)[["begins_at", "ticker", *features]]
         .copy()
     )
-    probabilities = model.predict_proba(latest[list(FEATURES)])[:, 1]
+    probabilities = model.predict_proba(latest[list(features)])[:, 1]
     latest = latest.rename(columns={"begins_at": "as_of_date"})
     latest["horizon_days"] = horizon
     latest["probability_up"] = probabilities
@@ -122,9 +122,19 @@ def build_horizon(frame, horizon):
 
     train = sample_rows(labeled[labeled["begins_at"].isin(train_dates)], MAX_TRAIN_ROWS)
     test = sample_rows(labeled[labeled["begins_at"].isin(test_dates)], MAX_TEST_ROWS)
-    x_train = train[list(FEATURES)]
+    usable_features = tuple(feature for feature in FEATURES if train[feature].notna().any())
+    dropped_features = tuple(feature for feature in FEATURES if feature not in usable_features)
+    if not usable_features:
+        raise RuntimeError(f"No usable model features remain for the {horizon}d model")
+    if dropped_features:
+        print(
+            f"{horizon}d model dropped features without training values: "
+            f"{', '.join(dropped_features)}"
+        )
+
+    x_train = train[list(usable_features)]
     y_train = (train["forward_return"] > 0).astype(int)
-    x_test = test[list(FEATURES)]
+    x_test = test[list(usable_features)]
     y_test = (test["forward_return"] > 0).astype(int)
 
     model = make_pipeline(
@@ -161,18 +171,20 @@ def build_horizon(frame, horizon):
         "selected_rows": len(selected),
         "selected_average_return": float(selected.mean()) if len(selected) else np.nan,
         "selected_win_rate": float((selected > 0).mean()) if len(selected) else np.nan,
+        "retained_features": len(usable_features),
+        "dropped_features": ", ".join(dropped_features),
     }
     classifier = model.named_steps["sgdclassifier"]
     importance = pd.DataFrame(
         {
             "horizon_days": horizon,
-            "feature": FEATURES,
+            "feature": usable_features,
             "coefficient": classifier.coef_[0],
         }
     )
     importance["absolute_coefficient"] = importance["coefficient"].abs()
     importance = importance.sort_values("absolute_coefficient", ascending=False)
-    return evaluation, importance, latest_predictions(model, frame, horizon)
+    return evaluation, importance, latest_predictions(model, frame, horizon, usable_features)
 
 
 def save_outputs(conn, evaluations, importances, predictions):

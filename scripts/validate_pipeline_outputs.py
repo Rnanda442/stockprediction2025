@@ -8,11 +8,24 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_SPANS = ("year", "5year")
 MAX_DATA_AGE_DAYS = 10
+MIN_LATEST_DATE_COVERAGE = 0.80
+MIN_FEATURE_SUMMARY_COVERAGE = 0.50
+MODEL_FEATURES = (
+    "pct_1d", "pct_2d", "pct_3d", "pct_5d", "volatility_5d",
+    "volatility_10d", "momentum_slope_5d", "ma_crossover", "ret_10d",
+    "ret_20d", "ret_60d", "riskadj_mom_60d", "vol_20d", "vol_60d",
+    "trend_slope_60d", "trend_r2_60d", "z_ma20", "bb_width_20d",
+    "dollar_vol_20d", "ac1_5d", "max_dd_60d", "time_since_max_60d",
+)
 
 
 def fail(message):
     print(f"ERROR: {message}")
     return False
+
+
+def warn(message):
+    print(f"WARNING: {message}")
 
 
 def check_csv(relative_path, required_columns, min_rows=1, max_rows=None, nonblank_columns=None):
@@ -116,6 +129,188 @@ def check_span_table(relative_db, table, required_spans=EXPECTED_SPANS):
     return ok
 
 
+def check_historical_quality():
+    path = ROOT / "historicals.db"
+    with sqlite3.connect(path) as conn:
+        duplicate_keys = conn.execute(
+            """
+            SELECT COUNT(*) FROM (
+              SELECT ticker, span, begins_at
+              FROM HistoricalPrices
+              GROUP BY ticker, span, begins_at
+              HAVING COUNT(*) > 1
+            )
+            """
+        ).fetchone()[0]
+        invalid_raw_prices = conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM HistoricalPrices
+            WHERE close_price IS NULL OR close_price <= 0
+               OR open_price < 0 OR high_price < 0 OR low_price < 0
+               OR volume < 0
+            """
+        ).fetchone()[0]
+        interpolated_invalid_prices = conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM HistoricalPrices
+            WHERE interpolated=1
+              AND (
+                close_price IS NULL OR close_price <= 0
+                OR open_price < 0 OR high_price < 0 OR low_price < 0
+                OR volume < 0
+              )
+            """
+        ).fetchone()[0]
+        invalid_raw_prices -= interpolated_invalid_prices
+        total_tickers, latest_date = conn.execute(
+            """
+            SELECT COUNT(DISTINCT ticker), MAX(begins_at)
+            FROM HistoricalPrices
+            WHERE span='5year'
+            """
+        ).fetchone()
+        latest_tickers = conn.execute(
+            """
+            SELECT COUNT(DISTINCT ticker)
+            FROM HistoricalPrices
+            WHERE span='5year' AND begins_at=?
+            """,
+            (latest_date,),
+        ).fetchone()[0]
+        recent_invalid_raw_prices = conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM HistoricalPrices
+            WHERE begins_at >= datetime(?, '-400 days')
+              AND COALESCE(interpolated, 0) != 1
+              AND (
+                close_price IS NULL OR close_price <= 0
+                OR open_price < 0 OR high_price < 0 OR low_price < 0
+                OR volume < 0
+              )
+            """,
+            (latest_date,),
+        ).fetchone()[0]
+
+    coverage = latest_tickers / total_tickers if total_tickers else 0.0
+    print(
+        "historicals.db:HistoricalPrices:5year: "
+        f"latest_date={latest_date} ticker_coverage={latest_tickers}/{total_tickers} "
+        f"({coverage:.1%}) duplicate_keys={duplicate_keys} "
+        f"recent_invalid_raw_prices={recent_invalid_raw_prices} "
+        f"legacy_invalid_raw_prices={invalid_raw_prices - recent_invalid_raw_prices} "
+        f"invalid_interpolated_prices={interpolated_invalid_prices}"
+    )
+    ok = True
+    if duplicate_keys:
+        ok = fail(f"historicals.db:HistoricalPrices has {duplicate_keys} duplicate keys") and ok
+    if recent_invalid_raw_prices:
+        ok = fail(
+            "historicals.db:HistoricalPrices has "
+            f"{recent_invalid_raw_prices} invalid recent raw price rows"
+        ) and ok
+    legacy_invalid_raw_prices = invalid_raw_prices - recent_invalid_raw_prices
+    if legacy_invalid_raw_prices:
+        warn(
+            "historicals.db:HistoricalPrices has "
+            f"{legacy_invalid_raw_prices} legacy invalid raw price rows"
+        )
+    if interpolated_invalid_prices:
+        warn(
+            "historicals.db:HistoricalPrices has "
+            f"{interpolated_invalid_prices} invalid interpolated placeholder rows"
+        )
+    if coverage < MIN_LATEST_DATE_COVERAGE:
+        ok = fail(
+            "historicals.db:HistoricalPrices latest 5year date covers only "
+            f"{coverage:.1%} of tracked tickers; expected at least {MIN_LATEST_DATE_COVERAGE:.0%}"
+        ) and ok
+    return ok
+
+
+def check_vectorized_quality():
+    path = ROOT / "vectorized.db"
+    with sqlite3.connect(path) as conn:
+        duplicate_keys = conn.execute(
+            """
+            SELECT COUNT(*) FROM (
+              SELECT ticker, span, begins_at
+              FROM VectorizedFeatures
+              GROUP BY ticker, span, begins_at
+              HAVING COUNT(*) > 1
+            )
+            """
+        ).fetchone()[0]
+        total_rows = conn.execute(
+            "SELECT COUNT(*) FROM VectorizedFeatures WHERE span='5year'"
+        ).fetchone()[0]
+        feature_summary_rows = conn.execute(
+            "SELECT COUNT(*) FROM FeatureSummary"
+        ).fetchone()[0]
+        tracked_tickers = conn.execute(
+            "SELECT COUNT(DISTINCT ticker) FROM VectorizedFeatures WHERE span='5year'"
+        ).fetchone()[0]
+        null_rates = []
+        for feature in MODEL_FEATURES:
+            nonnull = conn.execute(
+                f'SELECT COUNT("{feature}") FROM VectorizedFeatures WHERE span=\'5year\''
+            ).fetchone()[0]
+            null_rates.append((feature, 1.0 - (nonnull / total_rows if total_rows else 0.0)))
+
+    print(f"vectorized.db:VectorizedFeatures: duplicate_keys={duplicate_keys}")
+    for feature, null_rate in null_rates:
+        print(f"  model feature {feature}: null_rate={null_rate:.1%}")
+        if null_rate == 1.0:
+            warn(f"model feature {feature} has no usable values and will be dropped during training")
+        elif null_rate > 0.25:
+            warn(f"model feature {feature} has a high null rate: {null_rate:.1%}")
+
+    ok = True
+    if duplicate_keys:
+        ok = fail(f"vectorized.db:VectorizedFeatures has {duplicate_keys} duplicate keys") and ok
+    coverage = feature_summary_rows / tracked_tickers if tracked_tickers else 0.0
+    print(
+        f"vectorized.db:FeatureSummary: ticker_coverage={feature_summary_rows}/{tracked_tickers} "
+        f"({coverage:.1%})"
+    )
+    if coverage < MIN_FEATURE_SUMMARY_COVERAGE:
+        ok = fail(
+            f"vectorized.db:FeatureSummary covers only {coverage:.1%} of tracked tickers; "
+            f"expected at least {MIN_FEATURE_SUMMARY_COVERAGE:.0%}"
+        ) and ok
+    return ok
+
+
+def check_output_date_alignment():
+    with sqlite3.connect(ROOT / "historicals.db") as history, sqlite3.connect(
+        ROOT / "vectorized.db"
+    ) as vectorized:
+        latest_market_date = history.execute(
+            "SELECT MAX(begins_at) FROM HistoricalPrices WHERE span='5year'"
+        ).fetchone()[0]
+        latest_shortlist_date = vectorized.execute(
+            "SELECT MAX(begins_at) FROM WinnerUniverse"
+        ).fetchone()[0]
+        latest_watchlist_date = vectorized.execute(
+            "SELECT MAX(as_of_date) FROM WatchlistHistory"
+        ).fetchone()[0]
+
+    market_day = str(latest_market_date or "")[:10]
+    shortlist_day = str(latest_shortlist_date or "")[:10]
+    watchlist_day = str(latest_watchlist_date or "")[:10]
+    print(
+        f"output dates: market={market_day} shortlist={shortlist_day} watchlist={watchlist_day}"
+    )
+    ok = True
+    if shortlist_day != market_day:
+        ok = fail(f"shortlist date {shortlist_day} does not match market date {market_day}") and ok
+    if watchlist_day != market_day:
+        ok = fail(f"watchlist date {watchlist_day} does not match market date {market_day}") and ok
+    return ok
+
+
 def main():
     checks = [
         check_csv(
@@ -198,6 +393,9 @@ def main():
         ),
         check_span_table("historicals.db", "HistoricalPrices"),
         check_span_table("vectorized.db", "VectorizedFeatures"),
+        check_historical_quality(),
+        check_vectorized_quality(),
+        check_output_date_alignment(),
     ]
 
     if not all(checks):

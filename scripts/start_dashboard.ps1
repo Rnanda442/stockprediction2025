@@ -59,8 +59,25 @@ if (-not $SkipSync) {
     }
 
     Copy-Item -LiteralPath $artifactDb -Destination $incomingDb -Force
-    Move-Item -LiteralPath $incomingDb -Destination $dashboardDb -Force
+    Copy-Item -LiteralPath $incomingDb -Destination $dashboardDb -Force
+    Remove-Item -LiteralPath $incomingDb -Force
     Write-Host "Synced dashboard_data.db from $($run.url)"
+    $healthScript = @'
+import sqlite3
+import sys
+
+with sqlite3.connect(sys.argv[1]) as connection:
+    health = dict(connection.execute("SELECT metric, value FROM PipelineHealth"))
+coverage = health.get("latest_market_coverage")
+coverage_text = f"{float(coverage):.1%}" if coverage else "unavailable"
+print(
+    f"Synced market date: {health.get('latest_market_date', 'unknown')[:10]}; "
+    f"shortlist date: {health.get('latest_shortlist_date', 'unknown')[:10]}; "
+    f"latest-date coverage: {coverage_text}"
+)
+'@
+    $health = $healthScript | python - $dashboardDb
+    Write-Host $health
 }
 
 if ($SyncOnly) {
