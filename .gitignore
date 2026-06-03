@@ -37,3 +37,8 @@ logs/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Robinhood/browser session material (including encrypted cache payloads)
+*.pickle
+*.pkl
+*.enc

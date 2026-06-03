@@ -2,6 +2,73 @@
 
 Automated stock research pipeline with a private local Streamlit dashboard.
 
+
+## Sync Code And Run The Cloud Pipeline
+
+From PowerShell in the repository, use the root launcher to push the branch you
+are actually on and dispatch the workflow:
+
+```powershell
+.\sync_and_run_stock_pipeline.cmd -Watch
+```
+
+You can also call the PowerShell script directly:
+
+```powershell
+.\scripts\sync_and_run_stock_pipeline.ps1 -Watch
+```
+
+The script detects the current branch with `git branch --show-current`, pushes
+that branch to `origin`, then runs `stock-run.yml` with GitHub CLI. This avoids
+the common `src refspec work does not match any` error that happens when the
+local branch is not named `work`. If you intentionally want to run a specific
+branch, pass it explicitly:
+
+```powershell
+.\sync_and_run_stock_pipeline.cmd -Branch main -Watch
+```
+
+If PowerShell says the script is not recognized, this helper file is not in your
+current checkout yet. Use the manual commands below from the repository root;
+they do not require the helper script and they avoid hard-coding a branch name:
+
+```powershell
+$branch = git branch --show-current
+if (-not $branch) { throw "No current branch is checked out." }
+git status --short --branch
+git fetch origin --prune
+git push -u origin HEAD
+& "C:\Program Files\GitHub CLI\gh.exe" workflow run stock-run.yml --repo Rnanda442/stockprediction2025 --ref $branch
+Start-Sleep -Seconds 5
+$runId = & "C:\Program Files\GitHub CLI\gh.exe" run list --repo Rnanda442/stockprediction2025 --workflow stock-run.yml --branch $branch --limit 1 --json databaseId --jq '.[0].databaseId'
+& "C:\Program Files\GitHub CLI\gh.exe" run watch $runId --repo Rnanda442/stockprediction2025
+```
+
+`gh run watch` needs a run id to avoid the interactive "Select a workflow run"
+prompt. The commands above look up the newest `stock-run.yml` run for your
+current branch and watch that exact run.
+
+
+### Check A Completed Action And Dashboard Output
+
+After a workflow run starts, this helper can verify the run status, download the
+`stock-analysis-outputs` artifact, summarize `dashboard_data.db`, and compare
+the new app data against your existing local `dashboard_data.db` when present:
+
+```powershell
+.\scripts\check_stock_action_outputs.ps1 -RunId 26853601559 -Wait
+```
+
+If you omit `-RunId`, the helper checks the latest `stock-run.yml` run:
+
+```powershell
+.\scripts\check_stock_action_outputs.ps1
+```
+
+The summary includes pipeline health, latest market and shortlist dates, exported
+row counts, shortlist contents, top watchlist rows, model-baseline evaluation,
+and shortlist/watchlist changes compared with the prior local dashboard DB.
+
 ## Dashboard
 
 Generate the compact read-only dashboard database:

@@ -42,6 +42,13 @@ def table_exists(table):
         ).fetchone() is not None
 
 
+def table_columns(table):
+    if not table_exists(table):
+        return set()
+    with connect() as conn:
+        return {row[1] for row in conn.execute(f'PRAGMA table_info("{table}")')}
+
+
 def health():
     frame = query("SELECT metric, value FROM PipelineHealth ORDER BY metric")
     return dict(zip(frame["metric"], frame["value"]))
@@ -291,12 +298,70 @@ def model_feature_importance(horizon_days):
 def latest_model_predictions(horizon_days, limit=50):
     if not table_exists("LatestModelPredictions"):
         return pd.DataFrame()
+    columns = table_columns("LatestModelPredictions")
+    optional_columns = []
+    for column in ("probability_bucket", "top_positive_drivers", "top_negative_drivers"):
+        if column in columns:
+            optional_columns.append(column)
+        else:
+            optional_columns.append(f"'' AS {column}")
     return query(
-        """
-        SELECT model_rank, ticker, probability_up, as_of_date
+        f"""
+        SELECT model_rank, ticker, probability_up,
+               {', '.join(optional_columns)}, as_of_date
         FROM LatestModelPredictions
         WHERE horizon_days=?
         ORDER BY model_rank
+        LIMIT ?
+        """,
+        (horizon_days, limit),
+    )
+
+
+def trade_research_queue(horizon_days, limit=25):
+    if not table_exists("LatestModelPredictions"):
+        return pd.DataFrame()
+    columns = table_columns("LatestModelPredictions")
+    probability_bucket = (
+        "model.probability_bucket"
+        if "probability_bucket" in columns
+        else "'' AS probability_bucket"
+    )
+    positive_drivers = (
+        "model.top_positive_drivers"
+        if "top_positive_drivers" in columns
+        else "'' AS top_positive_drivers"
+    )
+    negative_drivers = (
+        "model.top_negative_drivers"
+        if "top_negative_drivers" in columns
+        else "'' AS top_negative_drivers"
+    )
+    return query(
+        f"""
+        SELECT watch.rank AS watchlist_rank,
+               model.model_rank,
+               watch.ticker,
+               model.probability_up,
+               {probability_bucket},
+               watch.confidence,
+               watch.recommendation,
+               watch.suggested_horizon,
+               watch.is_persistent,
+               watch.trend_slope_60d,
+               watch.trend_r2_60d,
+               watch.vol_60d,
+               watch.dollar_vol_20d,
+               watch.total_return,
+               {positive_drivers},
+               {negative_drivers},
+               model.as_of_date
+        FROM LatestWatchlist AS watch
+        INNER JOIN LatestModelPredictions AS model
+          ON model.ticker = watch.ticker
+         AND model.horizon_days = ?
+        WHERE model.probability_up >= 0.55
+        ORDER BY model.probability_up DESC, watch.confidence DESC, watch.rank
         LIMIT ?
         """,
         (horizon_days, limit),

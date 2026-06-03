@@ -93,6 +93,27 @@ def safe_auc(labels, probabilities):
     return float(roc_auc_score(labels, probabilities)) if labels.nunique() > 1 else np.nan
 
 
+def describe_probability(probability):
+    if probability >= 0.70:
+        return "strong bullish research signal"
+    if probability >= 0.60:
+        return "bullish research signal"
+    if probability >= 0.55:
+        return "modest bullish lean"
+    if probability <= 0.40:
+        return "bearish/avoid signal"
+    return "neutral / watch only"
+
+
+def feature_driver_text(features, contributions, positive=True, limit=3):
+    rows = sorted(zip(features, contributions), key=lambda row: row[1], reverse=positive)
+    if positive:
+        rows = [row for row in rows if row[1] > 0]
+    else:
+        rows = [row for row in rows if row[1] < 0]
+    return "; ".join(f"{feature} ({value:+.2f})" for feature, value in rows[:limit])
+
+
 def latest_predictions(model, frame, horizon, features):
     latest = (
         frame.sort_values(["ticker", "begins_at"])
@@ -100,12 +121,37 @@ def latest_predictions(model, frame, horizon, features):
         .tail(1)[["begins_at", "ticker", *features]]
         .copy()
     )
-    probabilities = model.predict_proba(latest[list(features)])[:, 1]
+    feature_frame = latest[list(features)]
+    probabilities = model.predict_proba(feature_frame)[:, 1]
+    imputer = model.named_steps["simpleimputer"]
+    scaler = model.named_steps["standardscaler"]
+    classifier = model.named_steps["sgdclassifier"]
+    standardized = scaler.transform(imputer.transform(feature_frame))
+    contributions = standardized * classifier.coef_[0]
+
     latest = latest.rename(columns={"begins_at": "as_of_date"})
     latest["horizon_days"] = horizon
     latest["probability_up"] = probabilities
+    latest["probability_bucket"] = latest["probability_up"].map(describe_probability)
     latest["model_rank"] = latest["probability_up"].rank(method="first", ascending=False).astype(int)
-    return latest[["as_of_date", "ticker", "horizon_days", "model_rank", "probability_up"]]
+    latest["top_positive_drivers"] = [
+        feature_driver_text(features, row, positive=True) for row in contributions
+    ]
+    latest["top_negative_drivers"] = [
+        feature_driver_text(features, row, positive=False) for row in contributions
+    ]
+    return latest[
+        [
+            "as_of_date",
+            "ticker",
+            "horizon_days",
+            "model_rank",
+            "probability_up",
+            "probability_bucket",
+            "top_positive_drivers",
+            "top_negative_drivers",
+        ]
+    ]
 
 
 def build_horizon(frame, horizon):

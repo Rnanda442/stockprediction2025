@@ -267,6 +267,8 @@ def render_guide():
             ("3D movement speed", "Distance traveled between saved feature-space snapshots."),
             ("3D movement acceleration", "Change in feature-space speed between saved snapshots."),
             ("Baseline probability up", "Logistic model estimate trained on earlier dates only. Treat it as a research ranking, not a promise."),
+            ("Model drivers", "Largest standardized feature contributions behind a model probability for the selected horizon."),
+            ("Trade research queue", "Overlap between the heuristic watchlist and model probabilities. It is a due-diligence list, not an order ticket."),
         ],
         columns=["Variable", "What it means"],
     )
@@ -275,8 +277,10 @@ def render_guide():
     st.subheader("Important limits")
     st.warning(
         "The confidence score is a transparent heuristic score, not a calibrated probability. "
+        "Model probabilities are baseline research outputs and can be wrong. "
         "Monte Carlo scenarios describe what could happen if historical return behavior persisted; "
-        "they do not know future news, earnings surprises, or market regime shifts."
+        "they do not know future news, earnings surprises, or market regime shifts. "
+        "The dashboard does not place trades; review liquidity, position size, stops, news, earnings, and account risk before any manual order."
     )
 
 
@@ -501,6 +505,62 @@ def render_model_lab():
             "not proof that a feature causes future movement."
         )
 
+    st.subheader("Model + watchlist trade research queue")
+    st.caption(
+        "These are tickers that appear in the ranked watchlist and have a model probability "
+        "of at least 55% for the selected horizon. Use this as a manual due-diligence queue; "
+        "the app does not size positions or submit orders."
+    )
+    queue = data.trade_research_queue(horizon)
+    if queue.empty:
+        st.info("No watchlist names currently clear the model-probability queue for this horizon.")
+    else:
+        queue_display = queue.rename(
+            columns={
+                "watchlist_rank": "Watchlist rank",
+                "model_rank": "Model rank",
+                "ticker": "Ticker",
+                "probability_up": "Baseline probability up",
+                "probability_bucket": "Model read",
+                "confidence": "Heuristic confidence",
+                "recommendation": "Watchlist guidance",
+                "suggested_horizon": "Holding window",
+                "is_persistent": "Stayed ranked",
+                "trend_slope_60d": "Trend slope",
+                "trend_r2_60d": "Trend fit",
+                "vol_60d": "60d volatility",
+                "dollar_vol_20d": "Dollar volume",
+                "total_return": "Total return",
+                "top_positive_drivers": "Positive model drivers",
+                "top_negative_drivers": "Negative model drivers",
+                "as_of_date": "As of",
+            }
+        )
+        queue_display["Stayed ranked"] = queue_display["Stayed ranked"].map({1: "yes", 0: "new"})
+        queue_display["Baseline probability up"] = queue_display["Baseline probability up"] * 100
+        for column in ("60d volatility", "Total return"):
+            queue_display[column] = queue_display[column] * 100
+        st.dataframe(
+            queue_display,
+            hide_index=True,
+            use_container_width=True,
+            column_config={
+                "Baseline probability up": st.column_config.ProgressColumn(
+                    format="%.1f%%",
+                    min_value=0.0,
+                    max_value=100.0,
+                ),
+                "Heuristic confidence": st.column_config.ProgressColumn(
+                    format="%.1f",
+                    min_value=0.0,
+                    max_value=100.0,
+                ),
+                "60d volatility": st.column_config.NumberColumn(format="%.2f%%"),
+                "Total return": st.column_config.NumberColumn(format="%.1f%%"),
+                "Dollar volume": st.column_config.NumberColumn(format="$%.0f"),
+            },
+        )
+
     st.subheader("Latest model research ranking")
     predictions = data.latest_model_predictions(horizon)
     if predictions.empty:
@@ -511,6 +571,9 @@ def render_model_lab():
             "model_rank": "Rank",
             "ticker": "Ticker",
             "probability_up": "Baseline probability up",
+            "probability_bucket": "Model read",
+            "top_positive_drivers": "Positive model drivers",
+            "top_negative_drivers": "Negative model drivers",
             "as_of_date": "As of",
         }
     )

@@ -75,6 +75,19 @@ def check_table(relative_db, table, min_rows=1):
     return True
 
 
+def check_table_columns(relative_db, table, required_columns):
+    path = ROOT / relative_db
+    if not has_tables(path, table):
+        return False
+    with sqlite3.connect(path) as conn:
+        columns = {row[1] for row in conn.execute(f'PRAGMA table_info("{table}")')}
+    missing = [column for column in required_columns if column not in columns]
+    if missing:
+        return fail(f"{relative_db}:{table} is missing columns: {', '.join(missing)}")
+    print(f"{relative_db}:{table}: required columns present={', '.join(required_columns)}")
+    return True
+
+
 def parse_db_datetime(value):
     if not value:
         return None
@@ -129,8 +142,26 @@ def check_span_table(relative_db, table, required_spans=EXPECTED_SPANS):
     return ok
 
 
+def has_tables(path, *tables):
+    if not path.exists() or path.stat().st_size == 0:
+        return fail(f"{path.relative_to(ROOT)} is missing or empty")
+    with sqlite3.connect(path) as conn:
+        existing = {
+            row[0]
+            for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        }
+    missing = [table for table in tables if table not in existing]
+    if missing:
+        return fail(
+            f"{path.relative_to(ROOT)} is missing required tables: {', '.join(missing)}"
+        )
+    return True
+
+
 def check_historical_quality():
     path = ROOT / "historicals.db"
+    if not has_tables(path, "HistoricalPrices"):
+        return False
     with sqlite3.connect(path) as conn:
         duplicate_keys = conn.execute(
             """
@@ -232,6 +263,8 @@ def check_historical_quality():
 
 def check_vectorized_quality():
     path = ROOT / "vectorized.db"
+    if not has_tables(path, "VectorizedFeatures", "FeatureSummary"):
+        return False
     with sqlite3.connect(path) as conn:
         duplicate_keys = conn.execute(
             """
@@ -284,9 +317,13 @@ def check_vectorized_quality():
 
 
 def check_output_date_alignment():
-    with sqlite3.connect(ROOT / "historicals.db") as history, sqlite3.connect(
-        ROOT / "vectorized.db"
-    ) as vectorized:
+    historicals = ROOT / "historicals.db"
+    vectorized = ROOT / "vectorized.db"
+    if not has_tables(historicals, "HistoricalPrices") or not has_tables(
+        vectorized, "WinnerUniverse", "WatchlistHistory"
+    ):
+        return False
+    with sqlite3.connect(historicals) as history, sqlite3.connect(vectorized) as vectorized:
         latest_market_date = history.execute(
             "SELECT MAX(begins_at) FROM HistoricalPrices WHERE span='5year'"
         ).fetchone()[0]
@@ -370,6 +407,24 @@ def main():
         check_table("dashboard_data.db", "ModelEvaluation", min_rows=3),
         check_table("dashboard_data.db", "ModelFeatureImportance", min_rows=1),
         check_table("dashboard_data.db", "LatestModelPredictions", min_rows=1),
+        check_table_columns(
+            "vectorized.db",
+            "LatestModelPredictions",
+            [
+                "probability_bucket",
+                "top_positive_drivers",
+                "top_negative_drivers",
+            ],
+        ),
+        check_table_columns(
+            "dashboard_data.db",
+            "LatestModelPredictions",
+            [
+                "probability_bucket",
+                "top_positive_drivers",
+                "top_negative_drivers",
+            ],
+        ),
         check_csv(
             "analytics/model_evaluation.csv",
             required_columns=[
@@ -390,6 +445,15 @@ def main():
             required_columns=["horizon", "evaluated_picks", "average_return", "win_rate"],
             min_rows=4,
             nonblank_columns=["horizon", "evaluated_picks"],
+        ),
+        check_csv(
+            "analytics/latest_model_predictions.csv",
+            required_columns=[
+                "ticker", "horizon_days", "model_rank", "probability_up",
+                "probability_bucket", "top_positive_drivers", "top_negative_drivers",
+            ],
+            min_rows=1,
+            nonblank_columns=["ticker", "horizon_days", "model_rank", "probability_bucket"],
         ),
         check_span_table("historicals.db", "HistoricalPrices"),
         check_span_table("vectorized.db", "VectorizedFeatures"),

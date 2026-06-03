@@ -94,15 +94,6 @@ jobs:
             scikit-learn
           python -m ipykernel install --user --name python3
 
-      - name: Restore legacy root database cache
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            *.db
-          key: stock-dbs-${{ github.ref_name }}-${{ github.run_id }}
-          restore-keys: |
-            stock-dbs-${{ github.ref_name }}-
-
       - name: Restore generated databases
         uses: actions/cache/restore@v4
         with:
@@ -137,6 +128,10 @@ jobs:
       - name: Inspect normalized pipeline state
         run: |
           python scripts/inspect_pipeline_state.py
+
+      - name: Check pipeline safety invariants
+        run: |
+          python scripts/check_pipeline_safety.py
 
       - name: Run notebook
         run: |
@@ -220,7 +215,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
+          # Generated databases, analytics, logs, and auth caches are artifacts or
+          # caches. Stage updates to already tracked files only so a credential or
+          # encrypted session can never become a new committed file.
+          git add -u -- .
           if git diff --cached --quiet; then
             echo "No changes to commit."
             exit 0
