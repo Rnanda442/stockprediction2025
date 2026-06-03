@@ -105,6 +105,7 @@ The dashboard includes:
 - Monte Carlo scenario fan and walk-forward signal evaluation
 - leakage-controlled 5d, 20d, and 60d logistic model baselines with a held-out time window
 - Model Lab with visible training cutoff, embargo, test range, feature weights, and latest rankings
+- proposed paper-trade review notes saved to a local ignored ledger at `data/paper_trade_ledger.csv`
 - guarded GitHub Actions rerun controls for cloud pipeline parameters
 - interactive 3D stock-universe map with visible filter outcomes
 - time-aware 3D map snapshots with date scrolling, trails, speed, and acceleration

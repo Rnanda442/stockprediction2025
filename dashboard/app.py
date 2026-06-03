@@ -8,6 +8,7 @@ import streamlit as st
 from dashboard import actions
 from dashboard.auth import require_login
 from dashboard import data
+from dashboard import paper_trades
 from dashboard import research
 
 
@@ -445,6 +446,122 @@ def render_pipeline_controls():
             st.link_button("Open GitHub Actions run", url)
 
 
+def render_paper_trade_review(queue, horizon):
+    st.subheader("Proposed paper-trade review")
+    st.caption(
+        "Record manual review notes for queue ideas. This writes a local paper ledger "
+        "only; it does not place trades or contact Robinhood."
+    )
+    if queue.empty:
+        st.info("The paper-trade review unlocks when the queue has at least one idea.")
+        return
+
+    choices = queue["ticker"].tolist()
+    selected_ticker = st.selectbox("Review ticker", choices)
+    selected = queue[queue["ticker"] == selected_ticker].iloc[0]
+    reference_price = pd.to_numeric(selected.get("entry_price"), errors="coerce")
+
+    metrics = st.columns(4)
+    metrics[0].metric("Watchlist rank", int(selected["watchlist_rank"]))
+    metrics[1].metric("Model rank", int(selected["model_rank"]))
+    metrics[2].metric("Probability up", percent(selected["probability_up"]))
+    metrics[3].metric("Confidence", f"{selected['confidence']:.1f}")
+
+    with st.form("paper_trade_review"):
+        left, right = st.columns(2)
+        status = left.selectbox("Review status", paper_trades.STATUS_OPTIONS)
+        direction = right.selectbox("Paper direction", paper_trades.DIRECTION_OPTIONS)
+        planned_entry = left.number_input(
+            "Planned entry",
+            min_value=0.0,
+            value=0.0 if pd.isna(reference_price) else float(reference_price),
+            step=0.01,
+            format="%.2f",
+        )
+        stop_loss = right.number_input("Stop loss", min_value=0.0, value=0.0, step=0.01, format="%.2f")
+        target_price = left.number_input("Target price", min_value=0.0, value=0.0, step=0.01, format="%.2f")
+        paper_quantity = right.number_input("Paper quantity", min_value=0, value=0, step=1)
+        risk_dollars = 0.0
+        if planned_entry > 0 and stop_loss > 0 and paper_quantity > 0:
+            risk_dollars = abs(planned_entry - stop_loss) * paper_quantity
+        st.metric("Planned paper risk", f"${risk_dollars:,.2f}")
+        notes = st.text_area("Review notes", height=100)
+        submitted = st.form_submit_button("Save paper review", type="primary")
+
+    if submitted:
+        path = paper_trades.save_review(
+            {
+                "ticker": selected_ticker,
+                "horizon_days": int(horizon),
+                "review_status": status,
+                "direction": direction,
+                "watchlist_rank": int(selected["watchlist_rank"]),
+                "model_rank": int(selected["model_rank"]),
+                "probability_up": float(selected["probability_up"]),
+                "confidence": float(selected["confidence"]),
+                "reference_price": "" if pd.isna(reference_price) else float(reference_price),
+                "planned_entry": float(planned_entry),
+                "stop_loss": float(stop_loss),
+                "target_price": float(target_price),
+                "paper_quantity": int(paper_quantity),
+                "risk_dollars": float(risk_dollars),
+                "notes": notes,
+            }
+        )
+        st.success(f"Saved paper review to {path}")
+
+    ledger = paper_trades.load_ledger()
+    if ledger.empty:
+        return
+    st.subheader("Paper review ledger")
+    display = ledger.head(50).rename(
+        columns={
+            "updated_at": "Updated",
+            "ticker": "Ticker",
+            "horizon_days": "Horizon",
+            "review_status": "Status",
+            "direction": "Direction",
+            "probability_up": "Probability up",
+            "confidence": "Confidence",
+            "planned_entry": "Planned entry",
+            "stop_loss": "Stop loss",
+            "target_price": "Target",
+            "paper_quantity": "Qty",
+            "risk_dollars": "Paper risk",
+            "notes": "Notes",
+        }
+    )
+    st.dataframe(
+        display[
+            [
+                "Updated",
+                "Ticker",
+                "Horizon",
+                "Status",
+                "Direction",
+                "Probability up",
+                "Confidence",
+                "Planned entry",
+                "Stop loss",
+                "Target",
+                "Qty",
+                "Paper risk",
+                "Notes",
+            ]
+        ],
+        hide_index=True,
+        use_container_width=True,
+        column_config={
+            "Probability up": st.column_config.NumberColumn(format="%.3f"),
+            "Confidence": st.column_config.NumberColumn(format="%.1f"),
+            "Planned entry": st.column_config.NumberColumn(format="$%.2f"),
+            "Stop loss": st.column_config.NumberColumn(format="$%.2f"),
+            "Target": st.column_config.NumberColumn(format="$%.2f"),
+            "Paper risk": st.column_config.NumberColumn(format="$%.2f"),
+        },
+    )
+
+
 def render_model_lab():
     st.title("Model Lab")
     st.caption(
@@ -560,6 +677,7 @@ def render_model_lab():
                 "Dollar volume": st.column_config.NumberColumn(format="$%.0f"),
             },
         )
+    render_paper_trade_review(queue, horizon)
 
     st.subheader("Latest model research ranking")
     predictions = data.latest_model_predictions(horizon)

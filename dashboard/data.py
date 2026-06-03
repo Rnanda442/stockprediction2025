@@ -353,6 +353,7 @@ def trade_research_queue(horizon_days, limit=25):
                watch.vol_60d,
                watch.dollar_vol_20d,
                watch.total_return,
+               watch.entry_price,
                {positive_drivers},
                {negative_drivers},
                model.as_of_date
