@@ -2,6 +2,17 @@
 
 Automated stock research pipeline with a private local Streamlit dashboard.
 
+## Product Roadmap
+
+The product direction and next-step checklist are tracked in:
+
+- `docs/PRODUCT_DECISIONS.md`
+- `docs/ROADMAP_CHECKLIST.md`
+
+Current direction: build this into a personal Robinhood-aware trading assistant,
+starting with automatic paper trading and serious backtesting before any real
+trade execution.
+
 
 ## Sync Code And Run The Cloud Pipeline
 

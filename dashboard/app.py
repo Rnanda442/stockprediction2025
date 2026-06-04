@@ -116,6 +116,260 @@ def render_overview():
     )
 
 
+def _latest_portfolio_frame():
+    snapshot_text = portfolio_replay.latest_snapshot_text()
+    cash = portfolio_replay.latest_snapshot_cash()
+    if not snapshot_text.strip():
+        return pd.DataFrame(), cash, 0.0
+
+    holdings = portfolio_replay.parse_holdings(snapshot_text)
+    if holdings.empty:
+        return holdings, cash, cash
+
+    latest_prices = data.query(
+        """
+        WITH latest AS (
+            SELECT ticker, MAX(begins_at) AS begins_at
+            FROM RecentPrices
+            GROUP BY ticker
+        )
+        SELECT prices.ticker, prices.close_price
+        FROM RecentPrices AS prices
+        INNER JOIN latest
+          ON latest.ticker = prices.ticker
+         AND latest.begins_at = prices.begins_at
+        """
+    )
+    holdings = holdings.merge(latest_prices, on="ticker", how="left")
+    holdings["close_price"] = pd.to_numeric(holdings["close_price"], errors="coerce")
+    holdings["market_value"] = holdings["quantity"] * holdings["close_price"]
+    invested = holdings["market_value"].fillna(0.0).sum()
+    portfolio_value = float(invested + cash)
+    if portfolio_value > 0:
+        holdings["portfolio_weight"] = holdings["market_value"] / portfolio_value
+    else:
+        holdings["portfolio_weight"] = 0.0
+    return holdings, cash, portfolio_value
+
+
+def _model_queue_summary():
+    frames = []
+    for horizon in (5, 20, 60):
+        queue = data.trade_research_queue(horizon)
+        if queue.empty:
+            continue
+        queue = queue.copy()
+        queue["model_horizon_days"] = horizon
+        frames.append(queue)
+    if not frames:
+        return pd.DataFrame(
+            columns=[
+                "ticker",
+                "model_probability_up",
+                "model_rank",
+                "model_horizon_days",
+                "top_positive_drivers",
+                "top_negative_drivers",
+            ]
+        )
+
+    queue = pd.concat(frames, ignore_index=True)
+    queue = queue.sort_values(["ticker", "probability_up"], ascending=[True, False])
+    best = queue.groupby("ticker", as_index=False).first()
+    return best.rename(
+        columns={
+            "probability_up": "model_probability_up",
+            "model_rank": "model_rank",
+            "model_horizon_days": "model_horizon_days",
+        }
+    )[
+        [
+            "ticker",
+            "model_probability_up",
+            "model_rank",
+            "model_horizon_days",
+            "top_positive_drivers",
+            "top_negative_drivers",
+        ]
+    ]
+
+
+def _decision_action(row):
+    is_holding = bool(row.get("is_holding"))
+    rank = pd.to_numeric(row.get("rank"), errors="coerce")
+    probability = pd.to_numeric(row.get("model_probability_up"), errors="coerce")
+    confidence = pd.to_numeric(row.get("confidence"), errors="coerce")
+
+    has_strong_model = not pd.isna(probability) and probability >= 0.60
+    has_good_watchlist = not pd.isna(rank) and rank <= 10
+    has_confidence = pd.isna(confidence) or confidence >= 60
+
+    if is_holding and has_strong_model and has_confidence:
+        return "hold / consider add"
+    if is_holding and has_good_watchlist:
+        return "hold"
+    if is_holding:
+        return "review reduce"
+    if has_strong_model and has_good_watchlist and has_confidence:
+        return "paper buy candidate"
+    if has_good_watchlist:
+        return "watch"
+    return "avoid for now"
+
+
+def _decision_reason(row):
+    parts = []
+    rank = pd.to_numeric(row.get("rank"), errors="coerce")
+    probability = pd.to_numeric(row.get("model_probability_up"), errors="coerce")
+    if not pd.isna(rank):
+        parts.append(f"watchlist rank {int(rank)}")
+    if not pd.isna(probability):
+        horizon = row.get("model_horizon_days")
+        parts.append(f"{probability:.1%} model probability over {int(horizon)}d")
+    if row.get("is_holding"):
+        weight = pd.to_numeric(row.get("portfolio_weight"), errors="coerce")
+        if not pd.isna(weight):
+            parts.append(f"already held at {weight:.1%} of portfolio")
+    return "; ".join(parts) if parts else "not enough signal yet"
+
+
+def _paper_quantity(row, portfolio_value):
+    if portfolio_value <= 0:
+        return None
+    entry = pd.to_numeric(row.get("entry_price"), errors="coerce")
+    volatility = pd.to_numeric(row.get("vol_60d"), errors="coerce")
+    if pd.isna(entry) or entry <= 0:
+        return None
+    stop_pct = 0.08
+    if not pd.isna(volatility) and volatility > 0:
+        stop_pct = min(0.18, max(0.05, volatility * 2.0))
+    risk_budget = portfolio_value * 0.01
+    risk_per_share = entry * stop_pct
+    if risk_per_share <= 0:
+        return None
+    quantity = int(risk_budget // risk_per_share)
+    return max(quantity, 0)
+
+
+def render_daily_decision_board():
+    st.title("Daily Decision Board")
+    st.caption("Paper decisions first. Live trading stays disabled until backtests, paper results, and trading-limit guards are strong.")
+    health = data.health()
+    render_health_warnings(health)
+    st.warning(
+        "Real trade execution is not enabled here. The board is a review and paper-trading surface, "
+        "especially while PDT, buying-power, and account-type constraints are still being built."
+    )
+
+    watch = data.watchlist()
+    if watch.empty:
+        st.info("No ranked watchlist is available. Run the pipeline to initialize daily decisions.")
+        return
+
+    holdings, cash, portfolio_value = _latest_portfolio_frame()
+    model_summary = _model_queue_summary()
+    shortlist = data.shortlist()
+    shortlist_tickers = set(shortlist["ticker"].str.upper()) if not shortlist.empty else set()
+
+    board = watch.head(50).copy()
+    board["ticker"] = board["ticker"].str.upper()
+    if "entry_price" not in board.columns:
+        board["entry_price"] = None
+    board = board.merge(model_summary, on="ticker", how="left")
+    if not holdings.empty:
+        board = board.merge(
+            holdings[["ticker", "quantity", "market_value", "portfolio_weight"]],
+            on="ticker",
+            how="left",
+        )
+    else:
+        board["quantity"] = 0.0
+        board["market_value"] = 0.0
+        board["portfolio_weight"] = 0.0
+
+    board["quantity"] = pd.to_numeric(board["quantity"], errors="coerce").fillna(0.0)
+    board["market_value"] = pd.to_numeric(board["market_value"], errors="coerce").fillna(0.0)
+    board["portfolio_weight"] = pd.to_numeric(board["portfolio_weight"], errors="coerce").fillna(0.0)
+    board["is_holding"] = board["quantity"] > 0
+    board["in_shortlist"] = board["ticker"].isin(shortlist_tickers)
+    board["decision"] = board.apply(_decision_action, axis=1)
+    board["why"] = board.apply(_decision_reason, axis=1)
+    board["paper_quantity_1pct_risk"] = board.apply(
+        lambda row: _paper_quantity(row, portfolio_value), axis=1
+    )
+
+    cols = st.columns(5)
+    cols[0].metric("Portfolio value", money(portfolio_value) if portfolio_value else "no snapshot")
+    cols[1].metric("Cash snapshot", money(cash))
+    cols[2].metric("Held tickers found", f"{int(board['is_holding'].sum()):,}")
+    cols[3].metric("Paper buy candidates", f"{int((board['decision'] == 'paper buy candidate').sum()):,}")
+    cols[4].metric("Hold / add reviews", f"{int((board['decision'] == 'hold / consider add').sum()):,}")
+
+    st.subheader("Best next actions")
+    priority = {
+        "hold / consider add": 0,
+        "paper buy candidate": 1,
+        "hold": 2,
+        "watch": 3,
+        "review reduce": 4,
+        "avoid for now": 5,
+    }
+    board["decision_priority"] = board["decision"].map(priority).fillna(9)
+    display = board.sort_values(
+        ["decision_priority", "rank", "model_probability_up"],
+        ascending=[True, True, False],
+    ).head(25)
+    display = display.rename(
+        columns={
+            "rank": "Watchlist rank",
+            "ticker": "Ticker",
+            "decision": "Action",
+            "why": "Why",
+            "confidence": "Watchlist confidence",
+            "model_probability_up": "Model probability",
+            "model_horizon_days": "Model horizon",
+            "entry_price": "Reference price",
+            "paper_quantity_1pct_risk": "Paper qty at 1% risk",
+            "portfolio_weight": "Portfolio weight",
+            "in_shortlist": "In shortlist",
+        }
+    )
+    st.dataframe(
+        display[
+            [
+                "Ticker",
+                "Action",
+                "Why",
+                "Watchlist rank",
+                "Watchlist confidence",
+                "Model probability",
+                "Model horizon",
+                "Reference price",
+                "Paper qty at 1% risk",
+                "Portfolio weight",
+                "In shortlist",
+            ]
+        ],
+        hide_index=True,
+        use_container_width=True,
+        column_config={
+            "Model probability": st.column_config.NumberColumn(format="%.1f%%"),
+            "Reference price": st.column_config.NumberColumn(format="$%.2f"),
+            "Portfolio weight": st.column_config.NumberColumn(format="%.1f%%"),
+        },
+    )
+
+    st.subheader("What this board does next")
+    st.markdown(
+        """
+        - Use these actions as the input queue for automatic paper trading.
+        - Add PDT, buying-power, and account-type checks before live trading.
+        - Keep every hold, buy, reduce, and rejected idea in an audit trail.
+        - Backtest this decision logic before trusting it with real orders.
+        """
+    )
+
+
 def render_performance():
     st.title("Shortlist Performance")
     st.caption("Forward returns populate as future trading sessions arrive.")
@@ -1158,6 +1412,7 @@ page = st.sidebar.radio(
     "Navigate",
     (
         "Overview",
+        "Daily Decision Board",
         "How It Works",
         "Research Lab",
         "Model Lab",
@@ -1176,6 +1431,8 @@ st.sidebar.caption("Private stock research workspace")
 try:
     if page == "Overview":
         render_overview()
+    elif page == "Daily Decision Board":
+        render_daily_decision_board()
     elif page == "How It Works":
         render_guide()
     elif page == "Research Lab":
