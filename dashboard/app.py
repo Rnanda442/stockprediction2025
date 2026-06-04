@@ -9,6 +9,7 @@ from dashboard import actions
 from dashboard.auth import require_login
 from dashboard import data
 from dashboard import paper_trades
+from dashboard import portfolio_replay
 from dashboard import research
 
 
@@ -710,6 +711,166 @@ def render_model_lab():
     )
 
 
+def render_portfolio_replay():
+    st.title("Portfolio Replay")
+    st.caption(
+        "Replay rule-based portfolio decisions over recent history. This is a backward-looking "
+        "walk-forward test: each rebalance uses only price and volume data available before that date."
+    )
+    st.warning(
+        "This is not a future-return prediction and it does not place trades. It compares what "
+        "would have happened recently if the rule had rotated a simulated portfolio."
+    )
+
+    with st.expander("How this replay works", expanded=True):
+        st.markdown(
+            """
+            1. Enter a starting portfolio as `TICKER, quantity`.
+            2. The replay starts N trading days ago and computes the value of simply holding those shares.
+            3. On each rebalance date, the strategy ranks liquid stocks by trailing return divided by volatility.
+            4. The strategy rotates into the top ranked names and holds until the next rebalance.
+            5. The chart compares the simulated strategy against your starting holdings over the same dates.
+
+            The first version uses manual holdings. The next step is a read-only Robinhood snapshot table so this page can load your actual account positions automatically.
+            """
+        )
+
+    snapshot_defaults = portfolio_replay.latest_snapshot_text()
+    sample_defaults = "\n".join(f"{row.ticker}, 1" for row in data.shortlist().head(5).itertuples())
+    defaults = snapshot_defaults or sample_defaults
+    if snapshot_defaults:
+        st.success("Loaded starting holdings from data/robinhood_portfolio_snapshot.csv.")
+    else:
+        st.info(
+            "No Robinhood portfolio snapshot file was found yet. The starting holdings below "
+            "are editable sample holdings from the latest shortlist."
+        )
+    holdings_text = st.text_area(
+        "Starting holdings",
+        value=defaults,
+        height=140,
+        help="Use one holding per line, for example: AAPL, 3",
+    )
+
+    controls = st.columns(3)
+    replay_days = controls[0].slider("Replay window (trading days)", 10, 120, 30, 5)
+    lookback_days = controls[1].slider("Signal lookback", 20, 120, 60, 5)
+    rebalance_days = controls[2].slider("Rebalance every N trading days", 1, 20, 5, 1)
+    controls = st.columns(4)
+    snapshot_cash = portfolio_replay.latest_snapshot_cash() if snapshot_defaults else 0.0
+    max_positions = controls[0].slider("Max strategy positions", 1, 20, 5, 1)
+    minimum_dollar_volume = controls[1].number_input(
+        "Minimum dollar volume",
+        min_value=0,
+        value=2_000_000,
+        step=500_000,
+    )
+    maximum_volatility = controls[2].number_input(
+        "Maximum daily volatility",
+        min_value=0.001,
+        max_value=0.500,
+        value=0.080,
+        step=0.005,
+        format="%.3f",
+    )
+    cash = controls[3].number_input("Starting cash", min_value=0.0, value=float(snapshot_cash), step=100.0)
+
+    config = portfolio_replay.ReplayConfig(
+        lookback_days=int(lookback_days),
+        replay_days=int(replay_days),
+        rebalance_days=int(rebalance_days),
+        max_positions=int(max_positions),
+        minimum_dollar_volume=float(minimum_dollar_volume),
+        maximum_volatility=float(maximum_volatility),
+        cash=float(cash),
+    )
+    try:
+        result = portfolio_replay.replay(holdings_text, config)
+    except ValueError as exc:
+        st.error(str(exc))
+        return
+
+    if result.get("error"):
+        st.info(result["error"])
+        return
+
+    curve = result["curve"]
+    trades = result["trades"]
+    candidates = result["candidates"]
+    final = curve.iloc[-1]
+    actual_start = float(curve["actual_hold"].iloc[0])
+    strategy_start = float(curve["strategy"].iloc[0])
+    actual_end = float(final["actual_hold"])
+    strategy_end = float(final["strategy"])
+    edge = strategy_end - actual_end
+
+    metrics = st.columns(5)
+    metrics[0].metric("Replay dates", f"{str(result['start_date'])[:10]} to {str(result['end_date'])[:10]}")
+    metrics[1].metric("Hold result", money(actual_end - actual_start), percent(actual_end / actual_start - 1.0))
+    metrics[2].metric("Strategy result", money(strategy_end - strategy_start), percent(strategy_end / strategy_start - 1.0))
+    metrics[3].metric("Strategy vs hold", money(edge), percent(final["strategy_edge_pct"]))
+    metrics[4].metric("Rebalances", f"{len(trades):,}")
+
+    chart = curve[["date", "actual_hold", "strategy"]].rename(
+        columns={"actual_hold": "Actual hold", "strategy": "Strategy replay"}
+    )
+    chart = chart.melt("date", var_name="Portfolio", value_name="Value")
+    st.plotly_chart(
+        px.line(
+            chart,
+            x="date",
+            y="Value",
+            color="Portfolio",
+            title="Actual hold vs strategy replay",
+        ),
+        use_container_width=True,
+    )
+
+    if not trades.empty:
+        st.subheader("Replay trades")
+        display_trades = trades.copy()
+        display_trades["date"] = display_trades["date"].astype(str).str[:10]
+        st.dataframe(
+            display_trades.rename(
+                columns={
+                    "date": "Date",
+                    "action": "Action",
+                    "tickers": "Held after rebalance",
+                    "entered": "Entered",
+                    "exited": "Exited",
+                    "portfolio_value": "Portfolio value",
+                }
+            ),
+            hide_index=True,
+            use_container_width=True,
+            column_config={"Portfolio value": st.column_config.NumberColumn(format="$%.2f")},
+        )
+
+    st.subheader("Current rule candidates")
+    if candidates.empty:
+        st.info("No candidates pass the current replay filters.")
+    else:
+        display = candidates.rename(
+            columns={
+                "ticker": "Ticker",
+                "score": "Rule score",
+                "trailing_return": "Trailing return",
+                "volatility": "Daily volatility",
+                "dollar_volume": "Dollar volume",
+            }
+        )
+        st.dataframe(
+            display,
+            hide_index=True,
+            use_container_width=True,
+            column_config={
+                "Trailing return": st.column_config.NumberColumn(format="%.1%"),
+                "Daily volatility": st.column_config.NumberColumn(format="%.2%"),
+                "Dollar volume": st.column_config.NumberColumn(format="$%.0f"),
+            },
+        )
+
+
 def render_explorer():
     st.title("Ticker Explorer")
     available = data.tickers()
@@ -1000,6 +1161,7 @@ page = st.sidebar.radio(
         "How It Works",
         "Research Lab",
         "Model Lab",
+        "Portfolio Replay",
         "Pipeline Controls",
         "Ranked Watchlist",
         "3D Stock Universe",
@@ -1020,6 +1182,8 @@ try:
         render_research_lab()
     elif page == "Model Lab":
         render_model_lab()
+    elif page == "Portfolio Replay":
+        render_portfolio_replay()
     elif page == "Pipeline Controls":
         render_pipeline_controls()
     elif page == "Ranked Watchlist":

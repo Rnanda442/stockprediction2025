@@ -106,6 +106,7 @@ The dashboard includes:
 - leakage-controlled 5d, 20d, and 60d logistic model baselines with a held-out time window
 - Model Lab with visible training cutoff, embargo, test range, feature weights, and latest rankings
 - proposed paper-trade review notes saved to a local ignored ledger at `data/paper_trade_ledger.csv`
+- Portfolio Replay for comparing recent walk-forward rotation rules against a starting portfolio
 - guarded GitHub Actions rerun controls for cloud pipeline parameters
 - interactive 3D stock-universe map with visible filter outcomes
 - time-aware 3D map snapshots with date scrolling, trails, speed, and acceleration
@@ -120,6 +121,16 @@ The dashboard includes:
 The scheduled GitHub Action exports `dashboard_data.db` as part of its
 `stock-analysis-outputs` artifact. The dashboard reads this compact database
 only; it never modifies pipeline databases.
+
+To save a read-only local Robinhood position snapshot for **Portfolio Replay**:
+
+```powershell
+python scripts/snapshot_robinhood_portfolio.py
+```
+
+The helper uses the existing cached Robinhood session when available, may ask
+for app authorization when Robinhood requires it, and writes only to the ignored
+local file `data/robinhood_portfolio_snapshot.csv`. It does not place orders.
 
 ## Robinhood Session Reuse
 
