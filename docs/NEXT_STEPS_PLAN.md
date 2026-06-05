@@ -68,7 +68,9 @@ Action update, 2026-06-04:
 - Run URL: `https://github.com/Rnanda442/stockprediction2025/actions/runs/26987118096`.
 - The run failed in the notebook login cell because Robinhood required app verification and the confirmation timed out.
 - This was an authentication/session issue, not a dashboard/model-health code failure.
+- The failed run uploaded a fallback dashboard DB, but it was the restored prior healthy DB, not a newly refreshed export.
 - Follow-up added: the notebook runner now emits a clear GitHub Actions error when Robinhood verification times out.
+- Rerun flow documented in `ROBINHOOD_ACTION_RUNBOOK.md`.
 
 ## Build 1: Restore Reliable Model Exports
 
@@ -94,7 +96,7 @@ Tasks:
 - [ ] Add a small model export smoke test that checks all three horizons: 5d, 20d, 60d.
 - [x] Add a clearer Actions error when Robinhood app verification times out.
 - [ ] Add a Robinhood auth/session preflight before the expensive notebook step.
-- [ ] Add a documented rerun flow for when Robinhood requires app approval.
+- [x] Add a documented rerun flow for when Robinhood requires app approval.
 
 Done criteria:
 

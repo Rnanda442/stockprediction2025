@@ -9,6 +9,7 @@ The product direction and next-step checklist are tracked in:
 - `docs/PRODUCT_DECISIONS.md`
 - `docs/ROADMAP_CHECKLIST.md`
 - `docs/NEXT_STEPS_PLAN.md`
+- `docs/ROBINHOOD_ACTION_RUNBOOK.md`
 
 Current direction: build this into a personal Robinhood-aware trading assistant,
 starting with automatic paper trading and serious backtesting before any real
