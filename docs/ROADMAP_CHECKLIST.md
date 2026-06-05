@@ -33,9 +33,9 @@ For the current implementation order, see `NEXT_STEPS_PLAN.md`.
 
 ## Phase 2: Trading Constraint Engine
 
-- [ ] Track Robinhood account type and current equity threshold status.
-- [ ] Track rolling 5-trading-day day trade count.
-- [ ] Warn before actions that could trigger pattern day trading risk.
+- [x] Add a manual local snapshot scaffold for Robinhood account type and current equity threshold status.
+- [x] Add a manual local snapshot scaffold for rolling 5-trading-day day trade count.
+- [x] Warn on the Daily Decision Board when trading constraints are unknown, cautious, or blocked.
 - [ ] Add buying-power checks.
 - [ ] Add cash-settlement or margin constraint checks.
 - [ ] Block automatic real-trade actions when trading constraints are unclear.

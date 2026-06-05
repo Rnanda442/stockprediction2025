@@ -133,6 +133,10 @@ jobs:
         run: |
           python scripts/check_pipeline_safety.py
 
+      - name: Check Robinhood auth preflight
+        run: |
+          python scripts/check_robinhood_auth_preflight.py
+
       - name: Run notebook
         run: |
           python scripts/run_notebook_with_progress.py notebook/2025summerstock-Copy6.ipynb --kernel-name python3 --executed-output logs/executed-notebook.ipynb
@@ -163,6 +167,10 @@ jobs:
       - name: Export dashboard database
         run: |
           python scripts/export_dashboard_data.py
+
+      - name: Check model export smoke
+        run: |
+          python scripts/check_model_export_smoke.py
 
       - name: Inspect generated pipeline state
         if: always()

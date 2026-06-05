@@ -77,4 +77,6 @@ If the workflow says verification is required but the app does not show a prompt
 
 ## Product Follow-Up
 
-Add a formal auth/session preflight before the notebook step so future runs can fail earlier with a clear reason before spending time on notebook execution.
+The workflow now runs `scripts/check_robinhood_auth_preflight.py` before the notebook step. It verifies required secrets and whether a cached session file was restored. It cannot guarantee Robinhood will not require app approval, but it catches missing secrets/session cache earlier and gives a clearer warning before the expensive notebook step.
+
+The workflow also runs `scripts/check_model_export_smoke.py` after dashboard export to confirm model tables and 5d/20d/60d prediction horizons.

@@ -93,9 +93,9 @@ Tasks:
 - [ ] If the artifact is missing model tables, debug `scripts/build_model_baseline.py` inside the pipeline.
 - [x] Add model table row counts to `Pipeline Health` so missing models are obvious in the app.
 - [x] Add a Daily Decision Board warning when model tables are missing.
-- [ ] Add a small model export smoke test that checks all three horizons: 5d, 20d, 60d.
+- [x] Add a small model export smoke test that checks all three horizons: 5d, 20d, 60d.
 - [x] Add a clearer Actions error when Robinhood app verification times out.
-- [ ] Add a Robinhood auth/session preflight before the expensive notebook step.
+- [x] Add a Robinhood auth/session preflight before the expensive notebook step.
 - [x] Add a documented rerun flow for when Robinhood requires app approval.
 
 Done criteria:
@@ -147,11 +147,12 @@ Current app hooks:
 
 Tasks:
 
-- [ ] Define a local ignored constraint snapshot file, such as `data/trading_constraints_snapshot.csv`.
+- [x] Define a local ignored constraint snapshot file, such as `data/trading_constraints_snapshot.csv`.
 - [ ] Track account equity, buying power, cash, margin/cash account mode if available, and snapshot time.
-- [ ] Track known day trades in a rolling 5-trading-day window.
-- [ ] Add a manual override field for day-trade count until reliable broker-derived trade history exists.
+- [x] Track known day trades in a rolling 5-trading-day window through the manual snapshot scaffold.
+- [x] Add a manual override field for day-trade count until reliable broker-derived trade history exists.
 - [ ] Add constraint status to every Daily Decision Board row.
+- [x] Add overall trading constraint status to the Daily Decision Board.
 - [ ] Block any same-day exit/re-entry recommendation if PDT status is unclear.
 - [ ] Add warning thresholds: safe, caution, blocked.
 - [ ] Add max weekly trade budget and max same-day trade budget.

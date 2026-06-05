@@ -11,6 +11,7 @@ from dashboard import data
 from dashboard import paper_trades
 from dashboard import portfolio_replay
 from dashboard import research
+from dashboard import trading_constraints
 
 
 st.set_page_config(
@@ -310,6 +311,8 @@ def render_daily_decision_board():
     model_summary = _model_queue_summary()
     shortlist = data.shortlist()
     shortlist_tickers = set(shortlist["ticker"].str.upper()) if not shortlist.empty else set()
+    constraints = trading_constraints.latest_constraints()
+    constraint_status, constraint_message = trading_constraints.status(constraints)
 
     board = watch.head(50).copy()
     board["ticker"] = board["ticker"].str.upper()
@@ -344,6 +347,25 @@ def render_daily_decision_board():
     cols[2].metric("Held tickers found", f"{int(board['is_holding'].sum()):,}")
     cols[3].metric("Paper buy candidates", f"{int((board['decision'] == 'paper buy candidate').sum()):,}")
     cols[4].metric("Hold / add reviews", f"{int((board['decision'] == 'hold / consider add').sum()):,}")
+
+    st.subheader("Trading constraints")
+    if constraint_status in ("blocked", "unknown"):
+        st.warning(constraint_message)
+    elif constraint_status == "caution":
+        st.warning(constraint_message)
+    else:
+        st.info(constraint_message)
+    st.dataframe(
+        trading_constraints.as_display_rows(constraints),
+        hide_index=True,
+        use_container_width=True,
+    )
+    with st.expander("Create a local constraint snapshot template"):
+        st.code(trading_constraints.sample_snapshot_text(), language="csv")
+        st.caption(
+            "Save this as data/trading_constraints_snapshot.csv and update it manually "
+            "until broker-derived constraints are implemented. The data folder is ignored by git."
+        )
 
     st.subheader("Best next actions")
     priority = {
