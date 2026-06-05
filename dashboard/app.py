@@ -68,6 +68,45 @@ def render_health_warnings(health):
         st.warning(message)
 
 
+def model_health_warnings(health):
+    warnings = []
+    status = data.model_status()
+    missing = status[status["status"] != "ready"]
+    if not missing.empty:
+        parts = [f"{row.table} ({row.status})" for row in missing.itertuples()]
+        warnings.append(
+            "Model outputs are incomplete: "
+            + ", ".join(parts)
+            + ". Run or sync the latest successful pipeline before trusting model-backed decisions."
+        )
+
+    horizons = data.model_horizon_status()
+    if horizons.empty:
+        warnings.append("No latest model prediction horizons are available.")
+    else:
+        available = {int(value) for value in horizons["horizon_days"].dropna()}
+        expected = {5, 20, 60}
+        missing_horizons = sorted(expected - available)
+        if missing_horizons:
+            warnings.append(
+                "Latest model predictions are missing horizon(s): "
+                + ", ".join(f"{horizon}d" for horizon in missing_horizons)
+                + "."
+            )
+        market_day = str(health.get("latest_market_date", ""))[:10]
+        latest_prediction = str(horizons["latest_prediction_date"].dropna().max())[:10]
+        if market_day and latest_prediction and market_day != latest_prediction:
+            warnings.append(
+                f"Model predictions are dated {latest_prediction}, but market data is dated {market_day}."
+            )
+    return warnings
+
+
+def render_model_health_warnings(health):
+    for message in model_health_warnings(health):
+        st.warning(message)
+
+
 def render_overview():
     health = data.health()
     short = data.shortlist()
@@ -256,6 +295,7 @@ def render_daily_decision_board():
     st.caption("Paper decisions first. Live trading stays disabled until backtests, paper results, and trading-limit guards are strong.")
     health = data.health()
     render_health_warnings(health)
+    render_model_health_warnings(health)
     st.warning(
         "Real trade execution is not enabled here. The board is a review and paper-trading surface, "
         "especially while PDT, buying-power, and account-type constraints are still being built."
@@ -1400,6 +1440,41 @@ def render_health():
 
     st.subheader("Compact database contents")
     st.dataframe(data.span_health(), hide_index=True, use_container_width=True)
+
+    st.subheader("Model export status")
+    st.dataframe(
+        data.model_status().rename(
+            columns={
+                "table": "Table",
+                "status": "Status",
+                "rows": "Rows",
+                "health_metric": "Health metric",
+                "health_rows": "Health rows",
+                "minimum_rows": "Minimum rows",
+            }
+        ),
+        hide_index=True,
+        use_container_width=True,
+    )
+    horizon_status = data.model_horizon_status()
+    if horizon_status.empty:
+        st.warning(
+            "LatestModelPredictions is missing or empty; Model Lab and Daily Decision Board "
+            "will run without model-backed probabilities."
+        )
+    else:
+        st.dataframe(
+            horizon_status.rename(
+                columns={
+                    "horizon_days": "Horizon days",
+                    "rows": "Rows",
+                    "latest_prediction_date": "Latest prediction date",
+                }
+            ),
+            hide_index=True,
+            use_container_width=True,
+        )
+    render_model_health_warnings(health)
     st.link_button(
         "Open latest GitHub Actions runs",
         "https://github.com/Rnanda442/stockprediction2025/actions/workflows/stock-run.yml",

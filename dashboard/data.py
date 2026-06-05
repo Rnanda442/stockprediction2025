@@ -70,7 +70,8 @@ def watchlist():
         """
         SELECT rank, ticker, confidence, recommendation, suggested_horizon,
                is_persistent, leader_score, trend_score, trend_slope_60d,
-               trend_r2_60d, vol_60d, dollar_vol_20d, total_return
+               trend_r2_60d, vol_60d, dollar_vol_20d, total_return,
+               entry_price
         FROM LatestWatchlist
         ORDER BY rank
         """
@@ -271,6 +272,58 @@ def span_health():
         FROM PipelineHealth
         WHERE metric LIKE '%_rows'
         ORDER BY metric
+        """
+    )
+
+
+def model_status():
+    required = [
+        ("ModelEvaluation", "model_evaluation_rows", 3),
+        ("ModelFeatureImportance", "model_feature_importance_rows", 1),
+        ("LatestModelPredictions", "latest_model_predictions_rows", 1),
+    ]
+    health_values = health()
+    rows = []
+    with connect() as conn:
+        for table, health_key, minimum_rows in required:
+            exists = conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+                (table,),
+            ).fetchone() is not None
+            actual_rows = 0
+            if exists:
+                actual_rows = conn.execute(f'SELECT COUNT(*) FROM "{table}"').fetchone()[0]
+            health_rows = pd.to_numeric(health_values.get(health_key), errors="coerce")
+            if not exists:
+                status = "missing table"
+            elif actual_rows < minimum_rows:
+                status = "not enough rows"
+            else:
+                status = "ready"
+            rows.append(
+                {
+                    "table": table,
+                    "status": status,
+                    "rows": int(actual_rows),
+                    "health_metric": health_key,
+                    "health_rows": None if pd.isna(health_rows) else int(health_rows),
+                    "minimum_rows": minimum_rows,
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def model_horizon_status():
+    if not table_exists("LatestModelPredictions"):
+        return pd.DataFrame(columns=["horizon_days", "rows", "latest_prediction_date"])
+    return query(
+        """
+        SELECT horizon_days,
+               COUNT(*) AS rows,
+               MAX(as_of_date) AS latest_prediction_date
+        FROM LatestModelPredictions
+        GROUP BY horizon_days
+        ORDER BY horizon_days
         """
     )
 

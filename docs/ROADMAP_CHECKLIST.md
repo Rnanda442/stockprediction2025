@@ -18,6 +18,8 @@ The app is already a private stock research dashboard with:
 
 The next product phase is to turn it from a research dashboard into a validated personal trading assistant.
 
+For the current implementation order, see `NEXT_STEPS_PLAN.md`.
+
 ## Phase 1: Decision System Foundation
 
 - [x] Add a Daily Decision Board page.
