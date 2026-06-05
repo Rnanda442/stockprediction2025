@@ -61,6 +61,15 @@ Inspection update, 2026-06-04:
 - Local model horizons after sync: 5d, 20d, and 60d, each with 2,470 predictions.
 - Watchlist/model overlap after sync: 44 rows.
 
+Action update, 2026-06-04:
+
+- Committed dashboard model-health status and this next-steps plan in commit `72e1bc6`.
+- Dispatched GitHub Actions run `26987118096` on `main`.
+- Run URL: `https://github.com/Rnanda442/stockprediction2025/actions/runs/26987118096`.
+- The run failed in the notebook login cell because Robinhood required app verification and the confirmation timed out.
+- This was an authentication/session issue, not a dashboard/model-health code failure.
+- Follow-up added: the notebook runner now emits a clear GitHub Actions error when Robinhood verification times out.
+
 ## Build 1: Restore Reliable Model Exports
 
 Why this comes first:
@@ -83,6 +92,9 @@ Tasks:
 - [x] Add model table row counts to `Pipeline Health` so missing models are obvious in the app.
 - [x] Add a Daily Decision Board warning when model tables are missing.
 - [ ] Add a small model export smoke test that checks all three horizons: 5d, 20d, 60d.
+- [x] Add a clearer Actions error when Robinhood app verification times out.
+- [ ] Add a Robinhood auth/session preflight before the expensive notebook step.
+- [ ] Add a documented rerun flow for when Robinhood requires app approval.
 
 Done criteria:
 

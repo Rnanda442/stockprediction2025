@@ -5,6 +5,13 @@ from pathlib import Path
 
 import nbformat
 from nbclient import NotebookClient
+from nbclient.exceptions import CellExecutionError
+
+
+AUTH_TIMEOUT_MARKERS = (
+    "Login confirmation timed out",
+    "Verification workflow required",
+)
 
 
 def cell_preview(source):
@@ -65,6 +72,18 @@ def main():
     start = time.monotonic()
     try:
         client.execute()
+    except CellExecutionError as exc:
+        message = str(exc)
+        if any(marker in message for marker in AUTH_TIMEOUT_MARKERS):
+            print(
+                "::error title=Robinhood verification required::"
+                "The notebook reached Robinhood login, but the mobile/app verification "
+                "workflow was not approved before timeout. Approve the Robinhood prompt "
+                "and rerun the workflow. If no prompt appears, refresh the cached "
+                "Robinhood session locally before dispatching another cloud run.",
+                flush=True,
+            )
+        raise
     finally:
         output_path = args.executed_output or args.notebook
         output_path.parent.mkdir(parents=True, exist_ok=True)
