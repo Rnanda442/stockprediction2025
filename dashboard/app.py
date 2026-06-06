@@ -37,6 +37,173 @@ def money(value):
     return "—" if pd.isna(value) else f"${value:,.0f}"
 
 
+VARIABLE_GUIDE = {
+    "Leader score": {
+        "group": "Opportunity",
+        "question": "Is the stock moving strongly enough to stand out after accounting for noise?",
+        "plain": "A combined ranking signal that rewards a strong trend and penalizes a rough, volatile path.",
+        "formula": "trend strength relative to volatility",
+        "high": "Stronger, cleaner leadership versus the rest of the universe.",
+        "low": "Weak movement, noisy movement, or both.",
+        "watch": "A high score can arrive late after a large run. Check drawdown, earnings, and current price location.",
+    },
+    "Trend score": {
+        "group": "Opportunity",
+        "question": "How much directional movement are we getting for the risk taken?",
+        "plain": "Trend slope divided by volatility. It is a signal-to-noise ratio for the recent price path.",
+        "formula": "trend slope / recent volatility",
+        "high": "Price has been rising with relatively little noise.",
+        "low": "The trend is flat, falling, or too erratic to trust.",
+        "watch": "A smooth historical trend can break suddenly when the market regime or company story changes.",
+    },
+    "Trend slope": {
+        "group": "Direction",
+        "question": "Which way has the fitted price path been pointing, and how steeply?",
+        "plain": "The direction and steepness of a fitted line through recent prices.",
+        "formula": "change in fitted price per trading day",
+        "high": "A steeper upward recent path.",
+        "low": "A flat or downward recent path.",
+        "watch": "Slope depends on the stock price scale and selected window. Compare it with return and volatility.",
+    },
+    "Trend fit": {
+        "group": "Consistency",
+        "question": "How closely did prices follow the fitted trend instead of wandering around it?",
+        "plain": "A consistency score, often expressed like R-squared, for the recent fitted trend.",
+        "formula": "share of price variation explained by the fitted trend",
+        "high": "A steadier, more orderly path around the trend line.",
+        "low": "A choppy path with frequent deviations from the trend.",
+        "watch": "A perfect fit describes the past shape; it does not guarantee that the trend continues.",
+    },
+    "60d volatility": {
+        "group": "Risk",
+        "question": "How bumpy has the stock's daily path been?",
+        "plain": "The typical variation in daily returns over roughly 60 trading sessions.",
+        "formula": "standard deviation of recent daily returns",
+        "high": "Wider daily swings and greater position-sizing risk.",
+        "low": "A more stable recent path.",
+        "watch": "Low historical volatility can jump quickly around earnings, news, or market stress.",
+    },
+    "Dollar volume": {
+        "group": "Tradability",
+        "question": "How much money typically changes hands in this stock?",
+        "plain": "Average share volume multiplied by price, used as a practical liquidity proxy.",
+        "formula": "average shares traded x price",
+        "high": "Usually easier to enter or exit without moving the market.",
+        "low": "Potentially wider spreads and more execution friction.",
+        "watch": "Dollar volume does not show the full order book, spread, or liquidity during a shock.",
+    },
+    "Total return": {
+        "group": "Direction",
+        "question": "How much did price change over the measured window?",
+        "plain": "The percentage change from the beginning to the end of the selected period.",
+        "formula": "(ending price / starting price) - 1",
+        "high": "Strong historical appreciation over the window.",
+        "low": "Weak or negative historical performance.",
+        "watch": "Return alone ignores how rough the path was and whether the move is already extended.",
+    },
+    "Confidence": {
+        "group": "Decision aid",
+        "question": "How strongly do the watchlist rules agree on this idea?",
+        "plain": "A transparent heuristic score assembled from ranking signals. It is not a probability.",
+        "formula": "rule-based score from the watchlist pipeline",
+        "high": "More of the heuristic conditions agree.",
+        "low": "The evidence is mixed or weaker relative to other candidates.",
+        "watch": "Do not read 80 confidence as an 80% chance of profit. Only model probability uses probability units.",
+    },
+    "Baseline probability up": {
+        "group": "Model",
+        "question": "How does the baseline model rank the chance of a positive later return?",
+        "plain": "A logistic-model estimate trained on earlier dates and evaluated on a later held-out period.",
+        "formula": "logistic transformation of weighted standardized features",
+        "high": "The model sees a feature combination historically associated with more positive outcomes.",
+        "low": "The model sees weaker historical evidence for an upward outcome.",
+        "watch": "Probabilities can be miscalibrated and market regimes change. Compare them with held-out accuracy and Brier score.",
+    },
+}
+
+
+def render_variable_card(name):
+    item = VARIABLE_GUIDE[name]
+    st.markdown(f"#### {name}")
+    st.caption(item["group"])
+    st.markdown(f"**Question it answers:** {item['question']}")
+    st.write(item["plain"])
+    st.code(item["formula"], language=None)
+    left, right = st.columns(2)
+    left.success(f"Higher: {item['high']}")
+    right.info(f"Lower: {item['low']}")
+    st.warning(f"Watch out: {item['watch']}")
+
+
+def render_signal_anatomy(watch, key_prefix):
+    if watch.empty:
+        return
+
+    chart = watch.copy()
+    chart["Risk: 60d volatility"] = pd.to_numeric(chart["vol_60d"], errors="coerce") * 100
+    chart["Opportunity: trend score"] = pd.to_numeric(chart["trend_score"], errors="coerce")
+    chart["Liquidity: dollar volume"] = pd.to_numeric(
+        chart["dollar_vol_20d"], errors="coerce"
+    ).clip(lower=1)
+    chart["Watchlist confidence"] = pd.to_numeric(chart["confidence"], errors="coerce")
+    chart["Ticker"] = chart["ticker"]
+    chart["Guidance"] = chart["recommendation"]
+    chart = chart.dropna(
+        subset=[
+            "Risk: 60d volatility",
+            "Opportunity: trend score",
+            "Liquidity: dollar volume",
+            "Watchlist confidence",
+        ]
+    )
+    if chart.empty:
+        return
+
+    risk_mid = chart["Risk: 60d volatility"].median()
+    signal_mid = chart["Opportunity: trend score"].median()
+    fig = px.scatter(
+        chart,
+        x="Risk: 60d volatility",
+        y="Opportunity: trend score",
+        size="Liquidity: dollar volume",
+        color="Watchlist confidence",
+        text="Ticker",
+        hover_name="Ticker",
+        hover_data={
+            "Guidance": True,
+            "Risk: 60d volatility": ":.2f",
+            "Opportunity: trend score": ":.2f",
+            "Liquidity: dollar volume": ":$,.0f",
+            "Watchlist confidence": ":.1f",
+        },
+        color_continuous_scale="Viridis",
+        size_max=42,
+        title="Signal anatomy: opportunity versus risk",
+    )
+    fig.add_vline(x=risk_mid, line_dash="dot", line_color="#7f8c8d")
+    fig.add_hline(y=signal_mid, line_dash="dot", line_color="#7f8c8d")
+    fig.add_annotation(
+        x=0.01,
+        y=0.99,
+        xref="paper",
+        yref="paper",
+        text="Cleaner opportunity zone",
+        showarrow=False,
+        bgcolor="rgba(39,174,96,0.12)",
+    )
+    fig.update_traces(textposition="top center")
+    fig.update_layout(
+        height=610,
+        coloraxis_colorbar_title="Rule<br>agreement",
+        margin=dict(l=30, r=30, t=70, b=30),
+    )
+    st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_signal_anatomy")
+    st.caption(
+        "Up is stronger risk-adjusted trend. Left is lower recent volatility. "
+        "Larger circles are more liquid. Color shows heuristic rule agreement, not probability."
+    )
+
+
 def health_warnings(health):
     warnings = []
     now = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -119,6 +286,7 @@ def render_model_health_warnings(health):
 def render_overview():
     health = data.health()
     short = data.shortlist()
+    watch = data.watchlist()
     st.title("Stock Research Dashboard")
     st.caption("Research signals only. This is not investment advice.")
     render_health_warnings(health)
@@ -133,6 +301,14 @@ def render_overview():
     cols[1].metric("Shortlist date", health.get("latest_shortlist_date", "—")[:10])
     cols[2].metric("Tracked candidates", health.get("feature_summary_rows", "0"))
     cols[3].metric("Shortlist picks", health.get("latest_shortlist_rows", "0"))
+
+    st.subheader("Where the strongest ideas sit")
+    st.write(
+        "This map separates **opportunity** from **risk** instead of compressing every "
+        "variable into one rank. Look first toward the upper-left, then inspect circle "
+        "size and color before opening the detailed watchlist."
+    )
+    render_signal_anatomy(watch.head(30), "overview")
 
     st.subheader("Latest shortlist")
     if short.empty:
@@ -519,6 +695,22 @@ def render_watchlist():
             )
             col.caption(f"Win rate: {percent(row.win_rate)}")
 
+    st.subheader("Read the ranking as a system")
+    render_signal_anatomy(watch, "watchlist")
+    with st.expander("Decode the four visual channels", expanded=False):
+        st.markdown(
+            """
+            - **Vertical position - opportunity:** trend strength after accounting for noise.
+            - **Horizontal position - risk:** recent price variability; farther right means a bumpier path.
+            - **Circle size - tradability:** average dollar volume; larger usually means easier execution.
+            - **Color - rule agreement:** how strongly the heuristic watchlist rules agree, not the chance of profit.
+
+            A stock is not automatically attractive because it is high on one dimension.
+            The useful question is whether the combination fits the intended holding period
+            and the amount of risk the portfolio can absorb.
+            """
+        )
+
     st.subheader("Latest ranked ideas")
     display = watch.rename(
         columns={
@@ -577,28 +769,96 @@ def render_guide():
         """
     )
 
-    st.subheader("Core variables")
-    variables = pd.DataFrame(
-        [
-            ("Leader score", "Current ranking alias built from trend strength relative to volatility."),
-            ("Trend score", "Trend slope divided by volatility. Higher means stronger movement relative to noise."),
-            ("Trend slope", "Direction and steepness of the recent fitted price trend."),
-            ("Trend fit", "How closely prices follow that fitted trend. Higher means a steadier trend."),
-            ("60d volatility", "Standard deviation of recent daily returns. Higher means a bumpier path."),
-            ("Risk-adjusted momentum", "Recent return divided by recent volatility."),
-            ("Dollar volume", "Average traded dollar value. Used as a liquidity proxy."),
-            ("Max drawdown", "Largest decline from a prior peak inside the measured window."),
-            ("Sharpe-style ratio", "Annualized average return divided by annualized volatility, with a configurable risk-free rate."),
-            ("3D coordinates", "Compressed feature-space coordinates for exploration. They are not predictions by themselves."),
-            ("3D movement speed", "Distance traveled between saved feature-space snapshots."),
-            ("3D movement acceleration", "Change in feature-space speed between saved snapshots."),
-            ("Baseline probability up", "Logistic model estimate trained on earlier dates only. Treat it as a research ranking, not a promise."),
-            ("Model drivers", "Largest standardized feature contributions behind a model probability for the selected horizon."),
-            ("Trade research queue", "Overlap between the heuristic watchlist and model probabilities. It is a due-diligence list, not an order ticket."),
-        ],
-        columns=["Variable", "What it means"],
+    st.subheader("The five questions behind every variable")
+    concept_cols = st.columns(5)
+    concepts = [
+        ("Direction", "Is price moving up or down?"),
+        ("Consistency", "Is the path smooth enough to trust?"),
+        ("Risk", "How violently can the path move?"),
+        ("Tradability", "Can a position be entered and exited efficiently?"),
+        ("Evidence", "Do the rules and model agree?"),
+    ]
+    for column, (name, question) in zip(concept_cols, concepts):
+        column.markdown(f"**{name}**")
+        column.caption(question)
+
+    st.info(
+        "No single variable answers 'Should I buy?' Each variable answers one smaller "
+        "question. The research process combines those answers and still requires a "
+        "holding period, position size, exit plan, and review of current events."
     )
-    st.dataframe(variables, hide_index=True, use_container_width=True)
+
+    st.subheader("Interactive variable decoder")
+    variable = st.selectbox(
+        "Choose a variable",
+        list(VARIABLE_GUIDE),
+        help="Select any score or measurement to see its meaning, rough formula, and failure modes.",
+    )
+    render_variable_card(variable)
+
+    st.subheader("How the variables connect")
+    relationship = pd.DataFrame(
+        [
+            ("Price history", "Trend slope", "Direction"),
+            ("Price history", "Trend fit", "Consistency"),
+            ("Daily returns", "60d volatility", "Risk"),
+            ("Price x volume", "Dollar volume", "Tradability"),
+            ("Slope + volatility", "Trend score", "Risk-adjusted opportunity"),
+            ("Multiple rules", "Confidence", "Heuristic agreement"),
+            ("Standardized features", "Baseline probability up", "Model ranking"),
+        ],
+        columns=["Raw input", "Processed variable", "Decision role"],
+    )
+    flow = go.Figure(
+        go.Sankey(
+            arrangement="snap",
+            node=dict(
+                label=list(
+                    dict.fromkeys(
+                        relationship["Raw input"].tolist()
+                        + relationship["Processed variable"].tolist()
+                        + relationship["Decision role"].tolist()
+                    )
+                ),
+                pad=18,
+                thickness=18,
+                color="#4c78a8",
+            ),
+            link=dict(
+                source=[],
+                target=[],
+                value=[],
+            ),
+        )
+    )
+    labels = flow.data[0].node.label
+    label_index = {label: index for index, label in enumerate(labels)}
+    flow.data[0].link.source = [label_index[value] for value in relationship["Raw input"]]
+    flow.data[0].link.target = [
+        label_index[value] for value in relationship["Processed variable"]
+    ]
+    flow.data[0].link.value = [1] * len(relationship)
+    second_links = go.Sankey(
+        node=dict(label=labels),
+        link=dict(
+            source=[label_index[value] for value in relationship["Processed variable"]],
+            target=[label_index[value] for value in relationship["Decision role"]],
+            value=[1] * len(relationship),
+        ),
+    )
+    flow.data[0].link.source = list(flow.data[0].link.source) + list(second_links.link.source)
+    flow.data[0].link.target = list(flow.data[0].link.target) + list(second_links.link.target)
+    flow.data[0].link.value = list(flow.data[0].link.value) + list(second_links.link.value)
+    flow.update_layout(
+        title="From raw market data to a decision role",
+        height=560,
+        margin=dict(l=20, r=20, t=60, b=20),
+    )
+    st.plotly_chart(flow, use_container_width=True, key="variable_relationship_flow")
+    st.caption(
+        "This is a concept map, not a claim that one variable causes another. "
+        "It shows the processing path used to turn market observations into research aids."
+    )
 
     st.subheader("Important limits")
     st.warning(
