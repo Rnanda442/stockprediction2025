@@ -84,6 +84,19 @@ and shortlist/watchlist changes compared with the prior local dashboard DB.
 
 ## Dashboard
 
+### Streamlit Community Cloud
+
+Deploy the private repository with these settings:
+
+- Repository: `Rnanda442/stockprediction2025`
+- Branch: `main`
+- Main file path: `dashboard/app.py`
+- Secret: `DASHBOARD_PASSWORD = "choose-a-private-password"`
+
+The repository includes a read-only `dashboard_data.db` snapshot for the hosted
+app. Routine pipeline runs continue publishing fresher databases as workflow
+artifacts without committing a large database revision on every run.
+
 Generate the compact read-only dashboard database:
 
 ```powershell

@@ -227,6 +227,9 @@ jobs:
           # caches. Stage updates to already tracked files only so a credential or
           # encrypted session can never become a new committed file.
           git add -u -- .
+          # The deployed dashboard snapshot is refreshed deliberately. Keep routine
+          # pipeline runs from adding an 80+ MB database revision to Git history.
+          git reset -- dashboard_data.db
           if git diff --cached --quiet; then
             echo "No changes to commit."
             exit 0

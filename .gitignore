@@ -11,6 +11,7 @@ config/robinhood_token-Copy1.txt
 *.sqlite
 *.sqlite3
 *.db-journal
+!dashboard_data.db
 
 # generated data / outputs
 *.csv
@@ -24,6 +25,8 @@ data/
 # checkpoints / cache
 .auth-cache/
 .dashboard-sync/
+.dashboard-artifact/
+.dashboard-artifact.zip
 .tokens/
 .ipynb_checkpoints/
 */.ipynb_checkpoints/
@@ -32,6 +35,7 @@ __pycache__/
 
 # logs
 logs/
+streamlit-test*.log
 
 # VS Code / OS
 .vscode/
