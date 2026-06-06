@@ -1,4 +1,12 @@
 from datetime import datetime, timezone
+from pathlib import Path
+import sys
+
+# Streamlit Cloud launches this nested entry point with dashboard/ on sys.path.
+# Add the repository root so package imports work in both cloud and local runs.
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 import pandas as pd
 import plotly.express as px
