@@ -747,7 +747,36 @@ def render_watchlist():
 
 def render_guide():
     st.title("How This Research App Works")
-    st.caption("A readable map of the pipeline, the variables, and the limits of the analysis.")
+    st.caption(
+        "The product map: how observations become variables, predictions, guarded "
+        "decisions, and measurable outcomes."
+    )
+
+    st.subheader("North star")
+    st.info(
+        "The app should answer: What deserves attention today, why, and what risk, "
+        "portfolio, or account constraint could change the decision? A prediction is "
+        "evidence inside that decision, not the decision by itself."
+    )
+
+    st.subheader("System architecture")
+    stages = [
+        ("1. Observe", "Prices, volume, market history, portfolio snapshot"),
+        ("2. Measure", "Direction, consistency, risk, tradability, context"),
+        ("3. Compare", "Heuristic ranking plus time-split model baselines"),
+        ("4. Decide", "Hold, paper buy, watch, reduce, avoid, or blocked"),
+        ("5. Learn", "Later returns, paper outcomes, backtests, model feedback"),
+    ]
+    stage_columns = st.columns(len(stages))
+    for column, (name, detail) in zip(stage_columns, stages):
+        with column.container(border=True):
+            st.markdown(f"**{name}**")
+            st.caption(detail)
+
+    st.caption(
+        "Quality, time-leakage, portfolio, trading-limit, and human-review gates sit "
+        "between these stages. A candidate can stop at any gate."
+    )
 
     st.subheader("Research flow")
     st.markdown(
@@ -769,14 +798,14 @@ def render_guide():
         """
     )
 
-    st.subheader("The five questions behind every variable")
+    st.subheader("Variable families")
     concept_cols = st.columns(5)
     concepts = [
-        ("Direction", "Is price moving up or down?"),
-        ("Consistency", "Is the path smooth enough to trust?"),
-        ("Risk", "How violently can the path move?"),
-        ("Tradability", "Can a position be entered and exited efficiently?"),
-        ("Evidence", "Do the rules and model agree?"),
+        ("Direction", "Return, momentum, and trend slope"),
+        ("Consistency", "Trend fit and persistence"),
+        ("Risk", "Volatility and drawdown"),
+        ("Tradability", "Dollar volume and price"),
+        ("Context", "Horizon, holdings, concentration, constraints"),
     ]
     for column, (name, question) in zip(concept_cols, concepts):
         column.markdown(f"**{name}**")
@@ -859,6 +888,29 @@ def render_guide():
         "This is a concept map, not a claim that one variable causes another. "
         "It shows the processing path used to turn market observations into research aids."
     )
+
+    st.subheader("What we build next")
+    roadmap = [
+        ("Now", "Reliable daily decisions", "Make freshness, model health, reasons, and constraints obvious."),
+        ("Next", "Automatic paper loop", "Record every buy, hold, reject, stop, target, and later outcome."),
+        ("Then", "Full decision backtest", "Replay the same policy with sizing, turnover, and drawdown."),
+        ("After proof", "Model tournament", "Compare logistic and tree models by 5d, 20d, and 60d horizon."),
+        ("Safety gate", "Portfolio assistant", "Add allocation, alerts, audit logs, and review-gated proposals."),
+    ]
+    st.dataframe(
+        pd.DataFrame(roadmap, columns=["Stage", "Deliverable", "Why it matters"]),
+        hide_index=True,
+        use_container_width=True,
+    )
+
+    with st.expander("Where Processing / Java visual design fits"):
+        st.write(
+            "Processing is useful for prototyping motion: observations becoming features, "
+            "stocks moving through risk gates, rankings changing over time, and outcomes "
+            "flowing back into evaluation. The production dashboard should stay web-based. "
+            "Useful Processing studies can be exported as short videos, GIFs, or design "
+            "references so the Streamlit app does not require a Java runtime."
+        )
 
     st.subheader("Important limits")
     st.warning(

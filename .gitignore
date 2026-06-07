@@ -35,6 +35,7 @@ __pycache__/
 
 # logs
 logs/
+streamlit.*.log
 streamlit-test*.log
 
 # VS Code / OS

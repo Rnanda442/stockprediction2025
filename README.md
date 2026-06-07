@@ -6,6 +6,8 @@ Automated stock research pipeline with a private local Streamlit dashboard.
 
 The product direction and next-step checklist are tracked in:
 
+- `docs/PROJECT_CHARTER.md`
+- `docs/SYSTEM_ARCHITECTURE.md`
 - `docs/PRODUCT_DECISIONS.md`
 - `docs/ROADMAP_CHECKLIST.md`
 - `docs/NEXT_STEPS_PLAN.md`
