@@ -1,0 +1,71 @@
+{
+  "updated": "2026-06-07",
+  "north_star": "Turn fresh market and portfolio evidence into one understandable daily decision, then prove whether that decision helped.",
+  "current_milestone": "Complete the paper-decision learning loop before adding more model complexity.",
+  "goals": [
+    {
+      "name": "Understand today's decision",
+      "status": "in_progress",
+      "evidence": "Daily Decision Board combines watchlist, model, portfolio, risk, and plain-English reasons."
+    },
+    {
+      "name": "Respect account and portfolio limits",
+      "status": "in_progress",
+      "evidence": "Constraint snapshot and warnings exist; buying power and row-level blocking still need work."
+    },
+    {
+      "name": "Prove decisions with paper outcomes",
+      "status": "next",
+      "evidence": "Manual paper review exists; automatic decisions and outcome tracking are not complete."
+    },
+    {
+      "name": "Backtest the complete policy",
+      "status": "planned",
+      "evidence": "Portfolio Replay exists, but it does not yet replay the full daily decision policy."
+    },
+    {
+      "name": "Improve models only when they win",
+      "status": "planned",
+      "evidence": "Time-split logistic baselines exist for 5d, 20d, and 60d horizons."
+    }
+  ],
+  "completed": [
+    "Create a Daily Decision Board with hold as a valid action.",
+    "Restore and expose model exports for 5d, 20d, and 60d horizons.",
+    "Add a project charter and system architecture.",
+    "Add a readable variable decoder and architecture view.",
+    "Simplify the dashboard into mobile-friendly navigation groups."
+  ],
+  "next_commits": [
+    {
+      "title": "Define one automatic paper-decision record",
+      "why": "Every run needs the same auditable schema before outcomes can be measured.",
+      "done_when": "The app records ticker, action, reason, horizon, model version, size, stop, target, constraint state, and timestamp.",
+      "status": "next"
+    },
+    {
+      "title": "Generate daily paper decisions",
+      "why": "The system must make repeatable decisions without manual ticker selection.",
+      "done_when": "One pipeline or local command writes buy, hold, watch, reduce, avoid, and blocked decisions for the day.",
+      "status": "queued"
+    },
+    {
+      "title": "Update paper outcomes",
+      "why": "Predictions become useful only when later results are attached to the original decision.",
+      "done_when": "Open decisions receive 1d, 5d, 20d, and 60d returns without future-data leakage.",
+      "status": "queued"
+    },
+    {
+      "title": "Build the paper performance page",
+      "why": "The owner needs one place to see whether the combined decision policy is helping.",
+      "done_when": "The app shows action counts, win rate, average return, drawdown, open decisions, and comparison with baselines.",
+      "status": "queued"
+    },
+    {
+      "title": "Backtest the same decision policy",
+      "why": "Historical testing should reuse production decision rules instead of inventing a second strategy.",
+      "done_when": "A walk-forward backtest includes sizing, holds, stops, targets, constraints, turnover, and benchmark comparisons.",
+      "status": "planned"
+    }
+  ]
+}

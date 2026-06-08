@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import json
 from pathlib import Path
 import sys
 
@@ -26,6 +27,59 @@ st.set_page_config(
     page_title="Stock Research Dashboard",
     page_icon="📈",
     layout="wide",
+    initial_sidebar_state="collapsed",
+)
+
+ACTIVITY_BOARD_PATH = ROOT / "docs" / "activity_board.json"
+
+st.markdown(
+    """
+    <style>
+    .block-container {
+        max-width: 1180px;
+        padding-top: 1.4rem;
+        padding-bottom: 3rem;
+    }
+    div[data-testid="stRadio"] > div {
+        gap: 0.35rem;
+    }
+    div[data-testid="stRadio"] label {
+        border: 1px solid rgba(128, 128, 128, 0.28);
+        border-radius: 999px;
+        padding: 0.45rem 0.8rem;
+    }
+    div[data-testid="stMetric"] {
+        border: 1px solid rgba(128, 128, 128, 0.2);
+        border-radius: 0.8rem;
+        padding: 0.75rem;
+    }
+    @media (max-width: 700px) {
+        .block-container {
+            padding: 0.8rem 0.75rem 2rem;
+        }
+        h1 {
+            font-size: 1.8rem !important;
+        }
+        div[data-testid="stRadio"] > div {
+            align-items: stretch;
+        }
+        div[data-testid="stRadio"] label {
+            flex: 1 1 46%;
+            justify-content: center;
+            min-height: 2.7rem;
+            padding: 0.4rem 0.55rem;
+        }
+        div[data-testid="stDataFrame"] {
+            max-width: calc(100vw - 1.5rem);
+            overflow-x: auto;
+        }
+        button[kind="secondary"] {
+            min-height: 2.7rem;
+        }
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
 
@@ -35,6 +89,21 @@ def percent(value):
 
 def money(value):
     return "—" if pd.isna(value) else f"${value:,.0f}"
+
+
+def load_activity_board():
+    with ACTIVITY_BOARD_PATH.open(encoding="utf-8") as board_file:
+        return json.load(board_file)
+
+
+def status_icon(status):
+    return {
+        "complete": "✓",
+        "in_progress": "◐",
+        "next": "→",
+        "queued": "○",
+        "planned": "·",
+    }.get(status, "·")
 
 
 VARIABLE_GUIDE = {
@@ -338,6 +407,49 @@ def render_overview():
             "Avg dollar volume": st.column_config.NumberColumn(format="$%.0f"),
         },
     )
+
+
+def render_activity_board():
+    board = load_activity_board()
+    st.title("Activity Board")
+    st.caption(f"Goals, progress, and next commit targets. Updated {board['updated']}.")
+
+    st.subheader("North star")
+    st.info(board["north_star"])
+    st.markdown(f"**Current milestone:** {board['current_milestone']}")
+
+    goals = board["goals"]
+    complete = sum(item["status"] == "complete" for item in goals)
+    active = sum(item["status"] in {"in_progress", "next"} for item in goals)
+    metrics = st.columns(3)
+    metrics[0].metric("Product goals complete", f"{complete}/{len(goals)}")
+    metrics[1].metric("Goals active now", active)
+    metrics[2].metric("Commit targets", len(board["next_commits"]))
+
+    st.subheader("Goal checkboard")
+    for goal in goals:
+        with st.container(border=True):
+            st.markdown(f"### {status_icon(goal['status'])} {goal['name']}")
+            st.caption(goal["status"].replace("_", " ").title())
+            st.write(goal["evidence"])
+
+    st.subheader("Completed foundation")
+    for item in board["completed"]:
+        st.markdown(f"- ✓ {item}")
+
+    st.subheader("Next commits")
+    st.caption(
+        "Work top to bottom. Each item should leave the repository in a tested, "
+        "committed, and understandable state."
+    )
+    for index, item in enumerate(board["next_commits"], start=1):
+        with st.container(border=True):
+            st.markdown(
+                f"### {index}. {status_icon(item['status'])} {item['title']}"
+            )
+            st.write(item["why"])
+            st.success(f"Done when: {item['done_when']}")
+            st.caption(item["status"].replace("_", " ").title())
 
 
 def _latest_portfolio_frame():
@@ -1825,28 +1937,45 @@ def render_health():
 
 require_login()
 
-page = st.sidebar.radio(
-    "Navigate",
-    (
-        "Overview",
-        "Daily Decision Board",
-        "How It Works",
-        "Research Lab",
-        "Model Lab",
-        "Portfolio Replay",
-        "Pipeline Controls",
-        "Ranked Watchlist",
-        "3D Stock Universe",
-        "Visual Lab",
-        "Performance",
-        "Ticker Explorer",
-        "Pipeline Health",
-    ),
+st.caption("Private stock research workspace")
+page_group = st.radio(
+    "Primary navigation",
+    ("Today", "Activity", "Research", "Models & Testing", "More"),
+    horizontal=True,
+    label_visibility="collapsed",
 )
-st.sidebar.caption("Private stock research workspace")
+
+if page_group == "Research":
+    page = st.selectbox(
+        "Research view",
+        ("Ranked Watchlist", "Ticker Explorer", "Research Lab"),
+    )
+elif page_group == "Models & Testing":
+    page = st.selectbox(
+        "Model and testing view",
+        ("Model Lab", "Portfolio Replay", "Performance"),
+    )
+elif page_group == "More":
+    page = st.selectbox(
+        "More tools",
+        (
+            "How It Works",
+            "3D Stock Universe",
+            "Visual Lab",
+            "Pipeline Controls",
+            "Pipeline Health",
+            "Overview",
+        ),
+    )
+elif page_group == "Activity":
+    page = "Activity Board"
+else:
+    page = "Daily Decision Board"
 
 try:
-    if page == "Overview":
+    if page == "Activity Board":
+        render_activity_board()
+    elif page == "Overview":
         render_overview()
     elif page == "Daily Decision Board":
         render_daily_decision_board()

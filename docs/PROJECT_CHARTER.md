@@ -99,5 +99,5 @@ The app should teach the system while it operates:
 - Detailed decisions: `docs/PRODUCT_DECISIONS.md`.
 - Ordered implementation work: `docs/NEXT_STEPS_PLAN.md`.
 - Progress checklist: `docs/ROADMAP_CHECKLIST.md`.
+- Current goals and next commit targets: `docs/activity_board.json`.
 - Working code and deployment source: GitHub `main`.
-
