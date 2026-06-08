@@ -15,6 +15,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from dashboard import actions
+from dashboard import automatic_paper_decisions
 from dashboard.auth import require_login
 from dashboard import data
 from dashboard import paper_trades
@@ -439,7 +440,10 @@ def render_activity_board():
         "Goals active",
         sum(item["status"] in {"in_progress", "next"} for item in goals),
     )
-    metrics[2].metric("Next commits", len(board["next_commits"]))
+    metrics[2].metric(
+        "Next commits",
+        sum(item["status"] != "complete" for item in board["next_commits"]),
+    )
 
     release_tab, goals_tab, commits_tab, completed_tab = st.tabs(
         ("Release status", "Goals", "Next commits", "Completed")
@@ -749,6 +753,52 @@ def render_daily_decision_board():
             "Portfolio weight": st.column_config.NumberColumn(format="%.1f%%"),
         },
     )
+
+    st.subheader("Automatic paper-decision contract")
+    st.caption(
+        "Preview of the append-only record the next automation step will save. "
+        "This preview does not write a ledger or place a trade."
+    )
+    preview_rows = board.sort_values(
+        ["decision_priority", "rank", "model_probability_up"],
+        ascending=[True, True, False],
+    ).head(5)
+    preview_records = [
+        automatic_paper_decisions.record_from_board_row(
+            row,
+            source_date=str(health.get("latest_market_date", ""))[:10],
+            constraint_status=constraint_status,
+            constraint_reason=constraint_message,
+            portfolio_value=portfolio_value,
+        )
+        for row in preview_rows.to_dict("records")
+    ]
+    preview = pd.DataFrame(preview_records)
+    st.dataframe(
+        preview[
+            [
+                "decision_id",
+                "source_date",
+                "ticker",
+                "action",
+                "horizon_days",
+                "model_version",
+                "paper_quantity",
+                "stop_loss",
+                "target_price",
+                "constraint_status",
+                "record_status",
+            ]
+        ],
+        hide_index=True,
+        use_container_width=True,
+        column_config={
+            "stop_loss": st.column_config.NumberColumn(format="$%.2f"),
+            "target_price": st.column_config.NumberColumn(format="$%.2f"),
+        },
+    )
+    with st.expander("Fields kept for every automatic decision"):
+        st.write(", ".join(automatic_paper_decisions.LEDGER_COLUMNS))
 
     st.subheader("What this board does next")
     st.markdown(

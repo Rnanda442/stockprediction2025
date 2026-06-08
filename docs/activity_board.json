@@ -71,20 +71,21 @@
     "Restore and expose model exports for 5d, 20d, and 60d horizons.",
     "Add a project charter and system architecture.",
     "Add a readable variable decoder and architecture view.",
-    "Simplify the dashboard into mobile-friendly navigation groups."
+    "Simplify the dashboard into mobile-friendly navigation groups.",
+    "Define and test one auditable automatic paper-decision record."
   ],
   "next_commits": [
     {
       "title": "Define one automatic paper-decision record",
       "why": "Every run needs the same auditable schema before outcomes can be measured.",
       "done_when": "The app records ticker, action, reason, horizon, model version, size, stop, target, constraint state, and timestamp.",
-      "status": "next"
+      "status": "complete"
     },
     {
       "title": "Generate daily paper decisions",
       "why": "The system must make repeatable decisions without manual ticker selection.",
       "done_when": "One pipeline or local command writes buy, hold, watch, reduce, avoid, and blocked decisions for the day.",
-      "status": "queued"
+      "status": "next"
     },
     {
       "title": "Update paper outcomes",
