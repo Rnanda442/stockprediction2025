@@ -287,6 +287,291 @@ def render_signal_anatomy(watch, key_prefix):
     )
 
 
+ARCHITECTURE_NODES = {
+    "Market data": {
+        "position": (0, 0, 0),
+        "status": "implemented",
+        "kind": "input",
+        "summary": "Stored prices, volume, market dates, and historical snapshots.",
+        "feeds": "Feature calculations",
+    },
+    "Portfolio snapshot": {
+        "position": (0, -2, -1),
+        "status": "partial",
+        "kind": "context",
+        "summary": "Current holdings and cash when a private local snapshot is available.",
+        "feeds": "Portfolio rules only, never the raw stock prediction",
+    },
+    "Fundamentals and news": {
+        "position": (0, 2, 1),
+        "status": "planned",
+        "kind": "input",
+        "summary": "Potential future API inputs for fundamentals, analyst evidence, news, and market context.",
+        "feeds": "Feature calculations after source and licensing checks",
+    },
+    "Direction features": {
+        "position": (2, 1.5, 0.8),
+        "status": "implemented",
+        "kind": "feature",
+        "summary": "Return, momentum, moving-average position, and trend slope.",
+        "feeds": "Direction and return models",
+    },
+    "Consistency features": {
+        "position": (2, 0.5, -0.8),
+        "status": "implemented",
+        "kind": "feature",
+        "summary": "Trend fit and persistence describe whether movement is orderly.",
+        "feeds": "Direction model and heuristic ranking",
+    },
+    "Risk features": {
+        "position": (2, -0.8, 0.8),
+        "status": "implemented",
+        "kind": "feature",
+        "summary": "Volatility, drawdown, and price-path width describe potential roughness.",
+        "feeds": "Risk model and position sizing",
+    },
+    "Tradability features": {
+        "position": (2, -1.8, -0.8),
+        "status": "implemented",
+        "kind": "feature",
+        "summary": "Price and dollar volume help reject impractical candidates.",
+        "feeds": "Ranking and safety gates",
+    },
+    "Direction model": {
+        "position": (4, 1.2, 0.8),
+        "status": "implemented",
+        "kind": "model",
+        "summary": "Time-split logistic baselines estimate probability of a positive 5d, 20d, or 60d return.",
+        "feeds": "Decision policy",
+    },
+    "Return model": {
+        "position": (4, 0.2, -0.8),
+        "status": "planned",
+        "kind": "model",
+        "summary": "A future regression model will estimate return magnitude separately from direction.",
+        "feeds": "Decision policy after walk-forward validation",
+    },
+    "Risk model": {
+        "position": (4, -1.1, 0.8),
+        "status": "planned",
+        "kind": "model",
+        "summary": "A future model will estimate volatility and drawdown instead of treating risk as one static feature.",
+        "feeds": "Sizing and portfolio rules after validation",
+    },
+    "Heuristic ranking": {
+        "position": (4, 2.1, -0.8),
+        "status": "implemented",
+        "kind": "model",
+        "summary": "Transparent watchlist rules rank opportunity, consistency, risk, and liquidity.",
+        "feeds": "Decision policy and model comparison",
+    },
+    "Decision policy": {
+        "position": (6, 0.8, 0),
+        "status": "implemented",
+        "kind": "policy",
+        "summary": "Combines approved model evidence and watchlist rules into paper actions.",
+        "feeds": "Portfolio and account safety gates",
+    },
+    "Portfolio rules": {
+        "position": (6, -1.2, -0.5),
+        "status": "partial",
+        "kind": "policy",
+        "summary": "Adds holdings, concentration, paper sizing, and available account constraints.",
+        "feeds": "Final paper proposal",
+    },
+    "Paper decision": {
+        "position": (8, 0, 0),
+        "status": "implemented",
+        "kind": "action",
+        "summary": "Records buy, hold, watch, reduce, avoid, or blocked with reasons and model version.",
+        "feeds": "Outcome tracking",
+    },
+    "Outcomes and learning": {
+        "position": (10, 0, 0),
+        "status": "partial",
+        "kind": "outcome",
+        "summary": "Watchlist outcomes exist; automatic decision outcomes and full policy performance are next.",
+        "feeds": "Backtests, model calibration, and promotion decisions",
+    },
+}
+
+ARCHITECTURE_EDGES = [
+    ("Market data", "Direction features"),
+    ("Market data", "Consistency features"),
+    ("Market data", "Risk features"),
+    ("Market data", "Tradability features"),
+    ("Fundamentals and news", "Direction features"),
+    ("Direction features", "Direction model"),
+    ("Direction features", "Return model"),
+    ("Consistency features", "Direction model"),
+    ("Risk features", "Risk model"),
+    ("Risk features", "Heuristic ranking"),
+    ("Tradability features", "Heuristic ranking"),
+    ("Direction model", "Decision policy"),
+    ("Return model", "Decision policy"),
+    ("Risk model", "Decision policy"),
+    ("Heuristic ranking", "Decision policy"),
+    ("Portfolio snapshot", "Portfolio rules"),
+    ("Decision policy", "Portfolio rules"),
+    ("Portfolio rules", "Paper decision"),
+    ("Paper decision", "Outcomes and learning"),
+]
+
+
+def architecture_figure():
+    edge_x, edge_y, edge_z = [], [], []
+    for source, target in ARCHITECTURE_EDGES:
+        start = ARCHITECTURE_NODES[source]["position"]
+        end = ARCHITECTURE_NODES[target]["position"]
+        edge_x.extend((start[0], end[0], None))
+        edge_y.extend((start[1], end[1], None))
+        edge_z.extend((start[2], end[2], None))
+
+    figure = go.Figure()
+    figure.add_trace(
+        go.Scatter3d(
+            x=edge_x,
+            y=edge_y,
+            z=edge_z,
+            mode="lines",
+            line=dict(color="rgba(120,130,150,.34)", width=4),
+            hoverinfo="skip",
+            name="Connections",
+        )
+    )
+    colors = {"implemented": "#2e8bff", "partial": "#f0a629", "planned": "#8d97a8"}
+    short_labels = {
+        "Market data": "Market",
+        "Portfolio snapshot": "Portfolio",
+        "Fundamentals and news": "New data",
+        "Direction features": "Direction",
+        "Consistency features": "Consistency",
+        "Risk features": "Risk",
+        "Tradability features": "Liquidity",
+        "Direction model": "Direction ML",
+        "Return model": "Return ML",
+        "Risk model": "Risk ML",
+        "Heuristic ranking": "Ranking",
+        "Decision policy": "Decision",
+        "Portfolio rules": "Portfolio gate",
+        "Paper decision": "Paper action",
+        "Outcomes and learning": "Outcomes",
+    }
+    symbols = {
+        "input": "circle",
+        "context": "diamond",
+        "feature": "circle",
+        "model": "square",
+        "policy": "diamond",
+        "action": "square",
+        "outcome": "circle",
+    }
+    for status in ("implemented", "partial", "planned"):
+        names = [
+            name
+            for name, node in ARCHITECTURE_NODES.items()
+            if node["status"] == status
+        ]
+        nodes = [ARCHITECTURE_NODES[name] for name in names]
+        figure.add_trace(
+            go.Scatter3d(
+                x=[node["position"][0] for node in nodes],
+                y=[node["position"][1] for node in nodes],
+                z=[node["position"][2] for node in nodes],
+                mode="markers+text",
+                text=[short_labels[name] for name in names],
+                textposition="top center",
+                customdata=[
+                    [name, node["status"], node["summary"], node["feeds"]]
+                    for name, node in zip(names, nodes)
+                ],
+                hovertemplate=(
+                    "<b>%{customdata[0]}</b><br>"
+                    "Status: %{customdata[1]}<br>"
+                    "%{customdata[2]}<br>"
+                    "Feeds: %{customdata[3]}<extra></extra>"
+                ),
+                marker=dict(
+                    size=12 if status == "implemented" else 10,
+                    color=colors[status],
+                    symbol=[symbols[node["kind"]] for node in nodes],
+                    opacity=0.95 if status == "implemented" else 0.72,
+                    line=dict(color="white", width=1),
+                ),
+                name=status.title(),
+            )
+        )
+    figure.update_layout(
+        height=620,
+        margin=dict(l=0, r=0, t=15, b=0),
+        legend=dict(orientation="h", yanchor="bottom", y=1.01, xanchor="left", x=0),
+        scene=dict(
+            xaxis=dict(title="Decision flow", showgrid=False, zeroline=False),
+            yaxis=dict(title="System layer", showgrid=False, zeroline=False),
+            zaxis=dict(title="Evidence dimension", showgrid=False, zeroline=False),
+            camera=dict(
+                eye=dict(x=0.15, y=-2.25, z=1.15),
+                projection=dict(type="orthographic"),
+            ),
+        ),
+    )
+    return figure
+
+
+def render_decision_cards(rows):
+    if rows.empty:
+        return
+    st.caption(
+        "These are research and paper decisions. Historical return is evidence from the "
+        "recent window, not a forecast of future return."
+    )
+    for row_start in range(0, min(len(rows), 6), 2):
+        columns = st.columns(2)
+        for column, (_, row) in zip(columns, rows.iloc[row_start : row_start + 2].iterrows()):
+            probability = pd.to_numeric(row.get("model_probability_up"), errors="coerce")
+            recent_return = pd.to_numeric(row.get("total_return"), errors="coerce")
+            volatility = pd.to_numeric(row.get("vol_60d"), errors="coerce")
+            portfolio_weight = pd.to_numeric(row.get("portfolio_weight"), errors="coerce")
+            positive_value = row.get("top_positive_drivers")
+            negative_value = row.get("top_negative_drivers")
+            positives = (
+                "No model drivers exported"
+                if pd.isna(positive_value) or not str(positive_value).strip()
+                else str(positive_value)
+            )
+            negatives = (
+                "No model drivers exported"
+                if pd.isna(negative_value) or not str(negative_value).strip()
+                else str(negative_value)
+            )
+            with column.container(border=True):
+                st.caption(f"#{int(row['rank'])} WATCHLIST")
+                st.markdown(f"### {row['ticker']} · {row['decision'].title()}")
+                st.markdown(f"**Reason:** {row['why']}")
+                metric_columns = st.columns(3)
+                metric_columns[0].metric(
+                    "Model up signal",
+                    "not available" if pd.isna(probability) else f"{probability:.1%}",
+                )
+                metric_columns[1].metric(
+                    "Recent return",
+                    "not available" if pd.isna(recent_return) else f"{recent_return:.1%}",
+                )
+                metric_columns[2].metric(
+                    "60d risk",
+                    "not available" if pd.isna(volatility) else f"{volatility:.1%}",
+                )
+                if bool(row.get("is_holding")):
+                    st.info(
+                        "Existing holding"
+                        if pd.isna(portfolio_weight)
+                        else f"Existing holding: {portfolio_weight:.1%} of portfolio"
+                    )
+                with st.expander("Why the model moved"):
+                    st.success(f"Positive: {positives}")
+                    st.warning(f"Negative: {negatives}")
+
+
 def health_warnings(health):
     warnings = []
     now = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -614,76 +899,90 @@ def render_daily_decision_board():
     board["in_shortlist"] = board["ticker"].isin(shortlist_tickers)
     board = decision_policy.apply_policy(board, portfolio_value)
 
-    cols = st.columns(5)
-    cols[0].metric("Portfolio value", money(portfolio_value) if portfolio_value else "no snapshot")
-    cols[1].metric("Cash snapshot", money(cash))
-    cols[2].metric("Held tickers found", f"{int(board['is_holding'].sum()):,}")
-    cols[3].metric("Paper buy candidates", f"{int((board['decision'] == 'paper buy candidate').sum()):,}")
-    cols[4].metric("Hold / add reviews", f"{int((board['decision'] == 'hold / consider add').sum()):,}")
+    st.subheader("Best next actions")
+    ranked_decisions = board.sort_values(
+        ["decision_priority", "rank", "model_probability_up"],
+        ascending=[True, True, False],
+    ).head(25)
+    render_decision_cards(ranked_decisions)
+    with st.expander("Open the full decision audit table"):
+        display = ranked_decisions.rename(
+            columns={
+                "rank": "Watchlist rank",
+                "ticker": "Ticker",
+                "decision": "Action",
+                "why": "Why",
+                "confidence": "Watchlist confidence",
+                "model_probability_up": "Model probability",
+                "model_horizon_days": "Model horizon",
+                "entry_price": "Reference price",
+                "paper_quantity_1pct_risk": "Paper qty at 1% risk",
+                "portfolio_weight": "Portfolio weight",
+                "in_shortlist": "In shortlist",
+            }
+        )
+        st.dataframe(
+            display[
+                [
+                    "Ticker",
+                    "Action",
+                    "Why",
+                    "Watchlist rank",
+                    "Watchlist confidence",
+                    "Model probability",
+                    "Model horizon",
+                    "Reference price",
+                    "Paper qty at 1% risk",
+                    "Portfolio weight",
+                    "In shortlist",
+                ]
+            ],
+            hide_index=True,
+            use_container_width=True,
+            column_config={
+                "Model probability": st.column_config.NumberColumn(format="%.1f%%"),
+                "Reference price": st.column_config.NumberColumn(format="$%.2f"),
+                "Portfolio weight": st.column_config.NumberColumn(format="%.1f%%"),
+            },
+        )
+
+    with st.expander("Portfolio and decision summary"):
+        cols = st.columns(5)
+        cols[0].metric(
+            "Portfolio value",
+            money(portfolio_value) if portfolio_value else "no snapshot",
+        )
+        cols[1].metric("Cash snapshot", money(cash))
+        cols[2].metric("Held tickers found", f"{int(board['is_holding'].sum()):,}")
+        cols[3].metric(
+            "Paper buy candidates",
+            f"{int((board['decision'] == 'paper buy candidate').sum()):,}",
+        )
+        cols[4].metric(
+            "Hold / add reviews",
+            f"{int((board['decision'] == 'hold / consider add').sum()):,}",
+        )
 
     st.subheader("Trading constraints")
+    st.caption("These account and portfolio gates can stop a model-supported proposal.")
     if constraint_status in ("blocked", "unknown"):
         st.warning(constraint_message)
     elif constraint_status == "caution":
         st.warning(constraint_message)
     else:
         st.info(constraint_message)
-    st.dataframe(
-        trading_constraints.as_display_rows(constraints),
-        hide_index=True,
-        use_container_width=True,
-    )
+    with st.expander("Open constraint details"):
+        st.dataframe(
+            trading_constraints.as_display_rows(constraints),
+            hide_index=True,
+            use_container_width=True,
+        )
     with st.expander("Create a local constraint snapshot template"):
         st.code(trading_constraints.sample_snapshot_text(), language="csv")
         st.caption(
             "Save this as data/trading_constraints_snapshot.csv and update it manually "
             "until broker-derived constraints are implemented. The data folder is ignored by git."
         )
-
-    st.subheader("Best next actions")
-    display = board.sort_values(
-        ["decision_priority", "rank", "model_probability_up"],
-        ascending=[True, True, False],
-    ).head(25)
-    display = display.rename(
-        columns={
-            "rank": "Watchlist rank",
-            "ticker": "Ticker",
-            "decision": "Action",
-            "why": "Why",
-            "confidence": "Watchlist confidence",
-            "model_probability_up": "Model probability",
-            "model_horizon_days": "Model horizon",
-            "entry_price": "Reference price",
-            "paper_quantity_1pct_risk": "Paper qty at 1% risk",
-            "portfolio_weight": "Portfolio weight",
-            "in_shortlist": "In shortlist",
-        }
-    )
-    st.dataframe(
-        display[
-            [
-                "Ticker",
-                "Action",
-                "Why",
-                "Watchlist rank",
-                "Watchlist confidence",
-                "Model probability",
-                "Model horizon",
-                "Reference price",
-                "Paper qty at 1% risk",
-                "Portfolio weight",
-                "In shortlist",
-            ]
-        ],
-        hide_index=True,
-        use_container_width=True,
-        column_config={
-            "Model probability": st.column_config.NumberColumn(format="%.1f%%"),
-            "Reference price": st.column_config.NumberColumn(format="$%.2f"),
-            "Portfolio weight": st.column_config.NumberColumn(format="%.1f%%"),
-        },
-    )
 
     st.subheader("Automatic paper-decision contract")
     st.caption(
@@ -969,6 +1268,28 @@ def render_guide():
             "A prediction never jumps directly to a trade. Evidence must be explained, "
             "pass safety gates, become a paper action, and earn trust through outcomes."
         )
+
+        st.subheader("Interactive system map")
+        st.write(
+            "Drag to rotate, scroll to zoom, and hover over a node. Blue nodes exist, "
+            "amber nodes are partial, and gray nodes are planned."
+        )
+        st.plotly_chart(
+            architecture_figure(),
+            use_container_width=True,
+            key="architecture_knowledge_graph",
+        )
+        selected_node = st.selectbox(
+            "Open a node",
+            list(ARCHITECTURE_NODES),
+            key="architecture_selected_node",
+        )
+        node = ARCHITECTURE_NODES[selected_node]
+        node_columns = st.columns(2)
+        node_columns[0].metric("Status", node["status"].title())
+        node_columns[1].metric("Layer", node["kind"].title())
+        st.markdown(f"**{selected_node}:** {node['summary']}")
+        st.caption(f"Feeds: {node['feeds']}")
 
         st.subheader("The six questions")
         question_rows = [

@@ -94,8 +94,14 @@ def as_display_rows(constraints):
                 "field": "Day trades in 5 trading days",
                 "value": _count_or_unknown(constraints.get("day_trades_5d")),
             },
-            {"field": "Max day trades in 5 days", "value": constraints.get("max_day_trades_5d")},
-            {"field": "Max weekly trades", "value": constraints.get("max_weekly_trades")},
+            {
+                "field": "Max day trades in 5 days",
+                "value": str(constraints.get("max_day_trades_5d") or "unknown"),
+            },
+            {
+                "field": "Max weekly trades",
+                "value": str(constraints.get("max_weekly_trades") or "unknown"),
+            },
             {"field": "Notes", "value": constraints.get("notes") or ""},
         ]
     )

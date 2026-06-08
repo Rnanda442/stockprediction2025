@@ -1,7 +1,7 @@
 {
   "updated": "2026-06-08",
   "north_star": "Turn fresh market and portfolio evidence into one understandable daily decision, then prove whether that decision helped.",
-  "current_milestone": "Make the decision story understandable while completing the paper-outcome learning loop.",
+  "current_milestone": "Turn the architecture into an interactive model map while completing the paper-outcome learning loop.",
   "deployment": [
     {
       "name": "Mobile navigation and responsive layout",
@@ -43,7 +43,7 @@
     {
       "name": "Understand today's decision",
       "status": "in_progress",
-      "evidence": "Daily Decision Board combines watchlist, model, portfolio, risk, and reasons; the Architecture page now separates the simple story, variables, and technical detail."
+      "evidence": "Today now prioritizes decision reasons, risk, recent return evidence, model drivers, and portfolio context; Architecture includes a 3D system map with implementation status."
     },
     {
       "name": "Respect account and portfolio limits",
@@ -74,7 +74,8 @@
     "Simplify the dashboard into mobile-friendly navigation groups.",
     "Define and test one auditable automatic paper-decision record.",
     "Generate deduplicated daily paper decisions in the scheduled pipeline.",
-    "Separate the Architecture page into a simple story, variable decoder, and technical detail."
+    "Separate the Architecture page into a simple story, variable decoder, and technical detail.",
+    "Add a 3D architecture knowledge graph and owner-priority decision cards."
   ],
   "next_commits": [
     {
@@ -93,6 +94,12 @@
       "title": "Simplify the architecture story",
       "why": "A new user should understand the system before seeing every variable and pipeline detail.",
       "done_when": "The page opens with a five-stage decision story and keeps variables and technical detail in separate views.",
+      "status": "complete"
+    },
+    {
+      "title": "Build the interactive model architecture map",
+      "why": "The owner needs to see how variables, models, rules, decisions, and outcomes connect without reading a long technical page.",
+      "done_when": "Architecture shows a rotatable 3D graph, node details, and honest implemented, partial, and planned states.",
       "status": "complete"
     },
     {
