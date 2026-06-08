@@ -1,12 +1,12 @@
 {
   "updated": "2026-06-08",
   "north_star": "Turn fresh market and portfolio evidence into one understandable daily decision, then prove whether that decision helped.",
-  "current_milestone": "Turn the architecture into an interactive model map while completing the paper-outcome learning loop.",
+  "current_milestone": "Make the four-section visual command center understandable while completing the paper-outcome learning loop.",
   "deployment": [
     {
       "name": "Mobile navigation and responsive layout",
       "status": "complete",
-      "detail": "Five primary destinations replace the original long page list and were tested at a 390px viewport."
+      "detail": "Four primary destinations replace the original long page list: Overview, Decisions, Model Lab, and System."
     },
     {
       "name": "Architecture and activity pages",
@@ -43,7 +43,7 @@
     {
       "name": "Understand today's decision",
       "status": "in_progress",
-      "evidence": "Today now prioritizes decision reasons, risk, recent return evidence, model drivers, and portfolio context; Architecture includes a 3D system map with implementation status."
+      "evidence": "Overview now combines top decision cards, trust indicators, an opportunity map, portfolio state, and roadmap; detailed queues remain under Decisions."
     },
     {
       "name": "Respect account and portfolio limits",
@@ -75,7 +75,9 @@
     "Define and test one auditable automatic paper-decision record.",
     "Generate deduplicated daily paper decisions in the scheduled pipeline.",
     "Separate the Architecture page into a simple story, variable decoder, and technical detail.",
-    "Add a 3D architecture knowledge graph and owner-priority decision cards."
+    "Add a 3D architecture knowledge graph and owner-priority decision cards.",
+    "Reduce navigation to Overview, Decisions, Model Lab, and System.",
+    "Replace the table-first home page with a visual command center."
   ],
   "next_commits": [
     {
@@ -100,6 +102,12 @@
       "title": "Build the interactive model architecture map",
       "why": "The owner needs to see how variables, models, rules, decisions, and outcomes connect without reading a long technical page.",
       "done_when": "Architecture shows a rotatable 3D graph, node details, and honest implemented, partial, and planned states.",
+      "status": "complete"
+    },
+    {
+      "title": "Simplify top-level navigation and rebuild Overview",
+      "why": "The app should feel like one guided system instead of a collection of unrelated tabs.",
+      "done_when": "Only four primary destinations are visible and Overview leads with actions, trust, opportunity, portfolio, and roadmap visuals.",
       "status": "complete"
     },
     {

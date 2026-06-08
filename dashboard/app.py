@@ -521,10 +521,7 @@ def architecture_figure():
 def render_decision_cards(rows):
     if rows.empty:
         return
-    st.caption(
-        "These are research and paper decisions. Historical return is evidence from the "
-        "recent window, not a forecast of future return."
-    )
+    st.caption("Paper research only. Stored return is historical, not a forecast.")
     for row_start in range(0, min(len(rows), 6), 2):
         columns = st.columns(2)
         for column, (_, row) in zip(columns, rows.iloc[row_start : row_start + 2].iterrows()):
@@ -554,7 +551,7 @@ def render_decision_cards(rows):
                     "not available" if pd.isna(probability) else f"{probability:.1%}",
                 )
                 metric_columns[1].metric(
-                    "Recent return",
+                    "Stored return",
                     "not available" if pd.isna(recent_return) else f"{recent_return:.1%}",
                 )
                 metric_columns[2].metric(
@@ -649,63 +646,6 @@ def model_health_warnings(health):
 def render_model_health_warnings(health):
     for message in model_health_warnings(health):
         st.warning(message)
-
-
-def render_overview():
-    health = data.health()
-    short = data.shortlist()
-    watch = data.watchlist()
-    st.title("Stock Research Dashboard")
-    st.caption("Research signals only. This is not investment advice.")
-    render_health_warnings(health)
-    st.info(
-        "Start with Ranked Watchlist for the daily research funnel, use Research Lab "
-        "to test one ticker across historical slices, and use 3D Stock Universe to "
-        "explore similarities and filter outcomes."
-    )
-
-    cols = st.columns(4)
-    cols[0].metric("Latest market date", health.get("latest_market_date", "—")[:10])
-    cols[1].metric("Shortlist date", health.get("latest_shortlist_date", "—")[:10])
-    cols[2].metric("Tracked candidates", health.get("feature_summary_rows", "0"))
-    cols[3].metric("Shortlist picks", health.get("latest_shortlist_rows", "0"))
-
-    st.subheader("Where the strongest ideas sit")
-    st.write(
-        "This map separates **opportunity** from **risk** instead of compressing every "
-        "variable into one rank. Look first toward the upper-left, then inspect circle "
-        "size and color before opening the detailed watchlist."
-    )
-    render_signal_anatomy(watch.head(30), "overview")
-
-    st.subheader("Latest shortlist")
-    if short.empty:
-        st.info("No shortlist is available yet.")
-        return
-    display = short.rename(
-        columns={
-            "ticker": "Ticker",
-            "rank": "Rank",
-            "begins_at": "As of",
-            "trend_slope_60d": "Trend slope",
-            "ret_60d": "60d return",
-            "vol_60d": "60d volatility",
-            "AvgDollarVol": "Avg dollar volume",
-            "Days": "Liquidity days",
-        }
-    )
-    for column in ("60d return", "60d volatility"):
-        display[column] = display[column] * 100
-    st.dataframe(
-        display,
-        hide_index=True,
-        use_container_width=True,
-        column_config={
-            "60d return": st.column_config.NumberColumn(format="%.1f%%"),
-            "60d volatility": st.column_config.NumberColumn(format="%.2f%%"),
-            "Avg dollar volume": st.column_config.NumberColumn(format="$%.0f"),
-        },
-    )
 
 
 def render_activity_board():
@@ -853,21 +793,22 @@ def _model_queue_summary():
     ]
 
 
-def render_daily_decision_board():
-    st.title("Daily Decision Board")
-    st.caption("Paper decisions first. Live trading stays disabled until backtests, paper results, and trading-limit guards are strong.")
+def _daily_decision_context():
     health = data.health()
-    render_health_warnings(health)
-    render_model_health_warnings(health)
-    st.warning(
-        "Real trade execution is not enabled here. The board is a review and paper-trading surface, "
-        "especially while PDT, buying-power, and account-type constraints are still being built."
-    )
-
     watch = data.watchlist()
     if watch.empty:
-        st.info("No ranked watchlist is available. Run the pipeline to initialize daily decisions.")
-        return
+        return {
+            "health": health,
+            "watch": watch,
+            "board": pd.DataFrame(),
+            "ranked_decisions": pd.DataFrame(),
+            "holdings": pd.DataFrame(),
+            "cash": 0.0,
+            "portfolio_value": 0.0,
+            "constraints": trading_constraints.latest_constraints(),
+            "constraint_status": "unknown",
+            "constraint_message": "No ranked watchlist is available.",
+        }
 
     holdings, cash, portfolio_value = _latest_portfolio_frame()
     model_summary = _model_queue_summary()
@@ -898,12 +839,263 @@ def render_daily_decision_board():
     board["is_holding"] = board["quantity"] > 0
     board["in_shortlist"] = board["ticker"].isin(shortlist_tickers)
     board = decision_policy.apply_policy(board, portfolio_value)
-
-    st.subheader("Best next actions")
     ranked_decisions = board.sort_values(
         ["decision_priority", "rank", "model_probability_up"],
         ascending=[True, True, False],
     ).head(25)
+
+    return {
+        "health": health,
+        "watch": watch,
+        "board": board,
+        "ranked_decisions": ranked_decisions,
+        "holdings": holdings,
+        "cash": cash,
+        "portfolio_value": portfolio_value,
+        "constraints": constraints,
+        "constraint_status": constraint_status,
+        "constraint_message": constraint_message,
+    }
+
+
+def _status_chip(label, status, detail):
+    color = {
+        "ready": "#1fa463",
+        "partial": "#d88912",
+        "blocked": "#cc3d3d",
+        "planned": "#77808f",
+    }.get(status, "#77808f")
+    icon = {
+        "ready": "OK",
+        "partial": "!",
+        "blocked": "LOCK",
+        "planned": "...",
+    }.get(status, "...")
+    return f"""
+    <div class="trust-chip" style="border-color:{color};">
+      <div class="trust-icon" style="background:{color};">{icon}</div>
+      <strong>{label}</strong>
+      <small>{detail}</small>
+    </div>
+    """
+
+
+def render_trust_meter(context):
+    health = context["health"]
+    data_warnings = health_warnings(health)
+    model_warnings = model_health_warnings(health)
+    constraint_status = context["constraint_status"]
+    trust_items = [
+        (
+            "Data",
+            "ready" if not data_warnings else "partial",
+            "fresh" if not data_warnings else "check",
+        ),
+        (
+            "Models",
+            "ready" if not model_warnings else "partial",
+            "online" if not model_warnings else "limited",
+        ),
+        ("Outcomes", "partial", "next"),
+        ("Backtest", "planned", "locked"),
+        (
+            "Constraints",
+            "ready" if constraint_status in {"safe", "pdt cushion"} else "partial",
+            constraint_status,
+        ),
+    ]
+    chips = "\n".join(_status_chip(*item) for item in trust_items)
+    st.markdown(
+        f"""
+        <div class="trust-grid">{chips}</div>
+        <style>
+        .trust-grid {{
+          display:grid;
+          grid-template-columns:repeat(5,1fr);
+          gap:.65rem;
+          margin:.4rem 0 1rem;
+        }}
+        .trust-chip {{
+          border:1px solid;
+          border-radius:1rem;
+          padding:.85rem .75rem;
+          min-height:6.1rem;
+          background:rgba(128,128,128,.035);
+        }}
+        .trust-icon {{
+          display:inline-grid;
+          place-items:center;
+          min-width:2rem;
+          height:2rem;
+          padding:0 .35rem;
+          border-radius:999px;
+          color:white;
+          font-size:.72rem;
+          font-weight:700;
+          margin-bottom:.45rem;
+        }}
+        .trust-chip strong, .trust-chip small {{ display:block; }}
+        .trust-chip small {{ opacity:.72; margin-top:.15rem; }}
+        @media (max-width: 700px) {{
+          .trust-grid {{ grid-template-columns:repeat(2,1fr); }}
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_roadmap_strip():
+    steps = [
+        ("Built", "daily decisions", "ready"),
+        ("Now", "outcome updater", "partial"),
+        ("Next", "performance page", "planned"),
+        ("Later", "policy backtest", "planned"),
+        ("Locked", "live trading", "blocked"),
+    ]
+    html = "".join(
+        f'<div class="road-step road-{status}"><b>{stage}</b><span>{label}</span></div>'
+        for stage, label, status in steps
+    )
+    st.markdown(
+        f"""
+        <div class="road-strip">{html}</div>
+        <style>
+        .road-strip {{
+          display:grid;
+          grid-template-columns:repeat(5,1fr);
+          gap:.55rem;
+          margin:.5rem 0 1rem;
+        }}
+        .road-step {{
+          border-radius:.95rem;
+          padding:.75rem;
+          border:1px solid rgba(128,128,128,.22);
+          background:rgba(128,128,128,.04);
+        }}
+        .road-step b, .road-step span {{ display:block; }}
+        .road-step span {{ font-size:.88rem; opacity:.75; }}
+        .road-ready {{ border-color:rgba(31,164,99,.45); }}
+        .road-partial {{ border-color:rgba(216,137,18,.55); }}
+        .road-blocked {{ border-color:rgba(204,61,61,.48); }}
+        @media (max-width: 700px) {{
+          .road-strip {{ grid-template-columns:1fr; }}
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_portfolio_flow(context):
+    holdings = context["holdings"]
+    if holdings.empty:
+        st.info("Portfolio snapshot missing. Add a private local snapshot to visualize holdings, reductions, and proposed reallocations.")
+        return
+    shown = holdings.sort_values("market_value", ascending=False).head(6)
+    fig = go.Figure(
+        go.Scatter(
+            x=shown["portfolio_weight"],
+            y=shown["market_value"],
+            mode="markers+text",
+            text=shown["ticker"],
+            textposition="top center",
+            marker=dict(
+                size=(shown["portfolio_weight"].clip(lower=0.01) * 150).clip(14, 55),
+                color="#5b7cfa",
+                opacity=.78,
+            ),
+            hovertemplate="<b>%{text}</b><br>Weight %{x:.1%}<br>Value $%{y:,.0f}<extra></extra>",
+        )
+    )
+    fig.update_layout(
+        height=300,
+        margin=dict(l=20, r=20, t=20, b=20),
+        xaxis_title="portfolio weight",
+        yaxis_title="market value",
+    )
+    st.plotly_chart(fig, use_container_width=True, key="overview_portfolio_flow")
+
+
+def render_overview():
+    context = _daily_decision_context()
+    health = context["health"]
+    watch = context["watch"]
+
+    st.title("Overview")
+    st.caption("Visual command center for the stock prediction app.")
+    st.markdown(
+        """
+        <div class="safety-lock">
+          <b>LIVE TRADING LOCKED</b>
+          <span>paper decisions only</span>
+        </div>
+        <style>
+        .safety-lock {
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          border:1px solid rgba(216,137,18,.55);
+          border-radius:.9rem;
+          padding:.75rem .9rem;
+          margin:.35rem 0 1rem;
+          background:rgba(216,137,18,.08);
+        }
+        .safety-lock b { color:#b26d00; font-size:.82rem; letter-spacing:.06em; }
+        .safety-lock span { opacity:.72; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    if context["ranked_decisions"].empty:
+        st.info("No ranked decisions are available yet. Run the pipeline to initialize the dashboard.")
+        return
+
+    st.subheader("Decision command center")
+    render_decision_cards(context["ranked_decisions"].head(3))
+
+    st.subheader("Model trust meter")
+    render_trust_meter(context)
+    with st.expander("Open system warnings"):
+        render_health_warnings(health)
+        render_model_health_warnings(health)
+        st.write(context["constraint_message"])
+
+    st.subheader("Market opportunity map")
+    render_signal_anatomy(watch.head(30), "overview")
+
+    st.subheader("Portfolio flow")
+    render_portfolio_flow(context)
+
+    st.subheader("Build roadmap")
+    render_roadmap_strip()
+
+
+def render_daily_decision_board():
+    st.title("Daily Decision Board")
+    st.caption("Paper decisions first. Live trading stays disabled until backtests, paper results, and trading-limit guards are strong.")
+    context = _daily_decision_context()
+    health = context["health"]
+    render_health_warnings(health)
+    render_model_health_warnings(health)
+    st.warning(
+        "Real trade execution is not enabled here. The board is a review and paper-trading surface, "
+        "especially while PDT, buying-power, and account-type constraints are still being built."
+    )
+
+    if context["watch"].empty:
+        st.info("No ranked watchlist is available. Run the pipeline to initialize daily decisions.")
+        return
+
+    board = context["board"]
+    cash = context["cash"]
+    portfolio_value = context["portfolio_value"]
+    constraints = context["constraints"]
+    constraint_status = context["constraint_status"]
+    constraint_message = context["constraint_message"]
+
+    st.subheader("Best next actions")
+    ranked_decisions = context["ranked_decisions"]
     render_decision_cards(ranked_decisions)
     with st.expander("Open the full decision audit table"):
         display = ranked_decisions.rename(
@@ -2325,36 +2517,42 @@ require_login()
 st.caption("Private stock research workspace")
 page_group = st.radio(
     "Primary navigation",
-    ("Today", "Activity", "Architecture", "Research", "More"),
+    ("Overview", "Decisions", "Model Lab", "System"),
     horizontal=True,
     label_visibility="collapsed",
 )
 
-if page_group == "Research":
+if page_group == "Overview":
+    page = "Overview"
+elif page_group == "Decisions":
     page = st.selectbox(
-        "Research view",
-        ("Ranked Watchlist", "Ticker Explorer", "Research Lab"),
+        "Decision view",
+        ("Daily Decision Board", "Ranked Watchlist", "Performance", "Portfolio Replay"),
+        label_visibility="collapsed",
     )
-elif page_group == "More":
+elif page_group == "Model Lab":
     page = st.selectbox(
-        "More tools",
+        "Model view",
         (
             "Model Lab",
-            "Portfolio Replay",
-            "Performance",
+            "How It Works",
+            "Research Lab",
+            "Ticker Explorer",
             "3D Stock Universe",
             "Visual Lab",
-            "Pipeline Controls",
-            "Pipeline Health",
-            "Overview",
         ),
+        label_visibility="collapsed",
     )
-elif page_group == "Activity":
-    page = "Activity Board"
-elif page_group == "Architecture":
-    page = "How It Works"
 else:
-    page = "Daily Decision Board"
+    page = st.selectbox(
+        "System view",
+        (
+            "Activity Board",
+            "Pipeline Health",
+            "Pipeline Controls",
+        ),
+        label_visibility="collapsed",
+    )
 
 try:
     if page == "Activity Board":
