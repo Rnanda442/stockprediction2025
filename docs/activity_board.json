@@ -1,7 +1,44 @@
 {
-  "updated": "2026-06-07",
+  "updated": "2026-06-08",
   "north_star": "Turn fresh market and portfolio evidence into one understandable daily decision, then prove whether that decision helped.",
   "current_milestone": "Complete the paper-decision learning loop before adding more model complexity.",
+  "deployment": [
+    {
+      "name": "Mobile navigation and responsive layout",
+      "status": "complete",
+      "detail": "Five primary destinations replace the original long page list and were tested at a 390px viewport."
+    },
+    {
+      "name": "Architecture and activity pages",
+      "status": "complete",
+      "detail": "Both pages are part of the production Streamlit app and their source data is committed."
+    },
+    {
+      "name": "Latest code on GitHub main",
+      "status": "complete",
+      "detail": "The application code and dashboard database are available from the main branch."
+    },
+    {
+      "name": "Create permanent Streamlit Community Cloud app",
+      "status": "next",
+      "detail": "Deploy Rnanda442/stockprediction2025, branch main, with dashboard/app.py as the entry point."
+    },
+    {
+      "name": "Configure Streamlit dashboard secret",
+      "status": "blocked",
+      "detail": "Set DASHBOARD_PASSWORD in Streamlit Cloud secrets. The secret must not be committed to GitHub."
+    },
+    {
+      "name": "Verify cloud data and phone login",
+      "status": "queued",
+      "detail": "Confirm dashboard_data.db loads, the password gate works, and Today, Activity, and Architecture work on a phone."
+    },
+    {
+      "name": "Record the permanent app URL",
+      "status": "queued",
+      "detail": "Add the verified streamlit.app address to the README and repository homepage."
+    }
+  ],
   "goals": [
     {
       "name": "Understand today's decision",

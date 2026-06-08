@@ -53,6 +53,13 @@ st.markdown(
         border-radius: 0.8rem;
         padding: 0.75rem;
     }
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border-color: rgba(128, 128, 128, 0.2);
+        border-radius: 0.9rem;
+    }
+    div[data-testid="stTabs"] button {
+        min-height: 2.7rem;
+    }
     @media (max-width: 700px) {
         .block-container {
             padding: 0.8rem 0.75rem 2rem;
@@ -102,8 +109,13 @@ def status_icon(status):
         "in_progress": "◐",
         "next": "→",
         "queued": "○",
+        "blocked": "!",
         "planned": "·",
     }.get(status, "·")
+
+
+def status_label(status):
+    return status.replace("_", " ").title()
 
 
 VARIABLE_GUIDE = {
@@ -419,37 +431,58 @@ def render_activity_board():
     st.markdown(f"**Current milestone:** {board['current_milestone']}")
 
     goals = board["goals"]
-    complete = sum(item["status"] == "complete" for item in goals)
-    active = sum(item["status"] in {"in_progress", "next"} for item in goals)
+    deployment = board["deployment"]
+    deployment_complete = sum(item["status"] == "complete" for item in deployment)
     metrics = st.columns(3)
-    metrics[0].metric("Product goals complete", f"{complete}/{len(goals)}")
-    metrics[1].metric("Goals active now", active)
-    metrics[2].metric("Commit targets", len(board["next_commits"]))
-
-    st.subheader("Goal checkboard")
-    for goal in goals:
-        with st.container(border=True):
-            st.markdown(f"### {status_icon(goal['status'])} {goal['name']}")
-            st.caption(goal["status"].replace("_", " ").title())
-            st.write(goal["evidence"])
-
-    st.subheader("Completed foundation")
-    for item in board["completed"]:
-        st.markdown(f"- ✓ {item}")
-
-    st.subheader("Next commits")
-    st.caption(
-        "Work top to bottom. Each item should leave the repository in a tested, "
-        "committed, and understandable state."
+    metrics[0].metric("Deployment ready", f"{deployment_complete}/{len(deployment)}")
+    metrics[1].metric(
+        "Goals active",
+        sum(item["status"] in {"in_progress", "next"} for item in goals),
     )
-    for index, item in enumerate(board["next_commits"], start=1):
-        with st.container(border=True):
-            st.markdown(
-                f"### {index}. {status_icon(item['status'])} {item['title']}"
-            )
-            st.write(item["why"])
-            st.success(f"Done when: {item['done_when']}")
-            st.caption(item["status"].replace("_", " ").title())
+    metrics[2].metric("Next commits", len(board["next_commits"]))
+
+    release_tab, goals_tab, commits_tab, completed_tab = st.tabs(
+        ("Release status", "Goals", "Next commits", "Completed")
+    )
+
+    with release_tab:
+        st.subheader("Deployment checklist")
+        st.caption(
+            "Complete means verified. Blocked means a private setting or external "
+            "deployment step is still required."
+        )
+        for item in deployment:
+            with st.container(border=True):
+                st.markdown(f"**{status_icon(item['status'])} {item['name']}**")
+                st.caption(status_label(item["status"]))
+                st.write(item["detail"])
+
+    with goals_tab:
+        st.subheader("Product goals")
+        for goal in goals:
+            with st.container(border=True):
+                st.markdown(f"**{status_icon(goal['status'])} {goal['name']}**")
+                st.caption(status_label(goal["status"]))
+                st.write(goal["evidence"])
+
+    with commits_tab:
+        st.subheader("Commit queue")
+        st.caption(
+            "Work top to bottom. Each item should end tested, committed, and understandable."
+        )
+        for index, item in enumerate(board["next_commits"], start=1):
+            with st.container(border=True):
+                st.markdown(
+                    f"**{index}. {status_icon(item['status'])} {item['title']}**"
+                )
+                st.write(item["why"])
+                st.success(f"Done when: {item['done_when']}")
+                st.caption(status_label(item["status"]))
+
+    with completed_tab:
+        st.subheader("Completed foundation")
+        for item in board["completed"]:
+            st.markdown(f"- ✓ {item}")
 
 
 def _latest_portfolio_frame():
@@ -858,7 +891,7 @@ def render_watchlist():
 
 
 def render_guide():
-    st.title("How This Research App Works")
+    st.title("System Architecture")
     st.caption(
         "The product map: how observations become variables, predictions, guarded "
         "decisions, and measurable outcomes."
@@ -1940,7 +1973,7 @@ require_login()
 st.caption("Private stock research workspace")
 page_group = st.radio(
     "Primary navigation",
-    ("Today", "Activity", "Research", "Models & Testing", "More"),
+    ("Today", "Activity", "Architecture", "Research", "More"),
     horizontal=True,
     label_visibility="collapsed",
 )
@@ -1950,16 +1983,13 @@ if page_group == "Research":
         "Research view",
         ("Ranked Watchlist", "Ticker Explorer", "Research Lab"),
     )
-elif page_group == "Models & Testing":
-    page = st.selectbox(
-        "Model and testing view",
-        ("Model Lab", "Portfolio Replay", "Performance"),
-    )
 elif page_group == "More":
     page = st.selectbox(
         "More tools",
         (
-            "How It Works",
+            "Model Lab",
+            "Portfolio Replay",
+            "Performance",
             "3D Stock Universe",
             "Visual Lab",
             "Pipeline Controls",
@@ -1969,6 +1999,8 @@ elif page_group == "More":
     )
 elif page_group == "Activity":
     page = "Activity Board"
+elif page_group == "Architecture":
+    page = "How It Works"
 else:
     page = "Daily Decision Board"
 
