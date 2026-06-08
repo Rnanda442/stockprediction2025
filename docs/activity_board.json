@@ -20,13 +20,13 @@
     },
     {
       "name": "Create permanent Streamlit Community Cloud app",
-      "status": "next",
-      "detail": "Deploy Rnanda442/stockprediction2025, branch main, with dashboard/app.py as the entry point."
+      "status": "complete",
+      "detail": "The permanent app is deployed from Rnanda442/stockprediction2025, branch main, with dashboard/app.py as the entry point."
     },
     {
       "name": "Configure Streamlit dashboard secret",
-      "status": "blocked",
-      "detail": "Set DASHBOARD_PASSWORD in Streamlit Cloud secrets. The secret must not be committed to GitHub."
+      "status": "complete",
+      "detail": "The deployed app shows its private password gate, confirming DASHBOARD_PASSWORD is configured without being committed."
     },
     {
       "name": "Verify cloud data and phone login",
@@ -35,8 +35,8 @@
     },
     {
       "name": "Record the permanent app URL",
-      "status": "queued",
-      "detail": "Add the verified streamlit.app address to the README and repository homepage."
+      "status": "complete",
+      "detail": "The verified Streamlit URL is recorded in the README and GitHub repository homepage."
     }
   ],
   "goals": [

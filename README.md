@@ -2,6 +2,10 @@
 
 Automated stock research pipeline with a private local Streamlit dashboard.
 
+Permanent Streamlit app:
+
+https://stockprediction2025-j9r5rlvr6meymlsdsuvxqq.streamlit.app/
+
 ## Product Roadmap
 
 The product direction and next-step checklist are tracked in:
