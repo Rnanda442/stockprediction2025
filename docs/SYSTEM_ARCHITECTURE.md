@@ -65,6 +65,17 @@ Derived scores such as leader score and trend score summarize some of these
 families. They are not independent facts and should not be counted as separate
 proof when they reuse the same underlying variables.
 
+The dashboard presents these families as six separate questions:
+
+1. Direction: is it moving?
+2. Consistency: is the move orderly?
+3. Risk: how rough can it get?
+4. Tradability: can it be entered and exited?
+5. Evidence: do the heuristic and model agree?
+6. Context: does it fit the portfolio, horizon, and constraints?
+
+This question-first view replaces the earlier all-at-once variable diagram.
+
 ### 4. Research Engines
 
 **Heuristic engine**
@@ -144,4 +155,3 @@ variables:
 Only after that loop works should the model tournament add tree models or new
 data sources. This keeps model complexity from outrunning the product's ability
 to prove whether decisions helped.
-

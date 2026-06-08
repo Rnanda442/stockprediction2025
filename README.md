@@ -133,6 +133,7 @@ The dashboard includes:
 - mobile-friendly navigation grouped into Today, Activity, Architecture, Research, and More
 - an Activity Board backed by `docs/activity_board.json` for goals, completed work, and next commit targets
 - a tested automatic paper-decision record contract with a separate append-only local ledger
+- scheduled automatic paper-decision generation published in the pipeline artifact
 - latest five-stock shortlist
 - ranked 50-stock swing-trade watchlist with confidence and holding-window guidance
 - plain-English guide to the pipeline and core variables

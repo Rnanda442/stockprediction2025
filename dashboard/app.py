@@ -18,6 +18,7 @@ from dashboard import actions
 from dashboard import automatic_paper_decisions
 from dashboard.auth import require_login
 from dashboard import data
+from dashboard import decision_policy
 from dashboard import paper_trades
 from dashboard import portfolio_replay
 from dashboard import research
@@ -567,63 +568,6 @@ def _model_queue_summary():
     ]
 
 
-def _decision_action(row):
-    is_holding = bool(row.get("is_holding"))
-    rank = pd.to_numeric(row.get("rank"), errors="coerce")
-    probability = pd.to_numeric(row.get("model_probability_up"), errors="coerce")
-    confidence = pd.to_numeric(row.get("confidence"), errors="coerce")
-
-    has_strong_model = not pd.isna(probability) and probability >= 0.60
-    has_good_watchlist = not pd.isna(rank) and rank <= 10
-    has_confidence = pd.isna(confidence) or confidence >= 60
-
-    if is_holding and has_strong_model and has_confidence:
-        return "hold / consider add"
-    if is_holding and has_good_watchlist:
-        return "hold"
-    if is_holding:
-        return "review reduce"
-    if has_strong_model and has_good_watchlist and has_confidence:
-        return "paper buy candidate"
-    if has_good_watchlist:
-        return "watch"
-    return "avoid for now"
-
-
-def _decision_reason(row):
-    parts = []
-    rank = pd.to_numeric(row.get("rank"), errors="coerce")
-    probability = pd.to_numeric(row.get("model_probability_up"), errors="coerce")
-    if not pd.isna(rank):
-        parts.append(f"watchlist rank {int(rank)}")
-    if not pd.isna(probability):
-        horizon = row.get("model_horizon_days")
-        parts.append(f"{probability:.1%} model probability over {int(horizon)}d")
-    if row.get("is_holding"):
-        weight = pd.to_numeric(row.get("portfolio_weight"), errors="coerce")
-        if not pd.isna(weight):
-            parts.append(f"already held at {weight:.1%} of portfolio")
-    return "; ".join(parts) if parts else "not enough signal yet"
-
-
-def _paper_quantity(row, portfolio_value):
-    if portfolio_value <= 0:
-        return None
-    entry = pd.to_numeric(row.get("entry_price"), errors="coerce")
-    volatility = pd.to_numeric(row.get("vol_60d"), errors="coerce")
-    if pd.isna(entry) or entry <= 0:
-        return None
-    stop_pct = 0.08
-    if not pd.isna(volatility) and volatility > 0:
-        stop_pct = min(0.18, max(0.05, volatility * 2.0))
-    risk_budget = portfolio_value * 0.01
-    risk_per_share = entry * stop_pct
-    if risk_per_share <= 0:
-        return None
-    quantity = int(risk_budget // risk_per_share)
-    return max(quantity, 0)
-
-
 def render_daily_decision_board():
     st.title("Daily Decision Board")
     st.caption("Paper decisions first. Live trading stays disabled until backtests, paper results, and trading-limit guards are strong.")
@@ -668,11 +612,7 @@ def render_daily_decision_board():
     board["portfolio_weight"] = pd.to_numeric(board["portfolio_weight"], errors="coerce").fillna(0.0)
     board["is_holding"] = board["quantity"] > 0
     board["in_shortlist"] = board["ticker"].isin(shortlist_tickers)
-    board["decision"] = board.apply(_decision_action, axis=1)
-    board["why"] = board.apply(_decision_reason, axis=1)
-    board["paper_quantity_1pct_risk"] = board.apply(
-        lambda row: _paper_quantity(row, portfolio_value), axis=1
-    )
+    board = decision_policy.apply_policy(board, portfolio_value)
 
     cols = st.columns(5)
     cols[0].metric("Portfolio value", money(portfolio_value) if portfolio_value else "no snapshot")
@@ -701,15 +641,6 @@ def render_daily_decision_board():
         )
 
     st.subheader("Best next actions")
-    priority = {
-        "hold / consider add": 0,
-        "paper buy candidate": 1,
-        "hold": 2,
-        "watch": 3,
-        "review reduce": 4,
-        "avoid for now": 5,
-    }
-    board["decision_priority"] = board["decision"].map(priority).fillna(9)
     display = board.sort_values(
         ["decision_priority", "rank", "model_probability_up"],
         ascending=[True, True, False],
@@ -1021,67 +952,49 @@ def render_guide():
     render_variable_card(variable)
 
     st.subheader("How the variables connect")
-    relationship = pd.DataFrame(
-        [
-            ("Price history", "Trend slope", "Direction"),
-            ("Price history", "Trend fit", "Consistency"),
-            ("Daily returns", "60d volatility", "Risk"),
-            ("Price x volume", "Dollar volume", "Tradability"),
-            ("Slope + volatility", "Trend score", "Risk-adjusted opportunity"),
-            ("Multiple rules", "Confidence", "Heuristic agreement"),
-            ("Standardized features", "Baseline probability up", "Model ranking"),
-        ],
-        columns=["Raw input", "Processed variable", "Decision role"],
-    )
-    flow = go.Figure(
-        go.Sankey(
-            arrangement="snap",
-            node=dict(
-                label=list(
-                    dict.fromkeys(
-                        relationship["Raw input"].tolist()
-                        + relationship["Processed variable"].tolist()
-                        + relationship["Decision role"].tolist()
-                    )
-                ),
-                pad=18,
-                thickness=18,
-                color="#4c78a8",
-            ),
-            link=dict(
-                source=[],
-                target=[],
-                value=[],
-            ),
-        )
-    )
-    labels = flow.data[0].node.label
-    label_index = {label: index for index, label in enumerate(labels)}
-    flow.data[0].link.source = [label_index[value] for value in relationship["Raw input"]]
-    flow.data[0].link.target = [
-        label_index[value] for value in relationship["Processed variable"]
+    connection_rows = [
+        ("Direction", "Is it moving?", "Return, momentum, trend slope", "Find upward or downward movement"),
+        ("Consistency", "Is the move orderly?", "Trend fit, persistence", "Separate steady paths from noise"),
+        ("Risk", "How rough can it get?", "Volatility, drawdown", "Set caution and paper size"),
+        ("Tradability", "Can we enter and exit?", "Dollar volume, price", "Avoid impractical ideas"),
+        ("Evidence", "Do methods agree?", "Rule confidence, model probability", "Rank the strength of the case"),
+        ("Context", "Does it fit us?", "Holding, horizon, constraints", "Hold, watch, buy, reduce, or block"),
     ]
-    flow.data[0].link.value = [1] * len(relationship)
-    second_links = go.Sankey(
-        node=dict(label=labels),
-        link=dict(
-            source=[label_index[value] for value in relationship["Processed variable"]],
-            target=[label_index[value] for value in relationship["Decision role"]],
-            value=[1] * len(relationship),
-        ),
+    connections = pd.DataFrame(
+        connection_rows,
+        columns=["Family", "Question", "Variables", "Decision use"],
     )
-    flow.data[0].link.source = list(flow.data[0].link.source) + list(second_links.link.source)
-    flow.data[0].link.target = list(flow.data[0].link.target) + list(second_links.link.target)
-    flow.data[0].link.value = list(flow.data[0].link.value) + list(second_links.link.value)
-    flow.update_layout(
-        title="From raw market data to a decision role",
-        height=560,
-        margin=dict(l=20, r=20, t=60, b=20),
+    selected_family = st.radio(
+        "Choose one question",
+        connections["Family"].tolist(),
+        horizontal=True,
+        key="architecture_variable_family",
     )
-    st.plotly_chart(flow, use_container_width=True, key="variable_relationship_flow")
+    selected_connection = connections[connections["Family"] == selected_family].iloc[0]
+    left, middle, right = st.columns(3)
+    with left.container(border=True):
+        st.caption("QUESTION")
+        st.markdown(f"### {selected_connection['Question']}")
+    with middle.container(border=True):
+        st.caption("VARIABLES")
+        st.markdown(f"### {selected_connection['Variables']}")
+    with right.container(border=True):
+        st.caption("DECISION USE")
+        st.markdown(f"### {selected_connection['Decision use']}")
+    st.dataframe(
+        connections,
+        hide_index=True,
+        use_container_width=True,
+        column_config={
+            "Family": st.column_config.TextColumn(width="small"),
+            "Question": st.column_config.TextColumn(width="medium"),
+            "Variables": st.column_config.TextColumn(width="medium"),
+            "Decision use": st.column_config.TextColumn(width="large"),
+        },
+    )
     st.caption(
-        "This is a concept map, not a claim that one variable causes another. "
-        "It shows the processing path used to turn market observations into research aids."
+        "Read one row at a time. Variables answer different questions; the final action "
+        "combines their evidence with portfolio and account constraints."
     )
 
     st.subheader("What we build next")

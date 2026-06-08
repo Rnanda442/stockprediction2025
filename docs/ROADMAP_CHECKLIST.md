@@ -43,10 +43,10 @@ For the current implementation order, see `NEXT_STEPS_PLAN.md`.
 
 ## Phase 3: Automatic Paper Trading
 
-- [ ] Convert model/watchlist queue into automatic paper trade candidates.
+- [x] Convert model/watchlist queue into automatic paper trade candidates.
 - [ ] Add paper position sizing from portfolio value and 1% risk budget.
 - [ ] Add stop loss and target logic for each paper trade.
-- [ ] Save every paper decision, including rejected and hold decisions.
+- [x] Save every paper decision, including rejected and hold decisions.
 - [ ] Track paper trade outcomes by horizon.
 - [ ] Add a paper-trading performance dashboard.
 - [ ] Compare automatic paper trades against manual review choices.

@@ -72,7 +72,8 @@
     "Add a project charter and system architecture.",
     "Add a readable variable decoder and architecture view.",
     "Simplify the dashboard into mobile-friendly navigation groups.",
-    "Define and test one auditable automatic paper-decision record."
+    "Define and test one auditable automatic paper-decision record.",
+    "Generate deduplicated daily paper decisions in the scheduled pipeline."
   ],
   "next_commits": [
     {
@@ -85,13 +86,13 @@
       "title": "Generate daily paper decisions",
       "why": "The system must make repeatable decisions without manual ticker selection.",
       "done_when": "One pipeline or local command writes buy, hold, watch, reduce, avoid, and blocked decisions for the day.",
-      "status": "next"
+      "status": "complete"
     },
     {
       "title": "Update paper outcomes",
       "why": "Predictions become useful only when later results are attached to the original decision.",
       "done_when": "Open decisions receive 1d, 5d, 20d, and 60d returns without future-data leakage.",
-      "status": "queued"
+      "status": "next"
     },
     {
       "title": "Build the paper performance page",
