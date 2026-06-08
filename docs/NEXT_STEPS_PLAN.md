@@ -182,9 +182,9 @@ Tasks:
 - [x] Calculate suggested paper quantity using portfolio value and 1% risk budget.
 - [x] Add stop loss, target price, and decision horizon.
 - [ ] Add automatic paper open/close logic based on next daily run.
-- [ ] Track outcome by 1d, 5d, 20d, and 60d.
-- [ ] Add a Paper Trading page or expand Model Lab with paper performance.
-- [ ] Compare automatic paper decisions against the existing watchlist and model-only picks.
+- [x] Track outcome by 1d, 5d, 20d, and 60d.
+- [x] Add a Paper Performance view under Decisions.
+- [x] Compare automatic paper decisions against watchlist-only and model-only rules.
 
 Done criteria:
 

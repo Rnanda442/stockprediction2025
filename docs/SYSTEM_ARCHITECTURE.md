@@ -148,9 +148,9 @@ variables:
 
 1. Completed: one daily decision schema.
 2. Completed: one automatic paper ledger.
-3. Next: one outcome updater.
-4. Then: one paper-performance view.
-5. Then: one backtest using the same decision policy.
+3. Completed: one idempotent, append-only outcome updater.
+4. Completed: one paper-performance view.
+5. Next: one backtest using the same decision policy.
 
 Only after that loop works should the model tournament add tree models or new
 data sources. This keeps model complexity from outrunning the product's ability

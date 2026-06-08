@@ -1,4 +1,5 @@
 import csv
+import json
 import sqlite3
 import sys
 from datetime import datetime, timezone
@@ -34,7 +35,9 @@ def check_csv(relative_path, required_columns, min_rows=1, max_rows=None, nonbla
         return fail(f"{relative_path} is missing")
 
     with path.open(newline="", encoding="utf-8-sig") as handle:
-        rows = list(csv.DictReader(handle))
+        reader = csv.DictReader(handle)
+        rows = list(reader)
+        fieldnames = reader.fieldnames or []
 
     print(f"{relative_path}: rows={len(rows)} size={path.stat().st_size}")
     if len(rows) < min_rows:
@@ -42,7 +45,7 @@ def check_csv(relative_path, required_columns, min_rows=1, max_rows=None, nonbla
     if max_rows is not None and len(rows) > max_rows:
         return fail(f"{relative_path} has {len(rows)} rows; expected at most {max_rows}")
 
-    missing = [column for column in required_columns if column not in (rows[0].keys() if rows else [])]
+    missing = [column for column in required_columns if column not in fieldnames]
     if missing:
         return fail(f"{relative_path} is missing columns: {', '.join(missing)}")
 
@@ -85,6 +88,56 @@ def check_table_columns(relative_db, table, required_columns):
     if missing:
         return fail(f"{relative_db}:{table} is missing columns: {', '.join(missing)}")
     print(f"{relative_db}:{table}: required columns present={', '.join(required_columns)}")
+    return True
+
+
+def check_paper_snapshot():
+    relative_path = "dashboard/paper_learning_snapshot.json"
+    path = ROOT / relative_path
+    if not path.exists():
+        return fail(f"{relative_path} is missing")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return fail(f"{relative_path} could not be read: {exc}")
+    missing = [
+        key for key in ("generated_at", "decisions", "outcomes", "metrics")
+        if key not in payload
+    ]
+    if missing:
+        return fail(f"{relative_path} is missing keys: {', '.join(missing)}")
+    if not isinstance(payload["decisions"], list) or not isinstance(payload["outcomes"], list):
+        return fail(f"{relative_path} decisions and outcomes must be lists")
+    print(
+        f"{relative_path}: decisions={len(payload['decisions'])} "
+        f"outcomes={len(payload['outcomes'])}"
+    )
+    return True
+
+
+def check_paper_health_metrics():
+    path = ROOT / "dashboard_data.db"
+    required = {
+        "automatic_paper_decisions_rows",
+        "automatic_paper_outcome_events_rows",
+        "automatic_paper_open_decisions",
+        "automatic_paper_matured_decisions",
+        "automatic_paper_unavailable_decisions",
+        "automatic_paper_unavailable_events",
+    }
+    if not has_tables(path, "PipelineHealth"):
+        return False
+    with sqlite3.connect(path) as conn:
+        metrics = {
+            row[0] for row in conn.execute("SELECT metric FROM PipelineHealth")
+        }
+    missing = sorted(required - metrics)
+    if missing:
+        return fail(
+            "dashboard_data.db:PipelineHealth is missing paper metrics: "
+            + ", ".join(missing)
+        )
+    print("dashboard_data.db:PipelineHealth: paper learning metrics present")
     return True
 
 
@@ -455,6 +508,28 @@ def main():
             min_rows=1,
             nonblank_columns=["ticker", "horizon_days", "model_rank", "probability_bucket"],
         ),
+        check_csv(
+            "analytics/automatic_paper_decisions.csv",
+            required_columns=[
+                "decision_id", "source_date", "ticker", "action", "horizon_days",
+                "model_version", "reference_price", "stop_loss", "target_price",
+            ],
+            min_rows=1,
+            nonblank_columns=["decision_id", "source_date", "ticker", "action"],
+        ),
+        check_csv(
+            "analytics/automatic_paper_decision_outcomes.csv",
+            required_columns=[
+                "outcome_id", "decision_id", "ticker", "source_date", "entry_price",
+                "action", "model_version", "evaluation_horizon_days",
+                "evaluation_date", "return_pct", "barrier_result", "status",
+            ],
+            min_rows=0,
+        ),
+        check_table("dashboard_data.db", "AutomaticPaperDecisions", min_rows=1),
+        check_table("dashboard_data.db", "AutomaticPaperOutcomeEvents", min_rows=0),
+        check_paper_snapshot(),
+        check_paper_health_metrics(),
         check_span_table("historicals.db", "HistoricalPrices"),
         check_span_table("vectorized.db", "VectorizedFeatures"),
         check_historical_quality(),

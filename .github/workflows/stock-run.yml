@@ -102,6 +102,7 @@ jobs:
             data/*.db
             notebook/stockprediction2025/data/*.db
             analytics/automatic_paper_decisions.csv
+            analytics/automatic_paper_decision_outcomes.csv
           key: stock-dbs-${{ github.ref_name }}-${{ github.run_id }}
           restore-keys: |
             stock-dbs-${{ github.ref_name }}-
@@ -173,6 +174,11 @@ jobs:
         run: |
           python scripts/generate_daily_paper_decisions.py
 
+      - name: Update automatic paper outcomes
+        run: |
+          python scripts/update_automatic_paper_outcomes.py
+          python scripts/sync_paper_learning_to_dashboard.py
+
       - name: Check model export smoke
         run: |
           python scripts/check_model_export_smoke.py
@@ -207,6 +213,7 @@ jobs:
             data/*.db
             notebook/stockprediction2025/data/*.db
             analytics/automatic_paper_decisions.csv
+            analytics/automatic_paper_decision_outcomes.csv
           key: stock-dbs-${{ github.ref_name }}-${{ github.run_id }}
 
       - name: Upload analysis outputs
@@ -220,6 +227,7 @@ jobs:
             analytics/*.csv
             analytics/*.html
             analytics/automatic_paper_decisions.csv
+            analytics/automatic_paper_decision_outcomes.csv
             vector_analysis_results.csv
             checkpoint_filtered.csv
             checkpoint_rejected.csv

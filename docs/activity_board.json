@@ -1,7 +1,7 @@
 {
   "updated": "2026-06-08",
   "north_star": "Turn fresh market and portfolio evidence into one understandable daily decision, then prove whether that decision helped.",
-  "current_milestone": "Make the four-section visual command center understandable while completing the paper-outcome learning loop.",
+  "current_milestone": "Use measured paper outcomes to validate the production decision policy before adding model complexity.",
   "deployment": [
     {
       "name": "Mobile navigation and responsive layout",
@@ -52,8 +52,8 @@
     },
     {
       "name": "Prove decisions with paper outcomes",
-      "status": "next",
-      "evidence": "Automatic daily decisions are recorded; future 1d, 5d, 20d, and 60d outcomes still need to be attached."
+      "status": "in_progress",
+      "evidence": "The pipeline now attaches mature 1d, 5d, 20d, and 60d outcome events and publishes open, matured, stop, target, and unavailable status."
     },
     {
       "name": "Backtest the complete policy",
@@ -77,7 +77,8 @@
     "Separate the Architecture page into a simple story, variable decoder, and technical detail.",
     "Add a 3D architecture knowledge graph and owner-priority decision cards.",
     "Reduce navigation to Overview, Decisions, Model Lab, and System.",
-    "Replace the table-first home page with a visual command center."
+    "Replace the table-first home page with a visual command center.",
+    "Add an idempotent automatic paper-outcome updater and visual paper-performance surface."
   ],
   "next_commits": [
     {
@@ -114,13 +115,13 @@
       "title": "Update paper outcomes",
       "why": "Predictions become useful only when later results are attached to the original decision.",
       "done_when": "Open decisions receive 1d, 5d, 20d, and 60d returns without future-data leakage.",
-      "status": "next"
+      "status": "complete"
     },
     {
       "title": "Build the paper performance page",
       "why": "The owner needs one place to see whether the combined decision policy is helping.",
       "done_when": "The app shows action counts, win rate, average return, drawdown, open decisions, and comparison with baselines.",
-      "status": "queued"
+      "status": "complete"
     },
     {
       "title": "Backtest the same decision policy",

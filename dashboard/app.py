@@ -418,11 +418,34 @@ ARCHITECTURE_EDGES = [
 ]
 
 
-def architecture_figure():
+def architecture_nodes():
+    nodes = {name: dict(node) for name, node in ARCHITECTURE_NODES.items()}
+    status = data.paper_learning_status()
+    outcome = nodes["Outcomes and learning"]
+    if status["matured"] > 0:
+        outcome["status"] = "implemented"
+        outcome["summary"] = (
+            f"{status['matured']} decisions have reached their declared horizon; "
+            f"{status['open']} remain open across {status['outcome_events']} outcome events."
+        )
+    elif status["decisions"] > 0:
+        outcome["status"] = "partial"
+        outcome["summary"] = (
+            f"{status['decisions']} decisions are recorded and {status['open']} are waiting "
+            "for future horizons to mature."
+        )
+    else:
+        outcome["status"] = "partial"
+        outcome["summary"] = "The outcome pipeline is ready, but no paper decisions are published."
+    return nodes
+
+
+def architecture_figure(nodes=None):
+    nodes = nodes or architecture_nodes()
     edge_x, edge_y, edge_z = [], [], []
     for source, target in ARCHITECTURE_EDGES:
-        start = ARCHITECTURE_NODES[source]["position"]
-        end = ARCHITECTURE_NODES[target]["position"]
+        start = nodes[source]["position"]
+        end = nodes[target]["position"]
         edge_x.extend((start[0], end[0], None))
         edge_y.extend((start[1], end[1], None))
         edge_z.extend((start[2], end[2], None))
@@ -469,21 +492,21 @@ def architecture_figure():
     for status in ("implemented", "partial", "planned"):
         names = [
             name
-            for name, node in ARCHITECTURE_NODES.items()
+            for name, node in nodes.items()
             if node["status"] == status
         ]
-        nodes = [ARCHITECTURE_NODES[name] for name in names]
+        status_nodes = [nodes[name] for name in names]
         figure.add_trace(
             go.Scatter3d(
-                x=[node["position"][0] for node in nodes],
-                y=[node["position"][1] for node in nodes],
-                z=[node["position"][2] for node in nodes],
+                x=[node["position"][0] for node in status_nodes],
+                y=[node["position"][1] for node in status_nodes],
+                z=[node["position"][2] for node in status_nodes],
                 mode="markers+text",
                 text=[short_labels[name] for name in names],
                 textposition="top center",
                 customdata=[
                     [name, node["status"], node["summary"], node["feeds"]]
-                    for name, node in zip(names, nodes)
+                    for name, node in zip(names, status_nodes)
                 ],
                 hovertemplate=(
                     "<b>%{customdata[0]}</b><br>"
@@ -494,7 +517,7 @@ def architecture_figure():
                 marker=dict(
                     size=12 if status == "implemented" else 10,
                     color=colors[status],
-                    symbol=[symbols[node["kind"]] for node in nodes],
+                    symbol=[symbols[node["kind"]] for node in status_nodes],
                     opacity=0.95 if status == "implemented" else 0.72,
                     line=dict(color="white", width=1),
                 ),
@@ -885,6 +908,13 @@ def render_trust_meter(context):
     data_warnings = health_warnings(health)
     model_warnings = model_health_warnings(health)
     constraint_status = context["constraint_status"]
+    paper_status = data.paper_learning_status()
+    outcome_ready = paper_status["matured"] > 0
+    outcome_detail = (
+        f"{paper_status['matured']} matured / {paper_status['open']} open"
+        if paper_status["decisions"]
+        else "no decisions"
+    )
     trust_items = [
         (
             "Data",
@@ -896,7 +926,7 @@ def render_trust_meter(context):
             "ready" if not model_warnings else "partial",
             "online" if not model_warnings else "limited",
         ),
-        ("Outcomes", "partial", "next"),
+        ("Outcomes", "ready" if outcome_ready else "partial", outcome_detail),
         ("Backtest", "planned", "locked"),
         (
             "Constraints",
@@ -943,6 +973,7 @@ def render_trust_meter(context):
         """,
         unsafe_allow_html=True,
     )
+    st.caption("Outcome evidence is detailed under Decisions > Paper Performance.")
 
 
 def render_roadmap_strip():
@@ -1282,6 +1313,269 @@ def render_performance():
     )
 
 
+def _paper_baseline_summary(decisions, outcomes):
+    decisions = decisions.copy()
+    outcomes = outcomes.copy()
+    decisions["probability_up"] = pd.to_numeric(
+        decisions["probability_up"], errors="coerce"
+    )
+    outcomes["return_pct"] = pd.to_numeric(outcomes["return_pct"], errors="coerce")
+    outcomes["evaluation_horizon_days"] = pd.to_numeric(
+        outcomes["evaluation_horizon_days"], errors="coerce"
+    )
+    available = outcomes[outcomes["return_pct"].notna()].copy()
+    if available.empty:
+        return pd.DataFrame()
+    joined = available.merge(
+        decisions[["decision_id", "probability_up", "action"]],
+        on="decision_id",
+        how="left",
+        suffixes=("", "_decision"),
+    )
+    joined["probability_up"] = pd.to_numeric(joined["probability_up"], errors="coerce")
+    groups = {
+        "Combined policy": joined["action"].eq("paper buy candidate"),
+        "Watchlist-only": pd.Series(True, index=joined.index),
+        "Model-only": joined["probability_up"].ge(0.55),
+    }
+    rows = []
+    for name, mask in groups.items():
+        sample = joined[mask]
+        for horizon, horizon_rows in sample.groupby("evaluation_horizon_days"):
+            rows.append(
+                {
+                    "baseline": name,
+                    "horizon": f"{int(horizon)}d",
+                    "evaluated": len(horizon_rows),
+                    "average_return": horizon_rows["return_pct"].mean(),
+                    "win_rate": (horizon_rows["return_pct"] > 0).mean(),
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def render_paper_performance():
+    st.title("Paper Performance")
+    st.caption(
+        "Later market outcomes attached to the decision that existed at the time. "
+        "No future price is used before its trading-session horizon matures."
+    )
+    decisions = data.automatic_paper_decisions()
+    outcomes = data.automatic_paper_outcomes()
+    status = data.paper_learning_status()
+
+    if decisions.empty:
+        st.info("No automatic paper decisions are published in the dashboard snapshot yet.")
+        return
+    decisions = decisions.copy()
+    outcomes = outcomes.copy()
+    for column in ("horizon_days", "probability_up", "reference_price"):
+        decisions[column] = pd.to_numeric(decisions[column], errors="coerce")
+    for column in (
+        "entry_price",
+        "decision_horizon_days",
+        "evaluation_horizon_days",
+        "evaluation_price",
+        "return_pct",
+        "stop_loss",
+        "target_price",
+    ):
+        if column in outcomes.columns:
+            outcomes[column] = pd.to_numeric(outcomes[column], errors="coerce")
+
+    action_counts = decisions["action"].fillna("unknown").value_counts()
+    action_badges = {
+        "paper buy candidate": "BUY",
+        "watch": "WATCH",
+        "avoid for now": "AVOID",
+        "review reduce": "REDUCE",
+        "hold / consider add": "HOLD",
+    }
+    action_html = "".join(
+        (
+            '<div class="action-count">'
+            f'<span>{action_badges.get(str(action), "ACTION")}</span>'
+            f"<b>{count}</b><small>{action}</small></div>"
+        )
+        for action, count in action_counts.head(6).items()
+    )
+    st.markdown(
+        f"""
+        <div class="action-count-grid">{action_html}</div>
+        <style>
+        .action-count-grid {{
+          display:grid; grid-template-columns:repeat(6,1fr); gap:.55rem; margin:.3rem 0 1rem;
+        }}
+        .action-count {{
+          border:1px solid rgba(128,128,128,.24); border-radius:.9rem;
+          padding:.65rem; text-align:center; background:rgba(128,128,128,.035);
+        }}
+        .action-count span {{
+          display:inline-grid; place-items:center; min-width:2.4rem; height:2.1rem;
+          border-radius:999px; background:rgba(46,139,255,.14); color:#2e8bff;
+          font-size:.67rem; font-weight:800;
+        }}
+        .action-count b, .action-count small {{ display:block; }}
+        .action-count b {{ font-size:1.35rem; margin-top:.25rem; }}
+        .action-count small {{ opacity:.7; line-height:1.1; }}
+        @media (max-width:700px) {{
+          .action-count-grid {{ grid-template-columns:repeat(2,1fr); }}
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    available = outcomes[outcomes["return_pct"].notna()].copy()
+    metrics = st.columns(4)
+    metrics[0].metric("Open decisions", status["open"])
+    metrics[1].metric("Matured decisions", status["matured"])
+    metrics[2].metric(
+        "Average return",
+        percent(available["return_pct"].mean()) if not available.empty else "waiting",
+    )
+    metrics[3].metric(
+        "Median return",
+        percent(available["return_pct"].median()) if not available.empty else "waiting",
+    )
+
+    if available.empty:
+        st.info(
+            "The learning loop is active, but none of the recorded decisions has a "
+            "published mature price yet."
+        )
+    else:
+        available["horizon"] = (
+            available["evaluation_horizon_days"].astype(int).astype(str) + "d"
+        )
+        available["win"] = available["return_pct"] > 0
+        action_horizon = (
+            available.groupby(["action", "horizon"], as_index=False)
+            .agg(
+                evaluated=("decision_id", "count"),
+                win_rate=("win", "mean"),
+                average_return=("return_pct", "mean"),
+                median_return=("return_pct", "median"),
+            )
+        )
+        left, right = st.columns(2)
+        with left:
+            fig = px.bar(
+                action_horizon,
+                x="horizon",
+                y="win_rate",
+                color="action",
+                barmode="group",
+                title="Win rate by action and horizon",
+                hover_data=["evaluated"],
+            )
+            fig.update_yaxes(tickformat=".0%")
+            fig.update_layout(height=370, margin=dict(l=20, r=20, t=55, b=20))
+            st.plotly_chart(fig, use_container_width=True, key="paper_win_rate")
+        with right:
+            ordered = available.sort_values(["evaluation_date", "decision_id"])
+            curve = (1 + ordered["return_pct"].fillna(0)).cumprod()
+            drawdown = curve / curve.cummax() - 1
+            st.metric("Observed max drawdown", percent(drawdown.min()))
+            st.caption("Equal-weight sequence of evaluated events, not portfolio equity.")
+            fig = px.box(
+                available,
+                x="horizon",
+                y="return_pct",
+                color="action",
+                points="all",
+                title="Return distribution, not a prediction",
+            )
+            fig.update_yaxes(tickformat=".1%")
+            fig.update_layout(height=310, margin=dict(l=20, r=20, t=55, b=20))
+            st.plotly_chart(fig, use_container_width=True, key="paper_return_distribution")
+
+        barrier_counts = outcomes["status"].value_counts()
+        barrier_cols = st.columns(4)
+        for column, label in zip(
+            barrier_cols, ("matured", "stopped", "targeted", "unavailable")
+        ):
+            column.metric(label.title(), int(barrier_counts.get(label, 0)))
+        st.caption("Stop and target hits use available daily closing prices.")
+
+        baseline = _paper_baseline_summary(decisions, outcomes)
+        if not baseline.empty:
+            st.subheader("Decision-rule comparison")
+            st.caption(
+                "Watchlist-only includes every recorded candidate. Model-only includes "
+                "candidates at or above 55% model probability. Combined policy includes "
+                "paper-buy actions. These are baselines, not randomized causal estimates."
+            )
+            figure = px.bar(
+                baseline,
+                x="horizon",
+                y="average_return",
+                color="baseline",
+                barmode="group",
+                hover_data=["evaluated", "win_rate"],
+                title="Average later return by decision rule",
+            )
+            figure.update_yaxes(tickformat=".1%")
+            figure.update_layout(height=390, margin=dict(l=20, r=20, t=55, b=20))
+            st.plotly_chart(figure, use_container_width=True, key="paper_baselines")
+
+    st.subheader("Maturity timeline")
+    timeline = decisions[["decision_id", "source_date", "ticker", "horizon_days"]].copy()
+    timeline["source_date"] = pd.to_datetime(timeline["source_date"], errors="coerce")
+    timeline["expected_maturity"] = timeline["source_date"] + pd.to_timedelta(
+        pd.to_numeric(timeline["horizon_days"], errors="coerce"), unit="D"
+    )
+    if not timeline.empty:
+        figure = px.scatter(
+            timeline,
+            x="expected_maturity",
+            y="ticker",
+            color="horizon_days",
+            hover_data=["source_date", "decision_id"],
+            title="Approximate calendar for declared decision horizons",
+        )
+        figure.update_layout(height=360, margin=dict(l=20, r=20, t=55, b=20))
+        st.plotly_chart(figure, use_container_width=True, key="paper_maturity_timeline")
+        st.caption("Actual evaluation uses trading sessions; this timeline is a calendar guide.")
+
+    st.subheader("Feedback loop")
+    st.markdown(
+        """
+        <div class="feedback-loop">
+          <div><b>1</b><span>Decision</span></div><i>→</i>
+          <div><b>2</b><span>Wait for horizon</span></div><i>→</i>
+          <div><b>3</b><span>Attach outcome</span></div><i>→</i>
+          <div><b>4</b><span>Compare policies</span></div><i>↺</i>
+        </div>
+        <style>
+        .feedback-loop {{ display:flex; align-items:center; gap:.55rem; margin:.4rem 0 1rem; }}
+        .feedback-loop div {{
+          flex:1; border:1px solid rgba(31,164,99,.4); border-radius:1rem;
+          padding:.7rem; text-align:center;
+        }}
+        .feedback-loop b {{
+          display:inline-grid; place-items:center; width:1.8rem; height:1.8rem;
+          border-radius:50%; background:#1fa463; color:white;
+        }}
+        .feedback-loop span {{ display:block; margin-top:.25rem; }}
+        .feedback-loop i {{ font-style:normal; opacity:.55; }}
+        @media (max-width:700px) {{
+          .feedback-loop {{ display:grid; grid-template-columns:1fr; }}
+          .feedback-loop i {{ transform:rotate(90deg); text-align:center; }}
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    with st.expander("Open full paper audit ledger"):
+        st.dataframe(
+            outcomes if not outcomes.empty else decisions,
+            hide_index=True,
+            use_container_width=True,
+        )
+
+
 def render_watchlist():
     st.title("Ranked Watchlist")
     st.caption(
@@ -1466,17 +1760,18 @@ def render_guide():
             "Drag to rotate, scroll to zoom, and hover over a node. Blue nodes exist, "
             "amber nodes are partial, and gray nodes are planned."
         )
+        nodes = architecture_nodes()
         st.plotly_chart(
-            architecture_figure(),
+            architecture_figure(nodes),
             use_container_width=True,
             key="architecture_knowledge_graph",
         )
         selected_node = st.selectbox(
             "Open a node",
-            list(ARCHITECTURE_NODES),
+            list(nodes),
             key="architecture_selected_node",
         )
-        node = ARCHITECTURE_NODES[selected_node]
+        node = nodes[selected_node]
         node_columns = st.columns(2)
         node_columns[0].metric("Status", node["status"].title())
         node_columns[1].metric("Layer", node["kind"].title())
@@ -2527,7 +2822,13 @@ if page_group == "Overview":
 elif page_group == "Decisions":
     page = st.selectbox(
         "Decision view",
-        ("Daily Decision Board", "Ranked Watchlist", "Performance", "Portfolio Replay"),
+        (
+            "Daily Decision Board",
+            "Paper Performance",
+            "Ranked Watchlist",
+            "Shortlist Performance",
+            "Portfolio Replay",
+        ),
         label_visibility="collapsed",
     )
 elif page_group == "Model Lab":
@@ -2577,7 +2878,9 @@ try:
         render_stock_universe()
     elif page == "Visual Lab":
         render_visual_lab()
-    elif page == "Performance":
+    elif page == "Paper Performance":
+        render_paper_performance()
+    elif page == "Shortlist Performance":
         render_performance()
     elif page == "Ticker Explorer":
         render_explorer()

@@ -49,8 +49,8 @@ For the current implementation order, see `NEXT_STEPS_PLAN.md`.
 - [x] Add paper position sizing from portfolio value and 1% risk budget.
 - [x] Add stop loss and target logic for each paper trade.
 - [x] Save every paper decision, including rejected and hold decisions.
-- [ ] Track paper trade outcomes by horizon.
-- [ ] Add a paper-trading performance dashboard.
+- [x] Track paper trade outcomes by horizon.
+- [x] Add a paper-trading performance dashboard.
 - [ ] Compare automatic paper trades against manual review choices.
 
 ## Phase 4: Serious Backtesting
@@ -118,7 +118,7 @@ Update this section as work is completed.
 - Product decision record: complete
 - Daily decision board: active primary surface
 - Trading constraint engine: scaffolded, incomplete
-- Automatic paper trading: daily decision generation complete; outcomes incomplete
+- Automatic paper trading: daily decisions and auditable horizon outcomes complete
 - Full backtesting: not started
 - Model tournament: not started
 - Portfolio-aware assistant: not started

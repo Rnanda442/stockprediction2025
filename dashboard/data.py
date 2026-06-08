@@ -1,13 +1,18 @@
 import os
+import json
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 
 import pandas as pd
 
+from dashboard import automatic_paper_decisions as paper_decisions
+from dashboard import paper_outcomes
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DB = ROOT / "dashboard_data.db"
+PAPER_SNAPSHOT = ROOT / "dashboard" / "paper_learning_snapshot.json"
 
 
 def database_path():
@@ -98,6 +103,91 @@ def performance_summary():
                               WHEN '20d' THEN 3 WHEN '60d' THEN 4 END
         """
     )
+
+
+def automatic_paper_decisions():
+    if PAPER_SNAPSHOT.exists():
+        payload = json.loads(PAPER_SNAPSHOT.read_text(encoding="utf-8"))
+        return pd.DataFrame(
+            payload.get("decisions", []), columns=paper_decisions.LEDGER_COLUMNS
+        )
+    if not table_exists("AutomaticPaperDecisions"):
+        return pd.DataFrame()
+    return query(
+        """
+        SELECT *
+        FROM AutomaticPaperDecisions
+        ORDER BY source_date DESC, watchlist_rank, ticker
+        """
+    )
+
+
+def automatic_paper_outcomes():
+    if PAPER_SNAPSHOT.exists():
+        payload = json.loads(PAPER_SNAPSHOT.read_text(encoding="utf-8"))
+        return pd.DataFrame(
+            payload.get("outcomes", []), columns=paper_outcomes.OUTCOME_COLUMNS
+        )
+    if not table_exists("AutomaticPaperOutcomeEvents"):
+        return pd.DataFrame()
+    return query(
+        """
+        SELECT *
+        FROM AutomaticPaperOutcomeEvents
+        ORDER BY evaluation_date DESC, evaluation_horizon_days, ticker
+        """
+    )
+
+
+def paper_learning_status():
+    decisions = automatic_paper_decisions()
+    outcomes = automatic_paper_outcomes()
+    if decisions.empty:
+        return {
+            "decisions": 0,
+            "open": 0,
+            "matured": 0,
+            "outcome_events": 0,
+            "unavailable": 0,
+            "unavailable_decisions": 0,
+        }
+    declared = decisions[["decision_id", "horizon_days"]].copy()
+    declared["horizon_days"] = pd.to_numeric(declared["horizon_days"], errors="coerce")
+    matured_ids = set()
+    unavailable_ids = set()
+    if not outcomes.empty:
+        event_horizon = pd.to_numeric(
+            outcomes["evaluation_horizon_days"], errors="coerce"
+        )
+        decision_horizon = pd.to_numeric(
+            outcomes["decision_horizon_days"], errors="coerce"
+        )
+        matured_ids = set(
+            outcomes.loc[
+                (event_horizon == decision_horizon)
+                & outcomes["status"].isin(["matured", "stopped", "targeted"]),
+                "decision_id",
+            ].astype(str)
+        )
+        unavailable_ids = set(
+            outcomes.loc[
+                (event_horizon == decision_horizon)
+                & outcomes["status"].eq("unavailable"),
+                "decision_id",
+            ].astype(str)
+        )
+        unavailable_ids -= matured_ids
+    resolved_ids = matured_ids | unavailable_ids
+    return {
+        "decisions": len(decisions),
+        "open": int((~declared["decision_id"].astype(str).isin(resolved_ids)).sum()),
+        "matured": len(matured_ids),
+        "outcome_events": len(outcomes),
+        "unavailable_decisions": len(unavailable_ids),
+        "unavailable": (
+            int((outcomes["status"] == "unavailable").sum()) if not outcomes.empty else 0
+        ),
+    }
 
 
 def shortlist_history():
