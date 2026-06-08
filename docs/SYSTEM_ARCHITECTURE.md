@@ -146,11 +146,11 @@ mean a better portfolio policy after sizing, turnover, and drawdown.
 The next implementation should complete one vertical path before adding more
 variables:
 
-1. One daily decision schema.
-2. One automatic paper ledger.
-3. One outcome updater.
-4. One paper-performance view.
-5. One backtest using the same decision policy.
+1. Completed: one daily decision schema.
+2. Completed: one automatic paper ledger.
+3. Next: one outcome updater.
+4. Then: one paper-performance view.
+5. Then: one backtest using the same decision policy.
 
 Only after that loop works should the model tournament add tree models or new
 data sources. This keeps model complexity from outrunning the product's ability

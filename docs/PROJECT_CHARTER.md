@@ -1,6 +1,6 @@
 # Stock Research Assistant Charter
 
-Last updated: 2026-06-07
+Last updated: 2026-06-08
 
 ## Product In One Sentence
 
@@ -50,8 +50,9 @@ budget, constraint status, and later outcome.
 ## Current Product Boundary
 
 The application is a private research workspace. It can rank ideas, estimate
-baseline probabilities, replay portfolio rules, and save paper-review notes.
-It does not know future news and it does not place real trades.
+baseline probabilities, replay portfolio rules, save paper-review notes, and
+generate an auditable daily paper-decision ledger. It does not yet attach all
+future outcomes, it does not know future news, and it does not place real trades.
 
 ## Definition Of A Trustworthy Decision
 

@@ -687,8 +687,8 @@ def render_daily_decision_board():
 
     st.subheader("Automatic paper-decision contract")
     st.caption(
-        "Preview of the append-only record the next automation step will save. "
-        "This preview does not write a ledger or place a trade."
+        "The scheduled pipeline uses this append-only record for every daily paper "
+        "decision. This screen previews the record without writing or placing a trade."
     )
     preview_rows = board.sort_values(
         ["decision_priority", "rank", "model_probability_up"],
@@ -734,9 +734,9 @@ def render_daily_decision_board():
     st.subheader("What this board does next")
     st.markdown(
         """
-        - Use these actions as the input queue for automatic paper trading.
+        - Attach 1d, 5d, 20d, and 60d outcomes to recorded paper decisions.
+        - Build one performance view for the complete decision policy.
         - Add PDT, buying-power, and account-type checks before live trading.
-        - Keep every hold, buy, reduce, and rejected idea in an audit trail.
         - Backtest this decision logic before trusting it with real orders.
         """
     )
@@ -874,38 +874,196 @@ def render_watchlist():
 def render_guide():
     st.title("System Architecture")
     st.caption(
-        "The product map: how observations become variables, predictions, guarded "
-        "decisions, and measurable outcomes."
+        "Start with the story, then open the variables or technical detail only when "
+        "you need them."
     )
 
-    st.subheader("North star")
     st.info(
-        "The app should answer: What deserves attention today, why, and what risk, "
-        "portfolio, or account constraint could change the decision? A prediction is "
-        "evidence inside that decision, not the decision by itself."
+        "North star: show what deserves attention today, why it matters, what could "
+        "block it, and whether the decision later worked."
     )
 
-    st.subheader("System architecture")
-    stages = [
-        ("1. Observe", "Prices, volume, market history, portfolio snapshot"),
-        ("2. Measure", "Direction, consistency, risk, tradability, context"),
-        ("3. Compare", "Heuristic ranking plus time-split model baselines"),
-        ("4. Decide", "Hold, paper buy, watch, reduce, avoid, or blocked"),
-        ("5. Learn", "Later returns, paper outcomes, backtests, model feedback"),
-    ]
-    stage_columns = st.columns(len(stages))
-    for column, (name, detail) in zip(stage_columns, stages):
-        with column.container(border=True):
-            st.markdown(f"**{name}**")
-            st.caption(detail)
-
-    st.caption(
-        "Quality, time-leakage, portfolio, trading-limit, and human-review gates sit "
-        "between these stages. A candidate can stop at any gate."
+    story_tab, variables_tab, technical_tab = st.tabs(
+        ("Start here", "Variables", "Technical detail")
     )
 
-    st.subheader("Research flow")
-    st.markdown(
+    with story_tab:
+        st.subheader("The app in 30 seconds")
+        st.markdown(
+            """
+            <div class="decision-flow" role="img" aria-label="Evidence moves through questions and safety gates into a paper decision, then outcomes flow back into learning.">
+              <div class="flow-step"><span>1</span><strong>Observe</strong><small>prices + portfolio</small></div>
+              <div class="flow-arrow">→</div>
+              <div class="flow-step"><span>2</span><strong>Explain</strong><small>six questions</small></div>
+              <div class="flow-arrow">→</div>
+              <div class="flow-step gate"><span>3</span><strong>Guard</strong><small>risk + constraints</small></div>
+              <div class="flow-arrow">→</div>
+              <div class="flow-step action"><span>4</span><strong>Decide</strong><small>paper action</small></div>
+              <div class="flow-arrow">→</div>
+              <div class="flow-step learn"><span>5</span><strong>Learn</strong><small>future outcomes</small></div>
+            </div>
+            <style>
+            .decision-flow {
+                display: flex;
+                align-items: stretch;
+                gap: .45rem;
+                margin: .6rem 0 1rem;
+            }
+            .flow-step {
+                position: relative;
+                flex: 1 1 0;
+                min-width: 0;
+                padding: .85rem .65rem;
+                border: 1px solid rgba(91, 124, 250, .32);
+                border-radius: .9rem;
+                background: linear-gradient(145deg, rgba(91, 124, 250, .10), rgba(91, 124, 250, .02));
+                overflow: hidden;
+            }
+            .flow-step::after {
+                content: "";
+                position: absolute;
+                width: 2.5rem;
+                height: 2.5rem;
+                border-radius: 50%;
+                background: rgba(91, 124, 250, .12);
+                right: -1rem;
+                bottom: -1rem;
+                animation: architecture-pulse 2.8s ease-in-out infinite;
+            }
+            .flow-step span {
+                display: inline-grid;
+                place-items: center;
+                width: 1.55rem;
+                height: 1.55rem;
+                margin-bottom: .45rem;
+                border-radius: 50%;
+                background: #5b7cfa;
+                color: white;
+                font-size: .8rem;
+                font-weight: 700;
+            }
+            .flow-step strong, .flow-step small { display: block; }
+            .flow-step small { margin-top: .2rem; opacity: .7; }
+            .flow-step.gate { border-color: rgba(245, 166, 35, .42); }
+            .flow-step.gate span { background: #d88912; }
+            .flow-step.action { border-color: rgba(31, 164, 99, .42); }
+            .flow-step.action span, .flow-step.learn span { background: #1fa463; }
+            .flow-arrow { align-self: center; opacity: .45; font-size: 1.25rem; }
+            @keyframes architecture-pulse {
+                0%, 100% { transform: scale(.7); opacity: .35; }
+                50% { transform: scale(1.15); opacity: .8; }
+            }
+            @media (max-width: 700px) {
+                .decision-flow { display: grid; grid-template-columns: 1fr; }
+                .flow-arrow { transform: rotate(90deg); text-align: center; line-height: .6; }
+                .flow-step { padding: .75rem .8rem; }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .flow-step::after { animation: none; }
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.caption(
+            "A prediction never jumps directly to a trade. Evidence must be explained, "
+            "pass safety gates, become a paper action, and earn trust through outcomes."
+        )
+
+        st.subheader("The six questions")
+        question_rows = [
+            ("Direction", "Is it moving?", "Return, momentum, trend slope"),
+            ("Consistency", "Is the move orderly?", "Trend fit, persistence"),
+            ("Risk", "How rough can it get?", "Volatility, drawdown"),
+            ("Tradability", "Can we enter and exit?", "Dollar volume, price"),
+            ("Evidence", "Do the methods agree?", "Rules, model probability"),
+            ("Context", "Does it fit the account?", "Holdings, horizon, constraints"),
+        ]
+        for row_start in range(0, len(question_rows), 3):
+            question_columns = st.columns(3)
+            for column, (family, question, variables) in zip(
+                question_columns, question_rows[row_start : row_start + 3]
+            ):
+                with column.container(border=True):
+                    st.markdown(f"**{family}**")
+                    st.write(question)
+                    st.caption(variables)
+
+        st.subheader("How to read one decision")
+        decision_columns = st.columns(4)
+        decision_cards = [
+            ("Evidence", "What the market data and models currently say."),
+            ("Reasons", "Which variables support or weaken the idea."),
+            ("Guardrails", "What risk, portfolio, or account rule can stop it."),
+            ("Outcome", "What happened 1d, 5d, 20d, and 60d later."),
+        ]
+        for column, (name, detail) in zip(decision_columns, decision_cards):
+            with column.container(border=True):
+                st.markdown(f"**{name}**")
+                st.caption(detail)
+
+        st.subheader("Build order")
+        roadmap = [
+            ("Now", "Outcome updater", "Attach later returns to every recorded paper decision."),
+            ("Next", "Performance page", "Show whether the complete policy is helping."),
+            ("Then", "Policy backtest", "Replay the same decisions with sizing and constraints."),
+            ("After proof", "Model tournament", "Promote a model only when it beats the baseline."),
+        ]
+        st.dataframe(
+            pd.DataFrame(roadmap, columns=["Stage", "Deliverable", "Proof"]),
+            hide_index=True,
+            use_container_width=True,
+        )
+
+    with variables_tab:
+        st.subheader("Variable families")
+        st.write(
+            "No single variable answers 'Should I buy?' Each one answers a smaller "
+            "question. The decision combines those answers with account context."
+        )
+        variable = st.selectbox(
+            "Choose a variable",
+            list(VARIABLE_GUIDE),
+            help="See what the measurement means, its rough formula, and its failure modes.",
+        )
+        render_variable_card(variable)
+
+        st.subheader("How the variables connect")
+        connection_rows = [
+            ("Direction", "Is it moving?", "Return, momentum, trend slope", "Find movement"),
+            ("Consistency", "Is the move orderly?", "Trend fit, persistence", "Separate signal from noise"),
+            ("Risk", "How rough can it get?", "Volatility, drawdown", "Set caution and paper size"),
+            ("Tradability", "Can we enter and exit?", "Dollar volume, price", "Avoid impractical ideas"),
+            ("Evidence", "Do methods agree?", "Rule confidence, model probability", "Rank the case"),
+            ("Context", "Does it fit us?", "Holding, horizon, constraints", "Decide or block"),
+        ]
+        connections = pd.DataFrame(
+            connection_rows,
+            columns=["Family", "Question", "Variables", "Decision use"],
+        )
+        selected_family = st.radio(
+            "Choose one question",
+            connections["Family"].tolist(),
+            horizontal=True,
+            key="architecture_variable_family",
+        )
+        selected_connection = connections[connections["Family"] == selected_family].iloc[0]
+        left, middle, right = st.columns(3)
+        with left.container(border=True):
+            st.caption("QUESTION")
+            st.markdown(f"### {selected_connection['Question']}")
+        with middle.container(border=True):
+            st.caption("VARIABLES")
+            st.markdown(f"### {selected_connection['Variables']}")
+        with right.container(border=True):
+            st.caption("DECISION USE")
+            st.markdown(f"### {selected_connection['Decision use']}")
+        with st.expander("See all six variable families"):
+            st.dataframe(connections, hide_index=True, use_container_width=True)
+
+    with technical_tab:
+        st.subheader("Research pipeline")
+        st.markdown(
         """
         1. **Baseline filters** remove symbols with invalid quotes, insufficient liquidity,
            excessive volatility, or other data-quality problems.
@@ -922,112 +1080,22 @@ def render_guide():
         7. **Model Lab** trains only on earlier historical dates, applies a time embargo,
            and measures the baseline on a later window that was not used for fitting.
         """
-    )
-
-    st.subheader("Variable families")
-    concept_cols = st.columns(5)
-    concepts = [
-        ("Direction", "Return, momentum, and trend slope"),
-        ("Consistency", "Trend fit and persistence"),
-        ("Risk", "Volatility and drawdown"),
-        ("Tradability", "Dollar volume and price"),
-        ("Context", "Horizon, holdings, concentration, constraints"),
-    ]
-    for column, (name, question) in zip(concept_cols, concepts):
-        column.markdown(f"**{name}**")
-        column.caption(question)
-
-    st.info(
-        "No single variable answers 'Should I buy?' Each variable answers one smaller "
-        "question. The research process combines those answers and still requires a "
-        "holding period, position size, exit plan, and review of current events."
-    )
-
-    st.subheader("Interactive variable decoder")
-    variable = st.selectbox(
-        "Choose a variable",
-        list(VARIABLE_GUIDE),
-        help="Select any score or measurement to see its meaning, rough formula, and failure modes.",
-    )
-    render_variable_card(variable)
-
-    st.subheader("How the variables connect")
-    connection_rows = [
-        ("Direction", "Is it moving?", "Return, momentum, trend slope", "Find upward or downward movement"),
-        ("Consistency", "Is the move orderly?", "Trend fit, persistence", "Separate steady paths from noise"),
-        ("Risk", "How rough can it get?", "Volatility, drawdown", "Set caution and paper size"),
-        ("Tradability", "Can we enter and exit?", "Dollar volume, price", "Avoid impractical ideas"),
-        ("Evidence", "Do methods agree?", "Rule confidence, model probability", "Rank the strength of the case"),
-        ("Context", "Does it fit us?", "Holding, horizon, constraints", "Hold, watch, buy, reduce, or block"),
-    ]
-    connections = pd.DataFrame(
-        connection_rows,
-        columns=["Family", "Question", "Variables", "Decision use"],
-    )
-    selected_family = st.radio(
-        "Choose one question",
-        connections["Family"].tolist(),
-        horizontal=True,
-        key="architecture_variable_family",
-    )
-    selected_connection = connections[connections["Family"] == selected_family].iloc[0]
-    left, middle, right = st.columns(3)
-    with left.container(border=True):
-        st.caption("QUESTION")
-        st.markdown(f"### {selected_connection['Question']}")
-    with middle.container(border=True):
-        st.caption("VARIABLES")
-        st.markdown(f"### {selected_connection['Variables']}")
-    with right.container(border=True):
-        st.caption("DECISION USE")
-        st.markdown(f"### {selected_connection['Decision use']}")
-    st.dataframe(
-        connections,
-        hide_index=True,
-        use_container_width=True,
-        column_config={
-            "Family": st.column_config.TextColumn(width="small"),
-            "Question": st.column_config.TextColumn(width="medium"),
-            "Variables": st.column_config.TextColumn(width="medium"),
-            "Decision use": st.column_config.TextColumn(width="large"),
-        },
-    )
-    st.caption(
-        "Read one row at a time. Variables answer different questions; the final action "
-        "combines their evidence with portfolio and account constraints."
-    )
-
-    st.subheader("What we build next")
-    roadmap = [
-        ("Now", "Reliable daily decisions", "Make freshness, model health, reasons, and constraints obvious."),
-        ("Next", "Automatic paper loop", "Record every buy, hold, reject, stop, target, and later outcome."),
-        ("Then", "Full decision backtest", "Replay the same policy with sizing, turnover, and drawdown."),
-        ("After proof", "Model tournament", "Compare logistic and tree models by 5d, 20d, and 60d horizon."),
-        ("Safety gate", "Portfolio assistant", "Add allocation, alerts, audit logs, and review-gated proposals."),
-    ]
-    st.dataframe(
-        pd.DataFrame(roadmap, columns=["Stage", "Deliverable", "Why it matters"]),
-        hide_index=True,
-        use_container_width=True,
-    )
-
-    with st.expander("Where Processing / Java visual design fits"):
-        st.write(
-            "Processing is useful for prototyping motion: observations becoming features, "
-            "stocks moving through risk gates, rankings changing over time, and outcomes "
-            "flowing back into evaluation. The production dashboard should stay web-based. "
-            "Useful Processing studies can be exported as short videos, GIFs, or design "
-            "references so the Streamlit app does not require a Java runtime."
         )
 
-    st.subheader("Important limits")
-    st.warning(
-        "The confidence score is a transparent heuristic score, not a calibrated probability. "
-        "Model probabilities are baseline research outputs and can be wrong. "
-        "Monte Carlo scenarios describe what could happen if historical return behavior persisted; "
-        "they do not know future news, earnings surprises, or market regime shifts. "
-        "The dashboard does not place trades; review liquidity, position size, stops, news, earnings, and account risk before any manual order."
-    )
+        with st.expander("Visual design and Processing studies"):
+            st.write(
+                "Processing can prototype motion for stocks moving through risk gates, "
+                "rankings changing over time, and outcomes flowing back into evaluation. "
+                "The production dashboard stays web-based; useful studies become short "
+                "videos, GIFs, or references instead of a Java runtime dependency."
+            )
+
+        st.subheader("Important limits")
+        st.warning(
+            "Heuristic confidence is not a calibrated probability. Model probabilities "
+            "can be wrong, simulations cannot anticipate future news, and this dashboard "
+            "does not place trades."
+        )
 
 
 def render_research_lab():

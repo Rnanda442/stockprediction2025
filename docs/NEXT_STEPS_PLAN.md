@@ -177,10 +177,10 @@ Current app hooks:
 
 Tasks:
 
-- [ ] Create an automatic paper decision ledger separate from manual review notes.
-- [ ] Save every daily action, including hold, watch, avoid, buy, add, reduce, and exit.
-- [ ] Calculate suggested paper quantity using portfolio value and 1% risk budget.
-- [ ] Add stop loss, target price, and decision horizon.
+- [x] Create an automatic paper decision ledger separate from manual review notes.
+- [x] Save every daily action, including hold, watch, avoid, buy, add, reduce, and exit.
+- [x] Calculate suggested paper quantity using portfolio value and 1% risk budget.
+- [x] Add stop loss, target price, and decision horizon.
 - [ ] Add automatic paper open/close logic based on next daily run.
 - [ ] Track outcome by 1d, 5d, 20d, and 60d.
 - [ ] Add a Paper Trading page or expand Model Lab with paper performance.
@@ -370,13 +370,12 @@ Done criteria:
 
 This is the recommended sequence for the next coding sessions:
 
-1. Verify model tables in the newest GitHub Actions artifact and fix local sync if needed.
-2. Add model-table status to `Pipeline Health` and `Daily Decision Board`.
-3. Add a trading constraint snapshot format and display constraint status.
-4. Add automatic paper decision ledger.
-5. Add Paper Trading performance page.
-6. Upgrade Portfolio Replay into Backtest Lab.
-7. Add model tournament only after the full decision backtest exists.
+1. Attach 1d, 5d, 20d, and 60d outcomes to automatic paper decisions.
+2. Add a Paper Trading performance page.
+3. Add row-level buying-power and account constraint status.
+4. Upgrade Portfolio Replay into Backtest Lab using the production decision policy.
+5. Add calibrated logistic regression as the first model challenger.
+6. Add one tree model only after the evaluation harness is stable.
 
 ## Questions To Revisit Later
 

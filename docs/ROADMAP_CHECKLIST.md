@@ -1,6 +1,6 @@
 # Stock Prediction Roadmap Checklist
 
-Last updated: 2026-06-04
+Last updated: 2026-06-08
 
 ## Current Product Read
 
@@ -13,7 +13,9 @@ The app is already a private stock research dashboard with:
 - Model Lab
 - 3D stock universe
 - Paper-trade review notes
+- Automatic daily paper-decision ledger
 - Portfolio Replay
+- Mobile Activity and Architecture views
 - Guarded GitHub Actions pipeline reruns
 
 The next product phase is to turn it from a research dashboard into a validated personal trading assistant.
@@ -25,7 +27,7 @@ For the current implementation order, see `NEXT_STEPS_PLAN.md`.
 - [x] Add a Daily Decision Board page.
 - [x] Define initial allowed action labels: hold, hold/add review, review reduce, paper buy candidate, watch, avoid.
 - [x] Make "do nothing / hold" a first-class recommendation.
-- [ ] Make the Daily Decision Board the first page after the flow proves useful.
+- [x] Make the Daily Decision Board the first page after the flow proves useful.
 - [x] Combine watchlist, model rankings, portfolio holdings, and risk into one decision table.
 - [ ] Add trading-limit checks to the decision table.
 - [x] Add plain-English explanation for each decision.
@@ -44,8 +46,8 @@ For the current implementation order, see `NEXT_STEPS_PLAN.md`.
 ## Phase 3: Automatic Paper Trading
 
 - [x] Convert model/watchlist queue into automatic paper trade candidates.
-- [ ] Add paper position sizing from portfolio value and 1% risk budget.
-- [ ] Add stop loss and target logic for each paper trade.
+- [x] Add paper position sizing from portfolio value and 1% risk budget.
+- [x] Add stop loss and target logic for each paper trade.
 - [x] Save every paper decision, including rejected and hold decisions.
 - [ ] Track paper trade outcomes by horizon.
 - [ ] Add a paper-trading performance dashboard.
@@ -114,9 +116,9 @@ For the current implementation order, see `NEXT_STEPS_PLAN.md`.
 Update this section as work is completed.
 
 - Product decision record: complete
-- Daily decision board: started
-- Trading constraint engine: not started
-- Automatic paper trading: not started
+- Daily decision board: active primary surface
+- Trading constraint engine: scaffolded, incomplete
+- Automatic paper trading: daily decision generation complete; outcomes incomplete
 - Full backtesting: not started
 - Model tournament: not started
 - Portfolio-aware assistant: not started
