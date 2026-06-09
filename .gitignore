@@ -5,6 +5,7 @@ config/robinhood_token.txt
 config/robinhood_token-Copy1.txt
 .env
 *.env
+.streamlit/secrets.toml
 
 # databases
 *.db
