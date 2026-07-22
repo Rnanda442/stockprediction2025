@@ -238,7 +238,8 @@ def _validate_sherrif_id(device_token:str, workflow_id:str,mfa_code:str):
         # put the while loop here
         # ***************************   NEW   ************************************
         start_time = time.time()
-        while time.time() - start_time < 120: # 2 minutes
+        timeout_seconds = int(os.getenv("ROBINHOOD_VERIFICATION_TIMEOUT_SECONDS", "300"))
+        while time.time() - start_time < timeout_seconds:
 
             time.sleep(5)
             if challenge_response["challenge_status"] == "validated":
@@ -255,7 +256,9 @@ def _validate_sherrif_id(device_token:str, workflow_id:str,mfa_code:str):
                 print("Waiting for challenge to be validated")
                 print(time.time() - start_time)
 
-        raise Exception("Login confirmation timed out. Please try again.")
+        raise Exception(
+            f"Login confirmation timed out after {timeout_seconds} seconds. Please try again."
+        )
         # *************************************************************************
 
     raise Exception("Id not returned in user-machine call")
@@ -279,7 +282,6 @@ def logout():
 
 
 # In[ ]:
-
 
 
 
