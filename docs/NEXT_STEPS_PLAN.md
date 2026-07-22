@@ -72,6 +72,18 @@ Action update, 2026-06-04:
 - Follow-up added: the notebook runner now emits a clear GitHub Actions error when Robinhood verification times out.
 - Rerun flow documented in `ROBINHOOD_ACTION_RUNBOOK.md`.
 
+Organization update, 2026-07-22:
+
+- Local `dashboard_data.db` was regenerated from the local root databases without starting Streamlit.
+- Model export smoke passed locally for `vectorized.db` and `dashboard_data.db`.
+- The newest successful GitHub Actions artifacts had expired because artifact retention was 14 days.
+- Future `stock-analysis-outputs` artifacts now retain for 90 days.
+- `scripts/start_dashboard.ps1 -SyncOnly` now skips expired/missing artifacts across recent successful runs and reports a clear rerun/export fallback.
+- Local data is still stale until Robinhood approval allows a fresh cloud run. The rebuilt local dashboard export reports latest market date `2026-04-01`, shortlist date `2026-03-31`, and very low latest-date ticker coverage.
+- Removed the unrelated trip-planner prototype and stale queued patch file from the tracked project.
+- `data/` is reserved for local personal snapshots and ledgers; duplicate ignored DB stubs were removed.
+- Daily Decision Board rows now get a per-action trading constraint status and reason.
+
 ## Build 1: Restore Reliable Model Exports
 
 Why this comes first:
@@ -370,12 +382,14 @@ Done criteria:
 
 This is the recommended sequence for the next coding sessions:
 
-1. Attach 1d, 5d, 20d, and 60d outcomes to automatic paper decisions.
-2. Add a Paper Trading performance page.
-3. Add row-level buying-power and account constraint status.
-4. Upgrade Portfolio Replay into Backtest Lab using the production decision policy.
-5. Add calibrated logistic regression as the first model challenger.
-6. Add one tree model only after the evaluation harness is stable.
+1. Run a fresh Robinhood-approved cloud pipeline so market data, watchlist, and artifacts are current again.
+2. Sync the new unexpired `stock-analysis-outputs` artifact with `scripts/start_dashboard.ps1 -SyncOnly`.
+3. Fill in a local `data/trading_constraints_snapshot.csv` with account type, equity, buying power, cash, day-trade count, and weekly trade count.
+4. Attach 1d, 5d, 20d, and 60d outcomes to automatic paper decisions.
+5. Add a Paper Trading performance page.
+6. Upgrade Portfolio Replay into Backtest Lab using the production decision policy.
+7. Add calibrated logistic regression as the first model challenger.
+8. Add one tree model only after the evaluation harness is stable.
 
 ## Questions To Revisit Later
 

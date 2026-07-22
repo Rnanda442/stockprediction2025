@@ -29,7 +29,7 @@ For the current implementation order, see `NEXT_STEPS_PLAN.md`.
 - [x] Make "do nothing / hold" a first-class recommendation.
 - [x] Make the Daily Decision Board the first page after the flow proves useful.
 - [x] Combine watchlist, model rankings, portfolio holdings, and risk into one decision table.
-- [ ] Add trading-limit checks to the decision table.
+- [x] Add trading-limit checks to the decision table.
 - [x] Add plain-English explanation for each decision.
 - [x] Add confidence level and primary time horizon for each decision when model data is available.
 
@@ -38,9 +38,9 @@ For the current implementation order, see `NEXT_STEPS_PLAN.md`.
 - [x] Add a manual local snapshot scaffold for Robinhood account type and current equity threshold status.
 - [x] Add a manual local snapshot scaffold for rolling 5-trading-day day trade count.
 - [x] Warn on the Daily Decision Board when trading constraints are unknown, cautious, or blocked.
-- [ ] Add buying-power checks.
+- [x] Add buying-power checks.
 - [ ] Add cash-settlement or margin constraint checks.
-- [ ] Block automatic real-trade actions when trading constraints are unclear.
+- [x] Block automatic real-trade actions when trading constraints are unclear.
 - [ ] Add a trade-frequency budget to the decision score.
 
 ## Phase 3: Automatic Paper Trading
@@ -117,7 +117,7 @@ Update this section as work is completed.
 
 - Product decision record: complete
 - Daily decision board: active primary surface
-- Trading constraint engine: scaffolded, incomplete
+- Trading constraint engine: scaffolded with row-level checks, incomplete
 - Automatic paper trading: daily decisions and auditable horizon outcomes complete
 - Full backtesting: not started
 - Model tournament: not started

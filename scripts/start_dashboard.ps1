@@ -30,38 +30,72 @@ if (-not $SkipSync) {
         --repo Rnanda442/stockprediction2025 `
         --workflow stock-run.yml `
         --status success `
-        --limit 1 `
+        --limit 20 `
         --json databaseId,createdAt,url | ConvertFrom-Json
-    if (-not $runs -or -not $runs[0].databaseId) {
+    if (-not $runs) {
         throw "No successful stock pipeline run was found."
     }
 
-    $run = $runs[0]
-    if (Test-Path $syncDir) {
-        $resolvedRoot = [System.IO.Path]::GetFullPath($root)
-        $resolvedSync = [System.IO.Path]::GetFullPath($syncDir)
-        if (-not $resolvedSync.StartsWith($resolvedRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
-            throw "Refusing to clean sync directory outside the repository."
+    $runs = @($runs)
+    $resolvedRoot = [System.IO.Path]::GetFullPath($root)
+    $resolvedSync = [System.IO.Path]::GetFullPath($syncDir)
+    if (-not $resolvedSync.StartsWith($resolvedRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to clean sync directory outside the repository."
+    }
+
+    $synced = $false
+    $skippedRuns = New-Object System.Collections.Generic.List[string]
+    foreach ($run in $runs) {
+        $artifactResponse = gh api "repos/Rnanda442/stockprediction2025/actions/runs/$($run.databaseId)/artifacts" | ConvertFrom-Json
+        $artifact = @($artifactResponse.artifacts) |
+            Where-Object { $_.name -eq "stock-analysis-outputs" } |
+            Select-Object -First 1
+
+        if (-not $artifact) {
+            $skippedRuns.Add("$($run.databaseId) had no stock-analysis-outputs artifact") | Out-Null
+            continue
         }
-        Remove-Item -LiteralPath $syncDir -Recurse -Force
+        if ($artifact.expired) {
+            $expiresAt = if ($artifact.expires_at) { $artifact.expires_at } else { "unknown expiry" }
+            $skippedRuns.Add("$($run.databaseId) artifact expired at $expiresAt") | Out-Null
+            continue
+        }
+
+        if (Test-Path $syncDir) {
+            Remove-Item -LiteralPath $syncDir -Recurse -Force
+        }
+        New-Item -ItemType Directory -Path $downloadDir -Force | Out-Null
+
+        Write-Host "Downloading dashboard data from successful run $($run.databaseId)..."
+        gh run download $run.databaseId `
+            --repo Rnanda442/stockprediction2025 `
+            --name stock-analysis-outputs `
+            --dir $downloadDir
+
+        $artifactDb = Join-Path $downloadDir "dashboard_data.db"
+        if (-not (Test-Path $artifactDb)) {
+            $skippedRuns.Add("$($run.databaseId) artifact did not include dashboard_data.db") | Out-Null
+            continue
+        }
+
+        Copy-Item -LiteralPath $artifactDb -Destination $incomingDb -Force
+        Copy-Item -LiteralPath $incomingDb -Destination $dashboardDb -Force
+        Remove-Item -LiteralPath $incomingDb -Force
+        Write-Host "Synced dashboard_data.db from $($run.url)"
+        $synced = $true
+        break
     }
-    New-Item -ItemType Directory -Path $downloadDir -Force | Out-Null
 
-    Write-Host "Downloading dashboard data from successful run $($run.databaseId)..."
-    gh run download $run.databaseId `
-        --repo Rnanda442/stockprediction2025 `
-        --name stock-analysis-outputs `
-        --dir $downloadDir
-
-    $artifactDb = Join-Path $downloadDir "dashboard_data.db"
-    if (-not (Test-Path $artifactDb)) {
-        throw "The workflow artifact did not include dashboard_data.db."
+    if (-not $synced) {
+        $details = if ($skippedRuns.Count) { "`n  - " + ($skippedRuns -join "`n  - ") } else { "" }
+        throw (
+            "No unexpired stock-analysis-outputs artifact with dashboard_data.db was found " +
+            "in the last $($runs.Count) successful stock pipeline runs.$details`n" +
+            "Run .\sync_and_run_stock_pipeline.cmd -Watch after approving Robinhood, " +
+            "or build from local databases with: python scripts\export_dashboard_data.py"
+        )
     }
 
-    Copy-Item -LiteralPath $artifactDb -Destination $incomingDb -Force
-    Copy-Item -LiteralPath $incomingDb -Destination $dashboardDb -Force
-    Remove-Item -LiteralPath $incomingDb -Force
-    Write-Host "Synced dashboard_data.db from $($run.url)"
     $healthScript = @'
 import sqlite3
 import sys

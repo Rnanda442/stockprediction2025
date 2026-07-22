@@ -15,6 +15,7 @@ The product direction and next-step checklist are tracked in:
 - `docs/PRODUCT_DECISIONS.md`
 - `docs/ROADMAP_CHECKLIST.md`
 - `docs/NEXT_STEPS_PLAN.md`
+- `docs/LOCAL_DATA_LAYOUT.md`
 - `docs/ROBINHOOD_ACTION_RUNBOOK.md`
 
 Current direction: build this into a personal Robinhood-aware trading assistant,
@@ -126,6 +127,19 @@ To start from the existing local database without downloading an artifact:
 
 ```powershell
 .\scripts\start_dashboard.ps1 -SkipSync
+```
+
+To sync only the latest unexpired dashboard artifact without starting Streamlit:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\start_dashboard.ps1 -SyncOnly
+```
+
+If no unexpired artifact is available, rebuild the compact local database from
+the local root databases:
+
+```powershell
+python scripts\export_dashboard_data.py
 ```
 
 The dashboard includes:

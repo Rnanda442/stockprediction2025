@@ -222,7 +222,7 @@ jobs:
         with:
           name: stock-analysis-outputs
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 90
           path: |
             analytics/*.csv
             analytics/*.html

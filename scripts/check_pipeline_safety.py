@@ -54,6 +54,7 @@ def main():
     )
     require("git add -A" not in workflow, "workflow does not stage every untracked file")
     require("git add -u -- ." in workflow, "workflow stages updates to tracked files only")
+    require("retention-days: 90" in workflow, "workflow keeps dashboard artifacts for 90 days")
     for path in (
         ".auth-cache/robinhood.pickle.enc",
         ".tokens/robinhood.pickle",

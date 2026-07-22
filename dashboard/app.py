@@ -815,6 +815,13 @@ def _model_queue_summary():
         ]
     ]
 
+def _estimated_trade_notional(row):
+    quantity = pd.to_numeric(row.get("paper_quantity_1pct_risk"), errors="coerce")
+    entry = pd.to_numeric(row.get("entry_price"), errors="coerce")
+    if pd.isna(quantity) or pd.isna(entry) or quantity <= 0 or entry <= 0:
+        return None
+    return float(quantity * entry)
+
 
 def _daily_decision_context():
     health = data.health()
@@ -862,6 +869,17 @@ def _daily_decision_context():
     board["is_holding"] = board["quantity"] > 0
     board["in_shortlist"] = board["ticker"].isin(shortlist_tickers)
     board = decision_policy.apply_policy(board, portfolio_value)
+    constraint_rows = board.apply(
+        lambda row: pd.Series(
+            trading_constraints.action_status(
+                row.get("decision"),
+                constraints,
+                estimated_notional=_estimated_trade_notional(row),
+            )
+        ),
+        axis=1,
+    )
+    board = pd.concat([board, constraint_rows], axis=1)
     ranked_decisions = board.sort_values(
         ["decision_priority", "rank", "model_probability_up"],
         ascending=[True, True, False],
@@ -1140,6 +1158,8 @@ def render_daily_decision_board():
                 "model_horizon_days": "Model horizon",
                 "entry_price": "Reference price",
                 "paper_quantity_1pct_risk": "Paper qty at 1% risk",
+                "constraint_status": "Constraint status",
+                "constraint_reason": "Constraint reason",
                 "portfolio_weight": "Portfolio weight",
                 "in_shortlist": "In shortlist",
             }
@@ -1156,6 +1176,8 @@ def render_daily_decision_board():
                     "Model horizon",
                     "Reference price",
                     "Paper qty at 1% risk",
+                    "Constraint status",
+                    "Constraint reason",
                     "Portfolio weight",
                     "In shortlist",
                 ]
@@ -1220,8 +1242,8 @@ def render_daily_decision_board():
         automatic_paper_decisions.record_from_board_row(
             row,
             source_date=str(health.get("latest_market_date", ""))[:10],
-            constraint_status=constraint_status,
-            constraint_reason=constraint_message,
+            constraint_status=row.get("constraint_status", constraint_status),
+            constraint_reason=row.get("constraint_reason", constraint_message),
             portfolio_value=portfolio_value,
         )
         for row in preview_rows.to_dict("records")
