@@ -35,6 +35,10 @@ on:
         description: Similar neighbors retained per ticker
         required: false
         default: "3"
+      model_candidates:
+        description: Model tournament candidates
+        required: false
+        default: "sgd_logistic,mlp_ann"
   schedule:
     - cron: "0 13 * * 1-5" # 13:00 UTC weekdays
 
@@ -61,6 +65,7 @@ jobs:
       PIPELINE_SIM_MIN: ${{ inputs.sim_min || '0.60' }}
       PIPELINE_SIM_CAP: ${{ inputs.sim_cap || '0.88' }}
       PIPELINE_TOP_N_PER_TICKER: ${{ inputs.top_n_per_ticker || '3' }}
+      MODEL_CANDIDATES: ${{ inputs.model_candidates || 'sgd_logistic,mlp_ann' }}
       PYTHONUNBUFFERED: "1"
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 

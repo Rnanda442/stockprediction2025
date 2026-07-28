@@ -135,6 +135,13 @@ To sync only the latest unexpired dashboard artifact without starting Streamlit:
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\start_dashboard.ps1 -SyncOnly
 ```
 
+To validate a synced dashboard artifact without requiring fresh local
+`historicals.db` and `vectorized.db` rebuilds:
+
+```powershell
+python scripts\validate_pipeline_outputs.py --dashboard-artifact-only
+```
+
 If no unexpired artifact is available, rebuild the compact local database from
 the local root databases:
 
@@ -148,6 +155,7 @@ The dashboard includes:
 - an Activity Board backed by `docs/activity_board.json` for goals, completed work, and next commit targets
 - a tested automatic paper-decision record contract with a separate append-only local ledger
 - scheduled automatic paper-decision generation published in the pipeline artifact
+
 - latest five-stock shortlist
 - ranked 50-stock swing-trade watchlist with confidence and holding-window guidance
 - plain-English guide to the pipeline and core variables
@@ -167,6 +175,50 @@ The dashboard includes:
 - searchable ticker feature summaries
 - recent price charts
 - pipeline freshness metadata
+
+### Backend API For The Streamlit Frontend
+
+Streamlit in `dashboard/app.py` is the frontend. The cleaner backend split lives
+in `backend/`, where shared service/API code reads `dashboard_data.db` and
+supports the Streamlit UI.
+
+```powershell
+python -m pip install -r requirements-backend.txt
+.\scripts\start_backend.ps1
+```
+
+Open `http://127.0.0.1:8000/docs` for the API schema. Use Streamlit for the
+frontend:
+
+```powershell
+.\scripts\start_dashboard.ps1 -SkipSync
+```
+
+Check the Streamlit/backend service contract without starting a server:
+
+```powershell
+python scripts\check_app_services_smoke.py
+```
+
+Run the complete local app-stack check:
+
+```powershell
+.\scripts\check_app_stack.ps1
+```
+
+The backend also exposes `/api/readiness`, `/api/daily-decisions`,
+`/api/model/tournament`, and `/api/ticker/{ticker}` for integration checks. The
+Streamlit Pipeline Health page surfaces the same readiness report.
+
+The product plan for prediction guidance, visuals, outputs, and next-run ANN
+model work is in `docs/PREDICTION_VISUAL_OUTPUT_PLAN.md`.
+
+The backend API does not refresh artifacts by itself. Sync the approved artifact
+first when needed:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\start_dashboard.ps1 -SyncOnly
+```
 
 The scheduled GitHub Action exports `dashboard_data.db` as part of its
 `stock-analysis-outputs` artifact. The dashboard reads this compact database

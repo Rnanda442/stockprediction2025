@@ -5,6 +5,7 @@ param(
     [string]$Repo = "Rnanda442/stockprediction2025",
     [string]$Workflow = "stock-run.yml",
     [string]$GitHubCli = "C:\Program Files\GitHub CLI\gh.exe",
+    [string]$ModelCandidates = "sgd_logistic,mlp_ann",
     [switch]$Watch
 )
 
@@ -90,7 +91,7 @@ Write-Host "Pushing local branch '$Branch' to '$Remote/$Branch'." -ForegroundCol
 Invoke-LoggedCommand git push -u $Remote "${Branch}:${Branch}"
 
 Write-Host "Starting workflow '$Workflow' on ref '$Branch' in $Repo." -ForegroundColor Green
-Invoke-LoggedCommand $GitHubCli workflow run $Workflow --repo $Repo --ref $Branch
+Invoke-LoggedCommand $GitHubCli workflow run $Workflow --repo $Repo --ref $Branch -f "model_candidates=$ModelCandidates"
 
 $LatestRunId = Get-LatestWorkflowRunId -GitHubCliPath $GitHubCli -Repository $Repo -WorkflowName $Workflow -BranchName $Branch
 Write-Host "Latest dispatched run id: $LatestRunId" -ForegroundColor Green

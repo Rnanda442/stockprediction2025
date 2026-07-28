@@ -136,8 +136,9 @@ mean a better portfolio policy after sizing, turnover, and drawdown.
 | Boundary | Responsibility |
 |---|---|
 | GitHub Actions | Refresh data, build features and models, validate outputs, publish artifacts |
-| `dashboard_data.db` | Compact read-only contract between pipeline and dashboard |
-| Streamlit dashboard | Explain, explore, compare, and review decisions |
+| `dashboard_data.db` | Compact read-only contract between pipeline, backend services, and dashboard |
+| Backend services/API | Shared read-only logic over the compact dashboard database |
+| Streamlit dashboard | Frontend for explaining, exploring, comparing, and reviewing decisions |
 | Ignored local files | Private portfolio snapshots, constraints, and paper-review state |
 | GitHub `main` | Public-safe code and documentation source of truth |
 

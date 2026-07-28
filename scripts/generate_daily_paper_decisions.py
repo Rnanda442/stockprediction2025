@@ -29,6 +29,9 @@ def model_summary():
         return pd.DataFrame(
             columns=[
                 "ticker",
+                "model_name",
+                "model_label",
+                "model_version",
                 "model_probability_up",
                 "model_rank",
                 "model_horizon_days",
@@ -50,6 +53,9 @@ def model_summary():
     )[
         [
             "ticker",
+            "model_name",
+            "model_label",
+            "model_version",
             "model_probability_up",
             "model_rank",
             "model_horizon_days",

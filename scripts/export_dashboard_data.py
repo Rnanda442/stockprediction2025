@@ -544,11 +544,20 @@ def main():
             ),
             "recent_prices": export_recent_prices(history, destination),
             "model_evaluation": export_optional_table(source, destination, "ModelEvaluation"),
+            "model_tournament_evaluation": export_optional_table(
+                source, destination, "ModelTournamentEvaluation"
+            ),
             "model_feature_importance": export_optional_table(
                 source, destination, "ModelFeatureImportance"
             ),
+            "model_tournament_feature_importance": export_optional_table(
+                source, destination, "ModelTournamentFeatureImportance"
+            ),
             "latest_model_predictions": export_optional_table(
                 source, destination, "LatestModelPredictions"
+            ),
+            "latest_model_candidate_predictions": export_optional_table(
+                source, destination, "LatestModelCandidatePredictions"
             ),
         }
         export_health(history, source, destination, counts)

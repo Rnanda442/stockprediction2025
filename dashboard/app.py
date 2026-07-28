@@ -14,11 +14,11 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
+from backend import services as backend_services
 from dashboard import actions
 from dashboard import automatic_paper_decisions
 from dashboard.auth import require_login
 from dashboard import data
-from dashboard import decision_policy
 from dashboard import paper_trades
 from dashboard import portfolio_replay
 from dashboard import research
@@ -739,164 +739,18 @@ def render_activity_board():
 
 
 def _latest_portfolio_frame():
-    snapshot_text = portfolio_replay.latest_snapshot_text()
-    cash = portfolio_replay.latest_snapshot_cash()
-    if not snapshot_text.strip():
-        return pd.DataFrame(), cash, 0.0
-
-    holdings = portfolio_replay.parse_holdings(snapshot_text)
-    if holdings.empty:
-        return holdings, cash, cash
-
-    latest_prices = data.query(
-        """
-        WITH latest AS (
-            SELECT ticker, MAX(begins_at) AS begins_at
-            FROM RecentPrices
-            GROUP BY ticker
-        )
-        SELECT prices.ticker, prices.close_price
-        FROM RecentPrices AS prices
-        INNER JOIN latest
-          ON latest.ticker = prices.ticker
-         AND latest.begins_at = prices.begins_at
-        """
-    )
-    holdings = holdings.merge(latest_prices, on="ticker", how="left")
-    holdings["close_price"] = pd.to_numeric(holdings["close_price"], errors="coerce")
-    holdings["market_value"] = holdings["quantity"] * holdings["close_price"]
-    invested = holdings["market_value"].fillna(0.0).sum()
-    portfolio_value = float(invested + cash)
-    if portfolio_value > 0:
-        holdings["portfolio_weight"] = holdings["market_value"] / portfolio_value
-    else:
-        holdings["portfolio_weight"] = 0.0
-    return holdings, cash, portfolio_value
+    return backend_services.latest_portfolio_frame()
 
 
 def _model_queue_summary():
-    frames = []
-    for horizon in (5, 20, 60):
-        queue = data.trade_research_queue(horizon)
-        if queue.empty:
-            continue
-        queue = queue.copy()
-        queue["model_horizon_days"] = horizon
-        frames.append(queue)
-    if not frames:
-        return pd.DataFrame(
-            columns=[
-                "ticker",
-                "model_probability_up",
-                "model_rank",
-                "model_horizon_days",
-                "top_positive_drivers",
-                "top_negative_drivers",
-            ]
-        )
-
-    queue = pd.concat(frames, ignore_index=True)
-    queue = queue.sort_values(["ticker", "probability_up"], ascending=[True, False])
-    best = queue.groupby("ticker", as_index=False).first()
-    return best.rename(
-        columns={
-            "probability_up": "model_probability_up",
-            "model_rank": "model_rank",
-            "model_horizon_days": "model_horizon_days",
-        }
-    )[
-        [
-            "ticker",
-            "model_probability_up",
-            "model_rank",
-            "model_horizon_days",
-            "top_positive_drivers",
-            "top_negative_drivers",
-        ]
-    ]
+    return backend_services.model_queue_summary()
 
 def _estimated_trade_notional(row):
-    quantity = pd.to_numeric(row.get("paper_quantity_1pct_risk"), errors="coerce")
-    entry = pd.to_numeric(row.get("entry_price"), errors="coerce")
-    if pd.isna(quantity) or pd.isna(entry) or quantity <= 0 or entry <= 0:
-        return None
-    return float(quantity * entry)
+    return backend_services.estimated_trade_notional(row)
 
 
 def _daily_decision_context():
-    health = data.health()
-    watch = data.watchlist()
-    if watch.empty:
-        return {
-            "health": health,
-            "watch": watch,
-            "board": pd.DataFrame(),
-            "ranked_decisions": pd.DataFrame(),
-            "holdings": pd.DataFrame(),
-            "cash": 0.0,
-            "portfolio_value": 0.0,
-            "constraints": trading_constraints.latest_constraints(),
-            "constraint_status": "unknown",
-            "constraint_message": "No ranked watchlist is available.",
-        }
-
-    holdings, cash, portfolio_value = _latest_portfolio_frame()
-    model_summary = _model_queue_summary()
-    shortlist = data.shortlist()
-    shortlist_tickers = set(shortlist["ticker"].str.upper()) if not shortlist.empty else set()
-    constraints = trading_constraints.latest_constraints()
-    constraint_status, constraint_message = trading_constraints.status(constraints)
-
-    board = watch.head(50).copy()
-    board["ticker"] = board["ticker"].str.upper()
-    if "entry_price" not in board.columns:
-        board["entry_price"] = None
-    board = board.merge(model_summary, on="ticker", how="left")
-    if not holdings.empty:
-        board = board.merge(
-            holdings[["ticker", "quantity", "market_value", "portfolio_weight"]],
-            on="ticker",
-            how="left",
-        )
-    else:
-        board["quantity"] = 0.0
-        board["market_value"] = 0.0
-        board["portfolio_weight"] = 0.0
-
-    board["quantity"] = pd.to_numeric(board["quantity"], errors="coerce").fillna(0.0)
-    board["market_value"] = pd.to_numeric(board["market_value"], errors="coerce").fillna(0.0)
-    board["portfolio_weight"] = pd.to_numeric(board["portfolio_weight"], errors="coerce").fillna(0.0)
-    board["is_holding"] = board["quantity"] > 0
-    board["in_shortlist"] = board["ticker"].isin(shortlist_tickers)
-    board = decision_policy.apply_policy(board, portfolio_value)
-    constraint_rows = board.apply(
-        lambda row: pd.Series(
-            trading_constraints.action_status(
-                row.get("decision"),
-                constraints,
-                estimated_notional=_estimated_trade_notional(row),
-            )
-        ),
-        axis=1,
-    )
-    board = pd.concat([board, constraint_rows], axis=1)
-    ranked_decisions = board.sort_values(
-        ["decision_priority", "rank", "model_probability_up"],
-        ascending=[True, True, False],
-    ).head(25)
-
-    return {
-        "health": health,
-        "watch": watch,
-        "board": board,
-        "ranked_decisions": ranked_decisions,
-        "holdings": holdings,
-        "cash": cash,
-        "portfolio_value": portfolio_value,
-        "constraints": constraints,
-        "constraint_status": constraint_status,
-        "constraint_message": constraint_message,
-    }
+    return backend_services.daily_decision_context()
 
 
 def _status_chip(label, status, detail):
@@ -2220,12 +2074,64 @@ def render_model_lab():
         st.info("No model export is available yet. Run the cloud pipeline to build it.")
         return
 
+    tournament = data.model_tournament_evaluation()
+    if not tournament.empty:
+        st.subheader("Model tournament")
+        st.caption(
+            "Future runs compare candidate models by horizon and promote one champion "
+            "into the daily decision board."
+        )
+        tournament_display = tournament.rename(
+            columns={
+                "horizon_days": "Horizon",
+                "model_label": "Model",
+                "fit_status": "Fit status",
+                "is_champion": "Champion",
+                "accuracy": "Accuracy",
+                "roc_auc": "ROC AUC",
+                "brier_score": "Brier",
+                "selected_rows": "High-confidence rows",
+                "selected_average_return": "High-confidence avg return",
+                "selected_win_rate": "High-confidence win rate",
+                "champion_score": "Champion score",
+            }
+        )
+        st.dataframe(
+            tournament_display[
+                [
+                    "Horizon",
+                    "Model",
+                    "Fit status",
+                    "Champion",
+                    "Accuracy",
+                    "ROC AUC",
+                    "Brier",
+                    "High-confidence rows",
+                    "High-confidence avg return",
+                    "High-confidence win rate",
+                    "Champion score",
+                ]
+            ],
+            hide_index=True,
+            use_container_width=True,
+            column_config={
+                "Accuracy": st.column_config.NumberColumn(format="%.3f"),
+                "ROC AUC": st.column_config.NumberColumn(format="%.3f"),
+                "Brier": st.column_config.NumberColumn(format="%.3f"),
+                "High-confidence avg return": st.column_config.NumberColumn(format="%.2%"),
+                "High-confidence win rate": st.column_config.NumberColumn(format="%.1%"),
+                "Champion score": st.column_config.NumberColumn(format="%.3f"),
+            },
+        )
+
     horizon = st.selectbox(
         "Prediction horizon",
-        evaluation["horizon_days"].astype(int).tolist(),
+        sorted(evaluation["horizon_days"].astype(int).unique().tolist()),
         format_func=lambda value: f"{value} trading days",
     )
     row = evaluation[evaluation["horizon_days"] == horizon].iloc[0]
+    model_label = row.get("model_label") or row.get("model_name") or "Baseline model"
+    st.caption(f"Champion shown for this horizon: {model_label}")
     cols = st.columns(5)
     cols[0].metric("Held-out accuracy", percent(row["accuracy"]))
     cols[1].metric("ROC AUC", f"{row['roc_auc']:.3f}")
@@ -2260,9 +2166,9 @@ def render_model_lab():
         chart = importance.set_index("feature")["coefficient"].sort_values()
         st.bar_chart(chart)
         st.caption(
-            "Positive coefficients push the baseline toward a higher probability of an "
-            "upward return; negative coefficients push it lower. This is descriptive, "
-            "not proof that a feature causes future movement."
+            "Linear coefficients push a model toward a higher or lower probability. "
+            "For nonlinear champions such as ANN models, this chart may fall back to "
+            "the linear baseline until attribution is added."
         )
 
     st.subheader("Model + watchlist trade research queue")
@@ -2280,7 +2186,8 @@ def render_model_lab():
                 "watchlist_rank": "Watchlist rank",
                 "model_rank": "Model rank",
                 "ticker": "Ticker",
-                "probability_up": "Baseline probability up",
+                "model_label": "Model",
+                "probability_up": "Model probability up",
                 "probability_bucket": "Model read",
                 "confidence": "Heuristic confidence",
                 "recommendation": "Watchlist guidance",
@@ -2297,7 +2204,7 @@ def render_model_lab():
             }
         )
         queue_display["Stayed ranked"] = queue_display["Stayed ranked"].map({1: "yes", 0: "new"})
-        queue_display["Baseline probability up"] = queue_display["Baseline probability up"] * 100
+        queue_display["Model probability up"] = queue_display["Model probability up"] * 100
         for column in ("60d volatility", "Total return"):
             queue_display[column] = queue_display[column] * 100
         st.dataframe(
@@ -2305,7 +2212,7 @@ def render_model_lab():
             hide_index=True,
             use_container_width=True,
             column_config={
-                "Baseline probability up": st.column_config.ProgressColumn(
+                "Model probability up": st.column_config.ProgressColumn(
                     format="%.1f%%",
                     min_value=0.0,
                     max_value=100.0,
@@ -2331,20 +2238,21 @@ def render_model_lab():
         columns={
             "model_rank": "Rank",
             "ticker": "Ticker",
-            "probability_up": "Baseline probability up",
+            "model_label": "Model",
+            "probability_up": "Model probability up",
             "probability_bucket": "Model read",
             "top_positive_drivers": "Positive model drivers",
             "top_negative_drivers": "Negative model drivers",
             "as_of_date": "As of",
         }
     )
-    display["Baseline probability up"] = display["Baseline probability up"] * 100
+    display["Model probability up"] = display["Model probability up"] * 100
     st.dataframe(
         display,
         hide_index=True,
         use_container_width=True,
         column_config={
-            "Baseline probability up": st.column_config.ProgressColumn(
+            "Model probability up": st.column_config.ProgressColumn(
                 format="%.1f%%",
                 min_value=0.0,
                 max_value=100.0,
@@ -2785,6 +2693,21 @@ def render_health():
     cols[2].metric("Dashboard exported", health.get("exported_at", "—")[:19])
     coverage = pd.to_numeric(health.get("latest_market_coverage"), errors="coerce")
     cols[3].metric("Latest-date coverage", "—" if pd.isna(coverage) else f"{coverage:.1%}")
+
+    readiness = backend_services.readiness_report()
+    st.subheader("App readiness")
+    st.caption(readiness["overall"])
+    st.dataframe(
+        pd.DataFrame(readiness["checks"]).rename(
+            columns={
+                "label": "Check",
+                "status": "Status",
+                "detail": "Detail",
+            }
+        )[["Check", "Status", "Detail"]],
+        hide_index=True,
+        use_container_width=True,
+    )
 
     st.subheader("Compact database contents")
     st.dataframe(data.span_health(), hide_index=True, use_container_width=True)

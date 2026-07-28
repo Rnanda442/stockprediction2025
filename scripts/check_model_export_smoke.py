@@ -55,6 +55,47 @@ def check_database(path):
                 if horizon_rows[horizon] <= 0:
                     errors.append(f"{path}:LatestModelPredictions horizon {horizon}d is empty")
 
+        if table_exists(conn, "ModelTournamentEvaluation"):
+            tournament_horizons = dict(
+                conn.execute(
+                    """
+                    SELECT horizon_days, SUM(CASE WHEN is_champion THEN 1 ELSE 0 END)
+                    FROM ModelTournamentEvaluation
+                    WHERE fit_status='ok'
+                    GROUP BY horizon_days
+                    """
+                ).fetchall()
+            )
+            missing = EXPECTED_HORIZONS - set(tournament_horizons)
+            if missing:
+                errors.append(
+                    f"{path}:ModelTournamentEvaluation missing horizons "
+                    + ", ".join(f"{horizon}d" for horizon in sorted(missing))
+                )
+            for horizon, champions in tournament_horizons.items():
+                if int(champions or 0) != 1:
+                    errors.append(
+                        f"{path}:ModelTournamentEvaluation horizon {horizon}d "
+                        f"has {champions} champions; expected 1"
+                    )
+
+        if table_exists(conn, "LatestModelCandidatePredictions"):
+            candidate_horizons = dict(
+                conn.execute(
+                    """
+                    SELECT horizon_days, COUNT(*)
+                    FROM LatestModelCandidatePredictions
+                    GROUP BY horizon_days
+                    """
+                ).fetchall()
+            )
+            missing = EXPECTED_HORIZONS - set(candidate_horizons)
+            if missing:
+                errors.append(
+                    f"{path}:LatestModelCandidatePredictions missing horizons "
+                    + ", ".join(f"{horizon}d" for horizon in sorted(missing))
+                )
+
         if table_exists(conn, "PipelineHealth"):
             health = dict(conn.execute("SELECT metric, value FROM PipelineHealth"))
             for metric in (
@@ -85,4 +126,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

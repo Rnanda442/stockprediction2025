@@ -1,3 +1,4 @@
+import argparse
 import csv
 import json
 import sqlite3
@@ -401,8 +402,58 @@ def check_output_date_alignment():
     return ok
 
 
-def main():
-    checks = [
+def check_dashboard_date_alignment():
+    path = ROOT / "dashboard_data.db"
+    if not has_tables(path, "PipelineHealth", "LatestShortlist", "LatestWatchlist"):
+        return False
+    with sqlite3.connect(path) as conn:
+        health = dict(conn.execute("SELECT metric, value FROM PipelineHealth"))
+        latest_market_date = health.get("latest_market_date")
+        latest_shortlist_health_date = health.get("latest_shortlist_date")
+        latest_shortlist_date = conn.execute(
+            "SELECT MAX(begins_at) FROM LatestShortlist"
+        ).fetchone()[0]
+        latest_watchlist_date = conn.execute(
+            "SELECT MAX(as_of_date) FROM LatestWatchlist"
+        ).fetchone()[0]
+
+    market_day = str(latest_market_date or "")[:10]
+    shortlist_health_day = str(latest_shortlist_health_date or "")[:10]
+    shortlist_day = str(latest_shortlist_date or "")[:10]
+    watchlist_day = str(latest_watchlist_date or "")[:10]
+    print(
+        "dashboard dates: "
+        f"market={market_day} shortlist={shortlist_day} watchlist={watchlist_day}"
+    )
+    ok = True
+    if shortlist_health_day != shortlist_day:
+        ok = fail(
+            "dashboard latest_shortlist_date health metric "
+            f"{shortlist_health_day} does not match LatestShortlist {shortlist_day}"
+        ) and ok
+    if shortlist_day != market_day:
+        ok = fail(f"dashboard shortlist date {shortlist_day} does not match market date {market_day}") and ok
+    if watchlist_day != market_day:
+        ok = fail(f"dashboard watchlist date {watchlist_day} does not match market date {market_day}") and ok
+
+    coverage = health.get("latest_market_coverage")
+    if coverage is not None:
+        try:
+            coverage_value = float(coverage)
+        except ValueError:
+            ok = fail(f"dashboard latest_market_coverage is not numeric: {coverage}") and ok
+        else:
+            print(f"dashboard latest-date coverage: {coverage_value:.1%}")
+            if coverage_value < MIN_LATEST_DATE_COVERAGE:
+                ok = fail(
+                    "dashboard latest-date coverage "
+                    f"{coverage_value:.1%} is below {MIN_LATEST_DATE_COVERAGE:.0%}"
+                ) and ok
+    return ok
+
+
+def artifact_output_checks():
+    return [
         check_csv(
             "vector_analysis_results.csv",
             required_columns=["ticker", "Leader_Score", "Rows", "Total_Return", "Trend_Slope_60d"],
@@ -436,47 +487,6 @@ def main():
             required_columns=["Ticker", "Reason"],
             min_rows=1,
             nonblank_columns=["Ticker", "Reason"],
-        ),
-        check_table("filtered_tickers.db", "FilteredTickers", min_rows=1),
-        check_table("historicals.db", "HistoricalPrices", min_rows=1),
-        check_table("vectorized.db", "VectorizedFeatures", min_rows=1),
-        check_table("vectorized.db", "FeatureSummary", min_rows=1),
-        check_table("vectorized.db", "WinnerUniverse", min_rows=1),
-        check_table("vectorized.db", "ShortlistHistory", min_rows=1),
-        check_table("vectorized.db", "WatchlistHistory", min_rows=1),
-        check_table("vectorized.db", "StockUniverseSnapshot", min_rows=1),
-        check_table("vectorized.db", "ModelEvaluation", min_rows=3),
-        check_table("vectorized.db", "ModelFeatureImportance", min_rows=1),
-        check_table("vectorized.db", "LatestModelPredictions", min_rows=1),
-        check_table("dashboard_data.db", "FeatureSummary", min_rows=1),
-        check_table("dashboard_data.db", "StockUniverse", min_rows=1),
-        check_table("dashboard_data.db", "StockUniverseSnapshot", min_rows=1),
-        check_table("dashboard_data.db", "LatestShortlist", min_rows=1),
-        check_table("dashboard_data.db", "LatestWatchlist", min_rows=1),
-        check_table("dashboard_data.db", "WatchlistHistory", min_rows=1),
-        check_table("dashboard_data.db", "WatchlistPerformanceSummary", min_rows=4),
-        check_table("dashboard_data.db", "RecentPrices", min_rows=1),
-        check_table("dashboard_data.db", "PipelineHealth", min_rows=1),
-        check_table("dashboard_data.db", "ModelEvaluation", min_rows=3),
-        check_table("dashboard_data.db", "ModelFeatureImportance", min_rows=1),
-        check_table("dashboard_data.db", "LatestModelPredictions", min_rows=1),
-        check_table_columns(
-            "vectorized.db",
-            "LatestModelPredictions",
-            [
-                "probability_bucket",
-                "top_positive_drivers",
-                "top_negative_drivers",
-            ],
-        ),
-        check_table_columns(
-            "dashboard_data.db",
-            "LatestModelPredictions",
-            [
-                "probability_bucket",
-                "top_positive_drivers",
-                "top_negative_drivers",
-            ],
         ),
         check_csv(
             "analytics/model_evaluation.csv",
@@ -526,16 +536,86 @@ def main():
             ],
             min_rows=0,
         ),
-        check_table("dashboard_data.db", "AutomaticPaperDecisions", min_rows=1),
-        check_table("dashboard_data.db", "AutomaticPaperOutcomeEvents", min_rows=0),
-        check_paper_snapshot(),
-        check_paper_health_metrics(),
+    ]
+
+
+def local_build_checks():
+    return [
+        check_table("filtered_tickers.db", "FilteredTickers", min_rows=1),
+        check_table("historicals.db", "HistoricalPrices", min_rows=1),
+        check_table("vectorized.db", "VectorizedFeatures", min_rows=1),
+        check_table("vectorized.db", "FeatureSummary", min_rows=1),
+        check_table("vectorized.db", "WinnerUniverse", min_rows=1),
+        check_table("vectorized.db", "ShortlistHistory", min_rows=1),
+        check_table("vectorized.db", "WatchlistHistory", min_rows=1),
+        check_table("vectorized.db", "StockUniverseSnapshot", min_rows=1),
+        check_table("vectorized.db", "ModelEvaluation", min_rows=3),
+        check_table("vectorized.db", "ModelFeatureImportance", min_rows=1),
+        check_table("vectorized.db", "LatestModelPredictions", min_rows=1),
+        check_table_columns(
+            "vectorized.db",
+            "LatestModelPredictions",
+            [
+                "probability_bucket",
+                "top_positive_drivers",
+                "top_negative_drivers",
+            ],
+        ),
         check_span_table("historicals.db", "HistoricalPrices"),
         check_span_table("vectorized.db", "VectorizedFeatures"),
         check_historical_quality(),
         check_vectorized_quality(),
         check_output_date_alignment(),
     ]
+
+
+def dashboard_export_checks():
+    return [
+        check_table("dashboard_data.db", "FeatureSummary", min_rows=1),
+        check_table("dashboard_data.db", "StockUniverse", min_rows=1),
+        check_table("dashboard_data.db", "StockUniverseSnapshot", min_rows=1),
+        check_table("dashboard_data.db", "LatestShortlist", min_rows=1),
+        check_table("dashboard_data.db", "LatestWatchlist", min_rows=1),
+        check_table("dashboard_data.db", "WatchlistHistory", min_rows=1),
+        check_table("dashboard_data.db", "WatchlistPerformanceSummary", min_rows=4),
+        check_table("dashboard_data.db", "RecentPrices", min_rows=1),
+        check_table("dashboard_data.db", "PipelineHealth", min_rows=1),
+        check_table("dashboard_data.db", "ModelEvaluation", min_rows=3),
+        check_table("dashboard_data.db", "ModelFeatureImportance", min_rows=1),
+        check_table("dashboard_data.db", "LatestModelPredictions", min_rows=1),
+        check_table_columns(
+            "dashboard_data.db",
+            "LatestModelPredictions",
+            [
+                "probability_bucket",
+                "top_positive_drivers",
+                "top_negative_drivers",
+            ],
+        ),
+        check_table("dashboard_data.db", "AutomaticPaperDecisions", min_rows=1),
+        check_table("dashboard_data.db", "AutomaticPaperOutcomeEvents", min_rows=0),
+        check_paper_snapshot(),
+        check_paper_health_metrics(),
+        check_dashboard_date_alignment(),
+    ]
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Validate stock pipeline outputs.")
+    parser.add_argument(
+        "--dashboard-artifact-only",
+        action="store_true",
+        help=(
+            "Validate the compact dashboard export and uploaded artifact files only. "
+            "Skip ignored local raw/vectorized databases."
+        ),
+    )
+    args = parser.parse_args(argv)
+
+    checks = artifact_output_checks()
+    if not args.dashboard_artifact_only:
+        checks.extend(local_build_checks())
+    checks.extend(dashboard_export_checks())
 
     if not all(checks):
         print("Pipeline output validation failed.")

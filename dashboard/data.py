@@ -54,6 +54,23 @@ def table_columns(table):
         return {row[1] for row in conn.execute(f'PRAGMA table_info("{table}")')}
 
 
+def _frame_with_columns(frame, columns):
+    if frame.empty:
+        return pd.DataFrame(columns=columns)
+    frame = frame.copy()
+    for column in columns:
+        if column not in frame.columns:
+            frame[column] = None
+    return frame[columns]
+
+
+def _paper_snapshot_frame(key, columns):
+    if not PAPER_SNAPSHOT.exists():
+        return pd.DataFrame(columns=columns)
+    payload = json.loads(PAPER_SNAPSHOT.read_text(encoding="utf-8"))
+    return _frame_with_columns(pd.DataFrame(payload.get(key, [])), columns)
+
+
 def health():
     frame = query("SELECT metric, value FROM PipelineHealth ORDER BY metric")
     return dict(zip(frame["metric"], frame["value"]))
@@ -106,37 +123,31 @@ def performance_summary():
 
 
 def automatic_paper_decisions():
-    if PAPER_SNAPSHOT.exists():
-        payload = json.loads(PAPER_SNAPSHOT.read_text(encoding="utf-8"))
-        return pd.DataFrame(
-            payload.get("decisions", []), columns=paper_decisions.LEDGER_COLUMNS
+    if database_path().exists() and table_exists("AutomaticPaperDecisions"):
+        frame = query(
+            """
+            SELECT *
+            FROM AutomaticPaperDecisions
+            ORDER BY source_date DESC, watchlist_rank, ticker
+            """
         )
-    if not table_exists("AutomaticPaperDecisions"):
-        return pd.DataFrame()
-    return query(
-        """
-        SELECT *
-        FROM AutomaticPaperDecisions
-        ORDER BY source_date DESC, watchlist_rank, ticker
-        """
-    )
+        if not frame.empty:
+            return _frame_with_columns(frame, paper_decisions.LEDGER_COLUMNS)
+    return _paper_snapshot_frame("decisions", paper_decisions.LEDGER_COLUMNS)
 
 
 def automatic_paper_outcomes():
-    if PAPER_SNAPSHOT.exists():
-        payload = json.loads(PAPER_SNAPSHOT.read_text(encoding="utf-8"))
-        return pd.DataFrame(
-            payload.get("outcomes", []), columns=paper_outcomes.OUTCOME_COLUMNS
+    if database_path().exists() and table_exists("AutomaticPaperOutcomeEvents"):
+        frame = query(
+            """
+            SELECT *
+            FROM AutomaticPaperOutcomeEvents
+            ORDER BY evaluation_date DESC, evaluation_horizon_days, ticker
+            """
         )
-    if not table_exists("AutomaticPaperOutcomeEvents"):
-        return pd.DataFrame()
-    return query(
-        """
-        SELECT *
-        FROM AutomaticPaperOutcomeEvents
-        ORDER BY evaluation_date DESC, evaluation_horizon_days, ticker
-        """
-    )
+        if not frame.empty:
+            return _frame_with_columns(frame, paper_outcomes.OUTCOME_COLUMNS)
+    return _paper_snapshot_frame("outcomes", paper_outcomes.OUTCOME_COLUMNS)
 
 
 def paper_learning_status():
@@ -424,6 +435,18 @@ def model_evaluation():
     return query("SELECT * FROM ModelEvaluation ORDER BY horizon_days")
 
 
+def model_tournament_evaluation():
+    if not table_exists("ModelTournamentEvaluation"):
+        return pd.DataFrame()
+    return query(
+        """
+        SELECT *
+        FROM ModelTournamentEvaluation
+        ORDER BY horizon_days, is_champion DESC, champion_score DESC
+        """
+    )
+
+
 def model_feature_importance(horizon_days):
     if not table_exists("ModelFeatureImportance"):
         return pd.DataFrame()
@@ -443,11 +466,19 @@ def latest_model_predictions(horizon_days, limit=50):
         return pd.DataFrame()
     columns = table_columns("LatestModelPredictions")
     optional_columns = []
-    for column in ("probability_bucket", "top_positive_drivers", "top_negative_drivers"):
+    defaults = {
+        "model_name": "'sgd_logistic' AS model_name",
+        "model_label": "'SGD logistic baseline' AS model_label",
+        "model_version": "'baseline_v1' AS model_version",
+        "probability_bucket": "'' AS probability_bucket",
+        "top_positive_drivers": "'' AS top_positive_drivers",
+        "top_negative_drivers": "'' AS top_negative_drivers",
+    }
+    for column, fallback in defaults.items():
         if column in columns:
             optional_columns.append(column)
         else:
-            optional_columns.append(f"'' AS {column}")
+            optional_columns.append(fallback)
     return query(
         f"""
         SELECT model_rank, ticker, probability_up,
@@ -480,11 +511,29 @@ def trade_research_queue(horizon_days, limit=25):
         if "top_negative_drivers" in columns
         else "'' AS top_negative_drivers"
     )
+    model_name = (
+        "model.model_name"
+        if "model_name" in columns
+        else "'sgd_logistic' AS model_name"
+    )
+    model_label = (
+        "model.model_label"
+        if "model_label" in columns
+        else "'SGD logistic baseline' AS model_label"
+    )
+    model_version = (
+        "model.model_version"
+        if "model_version" in columns
+        else "'baseline_v1' AS model_version"
+    )
     return query(
         f"""
         SELECT watch.rank AS watchlist_rank,
                model.model_rank,
                watch.ticker,
+               {model_name},
+               {model_label},
+               {model_version},
                model.probability_up,
                {probability_bucket},
                watch.confidence,

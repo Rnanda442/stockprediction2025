@@ -145,6 +145,8 @@ def record_from_board_row(
             "action": action,
             "reason": row.get("why"),
             "horizon_days": row.get("model_horizon_days"),
+            "model_name": row.get("model_name"),
+            "model_version": row.get("model_version"),
             "watchlist_rank": row.get("rank"),
             "model_rank": row.get("model_rank"),
             "probability_up": row.get("model_probability_up"),
