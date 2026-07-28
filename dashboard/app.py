@@ -1,7 +1,9 @@
 from datetime import datetime, timezone
+import html
 import json
 from pathlib import Path
 import sys
+from zoneinfo import ZoneInfo
 
 # Streamlit Cloud launches this nested entry point with dashboard/ on sys.path.
 # Add the repository root so package imports work in both cloud and local runs.
@@ -9,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -33,6 +36,7 @@ st.set_page_config(
 )
 
 ACTIVITY_BOARD_PATH = ROOT / "docs" / "activity_board.json"
+LOCAL_TZ = ZoneInfo("America/Chicago")
 
 st.markdown(
     """
@@ -98,6 +102,79 @@ def percent(value):
 
 def money(value):
     return "—" if pd.isna(value) else f"${value:,.0f}"
+
+
+def health_int(health, key, default=0):
+    try:
+        return int(float(health.get(key, default)))
+    except (TypeError, ValueError):
+        return default
+
+
+def health_float(health, key):
+    try:
+        return float(health[key])
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def parse_utc_timestamp(value):
+    parsed = pd.to_datetime(value, errors="coerce", utc=True)
+    if pd.isna(parsed):
+        return None
+    return parsed.to_pydatetime()
+
+
+def format_run_timestamp(value):
+    parsed = parse_utc_timestamp(value)
+    if parsed is None:
+        return "--"
+    local = parsed.astimezone(LOCAL_TZ)
+    return local.strftime("%b %d, %I:%M %p CT").replace(" 0", " ")
+
+
+def run_age_text(value):
+    parsed = parse_utc_timestamp(value)
+    if parsed is None:
+        return "run time unavailable"
+    elapsed = datetime.now(timezone.utc) - parsed
+    minutes = max(0, int(elapsed.total_seconds() // 60))
+    if minutes < 60:
+        return f"{minutes} min ago"
+    hours = minutes // 60
+    if hours < 48:
+        return f"{hours} hr ago"
+    return f"{hours // 24} days ago"
+
+
+def short_date(value):
+    if value is None:
+        return "--"
+    text = str(value)
+    return text[:10] if text.strip() else "--"
+
+
+def compact_count(value):
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return "--"
+    if value >= 1_000_000:
+        return f"{value / 1_000_000:.1f}M"
+    if value >= 1_000:
+        return f"{value / 1_000:.1f}K"
+    return f"{int(value):,}"
+
+
+def short_model_label(value):
+    text = str(value or "")
+    if "ANN" in text or "MLP" in text:
+        return "ANN"
+    if "Histogram" in text:
+        return "HGB"
+    if "logistic" in text.lower():
+        return "SGD"
+    return text[:18] if text else "--"
 
 
 def load_activity_board():
@@ -341,7 +418,7 @@ ARCHITECTURE_NODES = {
         "position": (4, 1.2, 0.8),
         "status": "implemented",
         "kind": "model",
-        "summary": "Time-split logistic baselines estimate probability of a positive 5d, 20d, or 60d return.",
+        "summary": "Time-split model tournament estimates positive 5d, 20d, and 60d return probability.",
         "feeds": "Decision policy",
     },
     "Return model": {
@@ -920,13 +997,398 @@ def render_portfolio_flow(context):
     st.plotly_chart(fig, use_container_width=True, key="overview_portfolio_flow")
 
 
+def champion_summary():
+    evaluation = data.model_evaluation()
+    if evaluation.empty:
+        return "No champion yet"
+    parts = []
+    for row in evaluation.sort_values("horizon_days").itertuples(index=False):
+        horizon = int(getattr(row, "horizon_days"))
+        label = short_model_label(getattr(row, "model_label", getattr(row, "model_name", "")))
+        parts.append(f"{horizon}d {label}")
+    return " / ".join(parts)
+
+
+def render_run_snapshot(context):
+    health = context["health"]
+    paper_status = data.paper_learning_status()
+    coverage = health_float(health, "latest_market_coverage")
+    latest_market = short_date(health.get("latest_market_date"))
+    latest_shortlist = short_date(health.get("latest_shortlist_date"))
+    exported_at = health.get("exported_at")
+    run_url = health.get("github_run_url")
+    coverage_text = "--" if coverage is None else f"{coverage:.1%}"
+    cards = [
+        (
+            "Last successful run",
+            format_run_timestamp(exported_at),
+            f"{run_age_text(exported_at)} | market {latest_market}",
+        ),
+        (
+            "Coverage",
+            coverage_text,
+            f"{compact_count(health.get('latest_market_tickers'))} / "
+            f"{compact_count(health.get('tracked_market_tickers'))} tickers",
+        ),
+        (
+            "Champion ML",
+            champion_summary(),
+            "promoted by horizon",
+        ),
+        (
+            "Paper loop",
+            f"{paper_status['matured']}/{paper_status['decisions']} matured",
+            f"{paper_status['open']} open | {paper_status['outcome_events']} events",
+        ),
+    ]
+    html_cards = "".join(
+        f"""
+        <div class="run-card">
+          <small>{html.escape(label)}</small>
+          <strong>{html.escape(value)}</strong>
+          <span>{html.escape(detail)}</span>
+        </div>
+        """
+        for label, value, detail in cards
+    )
+    st.markdown(
+        f"""
+        <div class="run-snapshot">{html_cards}</div>
+        <style>
+        .run-snapshot {{
+          display:grid;
+          grid-template-columns:1.25fr 0.8fr 1fr 1fr;
+          gap:.65rem;
+          margin:.45rem 0 1rem;
+        }}
+        .run-card {{
+          border:1px solid rgba(128,128,128,.22);
+          border-radius:.75rem;
+          padding:.85rem .9rem;
+          background:rgba(128,128,128,.035);
+          min-height:5.6rem;
+        }}
+        .run-card small {{
+          display:block;
+          color:rgba(90,96,106,.95);
+          font-size:.72rem;
+          text-transform:uppercase;
+          letter-spacing:.06em;
+        }}
+        .run-card strong {{
+          display:block;
+          margin-top:.15rem;
+          font-size:1.05rem;
+          line-height:1.25;
+        }}
+        .run-card span {{
+          display:block;
+          margin-top:.25rem;
+          color:rgba(90,96,106,.9);
+          font-size:.84rem;
+        }}
+        @media (max-width: 900px) {{
+          .run-snapshot {{ grid-template-columns:1fr 1fr; }}
+        }}
+        @media (max-width: 560px) {{
+          .run-snapshot {{ grid-template-columns:1fr; }}
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    if run_url:
+        st.link_button("Open latest GitHub run", run_url)
+    elif exported_at:
+        st.caption(f"Dashboard export built {format_run_timestamp(exported_at)}.")
+    if latest_shortlist != "--" and latest_market != "--" and latest_shortlist != latest_market:
+        st.warning(f"Shortlist date {latest_shortlist} does not match market date {latest_market}.")
+
+
+def render_pipeline_funnel(context):
+    health = context["health"]
+    board = context["board"]
+    paper_candidates = 0
+    if not board.empty and "decision" in board.columns:
+        paper_candidates = int(
+            board["decision"].astype(str).str.contains("paper", case=False, na=False).sum()
+        )
+    stages = pd.DataFrame(
+        [
+            ("Tracked market", health_int(health, "tracked_market_tickers")),
+            ("Fresh prices", health_int(health, "latest_market_tickers")),
+            ("Feature scored", health_int(health, "feature_summary_rows")),
+            ("Watchlist", health_int(health, "latest_watchlist_rows")),
+            ("Shortlist", health_int(health, "latest_shortlist_rows")),
+            ("Paper candidates", paper_candidates),
+        ],
+        columns=["Stage", "Stocks"],
+    )
+    if stages["Stocks"].max() <= 0:
+        st.info("Pipeline counts are not available yet.")
+        return
+    fig = go.Figure(
+        go.Funnel(
+            y=stages["Stage"],
+            x=stages["Stocks"],
+            textinfo="value+percent initial",
+            marker=dict(
+                color=["#2e6fbb", "#5c8f41", "#d88912", "#c4587a", "#8a8f98", "#3d7f76"]
+            ),
+        )
+    )
+    fig.update_layout(
+        title="Pipeline: market to paper queue",
+        height=335,
+        margin=dict(l=20, r=20, t=55, b=15),
+    )
+    st.plotly_chart(fig, use_container_width=True, key="overview_pipeline_funnel")
+
+
+def _tournament_with_edges():
+    tournament = data.model_tournament_evaluation()
+    if tournament.empty:
+        return tournament
+    tournament = tournament.copy()
+    numeric_columns = [
+        "horizon_days",
+        "positive_rate",
+        "accuracy",
+        "majority_accuracy",
+        "accuracy_lift",
+        "roc_auc",
+        "brier_score",
+        "baseline_brier_score",
+        "brier_skill",
+        "benchmark_average_return",
+        "selected_rows",
+        "selected_average_return",
+        "selected_return_edge",
+        "selected_win_rate",
+        "selected_win_lift",
+        "champion_score",
+    ]
+    for column in numeric_columns:
+        if column in tournament.columns:
+            tournament[column] = pd.to_numeric(tournament[column], errors="coerce")
+    if "selected_return_edge" not in tournament.columns:
+        tournament["selected_return_edge"] = (
+            tournament["selected_average_return"] - tournament["benchmark_average_return"]
+        )
+    if "selected_win_lift" not in tournament.columns:
+        baseline_win = tournament.get("positive_rate", 0.5)
+        tournament["selected_win_lift"] = tournament["selected_win_rate"] - baseline_win
+    if "accuracy_lift" not in tournament.columns:
+        baseline_accuracy = tournament.get("majority_accuracy", 0.5)
+        tournament["accuracy_lift"] = tournament["accuracy"] - baseline_accuracy
+    if "brier_skill" not in tournament.columns and "baseline_brier_score" in tournament.columns:
+        tournament["brier_skill"] = 1 - (
+            tournament["brier_score"] / tournament["baseline_brier_score"]
+        )
+    if "brier_skill" not in tournament.columns:
+        tournament["brier_skill"] = np.nan
+    tournament["Horizon"] = tournament["horizon_days"].astype("Int64").astype(str) + "d"
+    tournament["Model"] = tournament["model_label"].fillna(tournament["model_name"])
+    tournament["Champion"] = tournament["is_champion"].astype(bool).map(
+        {True: "Champion", False: "Challenger"}
+    )
+    tournament["High-confidence rows"] = (
+        pd.to_numeric(tournament["selected_rows"], errors="coerce").fillna(0).clip(lower=1)
+    )
+    return tournament
+
+
+def render_model_edge_map(key_prefix="overview"):
+    tournament = _tournament_with_edges()
+    if tournament.empty:
+        st.info("Model tournament output is not available yet.")
+        return
+    shown = tournament[tournament["fit_status"].eq("ok")].copy()
+    if shown.empty:
+        st.warning("No model candidate fit successfully in the latest tournament.")
+        return
+    fig = px.scatter(
+        shown,
+        x="selected_return_edge",
+        y="selected_win_lift",
+        size="High-confidence rows",
+        color="Model",
+        symbol="Champion",
+        text="Horizon",
+        hover_name="Model",
+        hover_data={
+            "Horizon": True,
+            "accuracy_lift": ":.2%",
+            "roc_auc": ":.3f",
+            "brier_skill": ":.2%",
+            "selected_return_edge": ":.2%",
+            "selected_win_lift": ":.2%",
+            "High-confidence rows": ":,.0f",
+        },
+        color_discrete_sequence=["#2e6fbb", "#d88912", "#6f8f3d", "#c4587a"],
+    )
+    fig.add_hline(y=0, line_color="rgba(80,80,80,.45)", line_width=1)
+    fig.add_vline(x=0, line_color="rgba(80,80,80,.45)", line_width=1)
+    fig.update_traces(textposition="top center", marker=dict(opacity=0.78, line=dict(width=1)))
+    fig.update_layout(
+        title="Model edge: return lift vs win-rate lift",
+        height=335,
+        margin=dict(l=20, r=20, t=55, b=20),
+        legend=dict(orientation="h", yanchor="bottom", y=-0.35, xanchor="left", x=0),
+        xaxis_title="High-confidence return edge",
+        yaxis_title="High-confidence win-rate lift",
+    )
+    fig.update_xaxes(tickformat=".1%")
+    fig.update_yaxes(tickformat=".1%")
+    st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_model_edge_map")
+
+
+def render_candidate_prediction_spread(horizon):
+    candidates = data.latest_model_candidate_predictions(horizon, limit_per_model=12)
+    if candidates.empty:
+        return
+    shown = candidates.copy()
+    shown["Probability up"] = pd.to_numeric(shown["probability_up"], errors="coerce") * 100
+    shown["Model"] = shown["model_label"].fillna(shown["model_name"])
+    shown["Ticker"] = shown["ticker"].astype(str)
+    shown = shown.dropna(subset=["Probability up"])
+    if shown.empty:
+        return
+    order = (
+        shown.groupby("Ticker")["Probability up"]
+        .mean()
+        .sort_values()
+        .index.tolist()
+    )
+    fig = px.scatter(
+        shown,
+        x="Probability up",
+        y="Ticker",
+        color="Model",
+        symbol="Model",
+        hover_name="Ticker",
+        hover_data={
+            "model_rank": True,
+            "probability_bucket": True,
+            "as_of_date": True,
+        },
+        category_orders={"Ticker": order},
+        color_discrete_sequence=["#2e6fbb", "#d88912", "#6f8f3d", "#c4587a"],
+    )
+    fig.add_vline(x=55, line_dash="dash", line_color="rgba(46,111,187,.65)")
+    fig.add_vline(x=60, line_dash="dot", line_color="rgba(80,80,80,.45)")
+    fig.update_traces(marker=dict(size=11, opacity=0.78, line=dict(width=1)))
+    fig.update_layout(
+        title=f"{horizon}d candidate disagreement",
+        height=max(340, min(620, 28 * len(order) + 120)),
+        margin=dict(l=20, r=20, t=55, b=20),
+        xaxis_title="Probability up",
+        yaxis_title="",
+        legend=dict(orientation="h", yanchor="bottom", y=-0.22, xanchor="left", x=0),
+    )
+    fig.update_xaxes(ticksuffix="%")
+    st.plotly_chart(fig, use_container_width=True, key=f"model_candidate_spread_{horizon}")
+
+
+def render_stock_signal_galaxy(context):
+    board = context["board"]
+    if board.empty:
+        st.info("No ranked stock board is available yet.")
+        return
+    galaxy = board.copy()
+    galaxy["Model probability"] = pd.to_numeric(
+        galaxy.get("model_probability_up"), errors="coerce"
+    ) * 100
+    galaxy["60d volatility"] = pd.to_numeric(galaxy.get("vol_60d"), errors="coerce") * 100
+    galaxy["Heuristic confidence"] = pd.to_numeric(galaxy.get("confidence"), errors="coerce")
+    galaxy["Dollar volume"] = pd.to_numeric(galaxy.get("dollar_vol_20d"), errors="coerce")
+    galaxy["60d return"] = pd.to_numeric(galaxy.get("total_return"), errors="coerce") * 100
+    if "decision" in galaxy.columns:
+        galaxy["Decision"] = galaxy["decision"].astype(str).str.title()
+    else:
+        galaxy["Decision"] = "Watch"
+    if "in_shortlist" in galaxy.columns:
+        shortlist_flag = galaxy["in_shortlist"].fillna(False).astype(bool)
+    else:
+        shortlist_flag = pd.Series(False, index=galaxy.index)
+    galaxy["Shortlist"] = shortlist_flag.map({True: "Shortlist", False: "Watchlist"})
+    galaxy["Ticker"] = galaxy["ticker"].astype(str)
+    galaxy = galaxy.dropna(subset=["Model probability", "60d volatility", "Heuristic confidence"])
+    if galaxy.empty:
+        st.info("Model probabilities are not available for the stock signal map yet.")
+        return
+    median_risk = float(galaxy["60d volatility"].median())
+    max_risk = float(max(galaxy["60d volatility"].max(), median_risk + 1))
+    hover_data = {
+        "Decision": True,
+        "Shortlist": True,
+        "rank": True,
+        "60d return": ":.1f",
+        "Dollar volume": ":$,.0f",
+        "Heuristic confidence": ":.1f",
+    }
+    for optional_column in (
+        "model_label",
+        "top_positive_drivers",
+        "top_negative_drivers",
+    ):
+        if optional_column in galaxy.columns:
+            hover_data[optional_column] = True
+    fig = px.scatter(
+        galaxy,
+        x="60d volatility",
+        y="Model probability",
+        size="Heuristic confidence",
+        color="Decision",
+        symbol="Shortlist",
+        text="Ticker",
+        hover_name="Ticker",
+        hover_data=hover_data,
+        color_discrete_map={
+            "Paper Buy Candidate": "#2e6fbb",
+            "Hold / Consider Add": "#5c8f41",
+            "Watch": "#d88912",
+            "Avoid": "#8a8f98",
+            "Reduce / Exit Review": "#c4587a",
+        },
+    )
+    fig.add_hrect(
+        y0=55,
+        y1=max(100, float(galaxy["Model probability"].max()) + 2),
+        fillcolor="rgba(46,111,187,.08)",
+        line_width=0,
+    )
+    fig.add_vrect(
+        x0=0,
+        x1=median_risk,
+        fillcolor="rgba(92,143,65,.08)",
+        line_width=0,
+    )
+    fig.add_hline(y=55, line_dash="dash", line_color="rgba(46,111,187,.65)")
+    fig.add_vline(x=median_risk, line_dash="dot", line_color="rgba(80,80,80,.45)")
+    fig.update_traces(textposition="top center", marker=dict(opacity=0.78, line=dict(width=1)))
+    fig.update_layout(
+        title="Stock signal galaxy: model strength vs roughness",
+        height=520,
+        margin=dict(l=20, r=20, t=55, b=20),
+        legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="left", x=0),
+        xaxis=dict(title="60d volatility", range=[0, max_risk * 1.08]),
+        yaxis=dict(title="Model probability up", ticksuffix="%"),
+    )
+    st.plotly_chart(fig, use_container_width=True, key="overview_stock_signal_galaxy")
+    st.caption(
+        "Upper-left is the cleaner pocket: stronger model signal with lower recent roughness. "
+        "Bigger dots have stronger rule-based confidence."
+    )
+
+
 def render_overview():
     context = _daily_decision_context()
     health = context["health"]
-    watch = context["watch"]
 
-    st.title("Overview")
-    st.caption("Visual command center for the stock prediction app.")
+    st.title("Stock Prediction Command Center")
+    st.caption("Freshness, model edge, stock risk, and paper decisions on one page.")
+    render_run_snapshot(context)
     st.markdown(
         """
         <div class="safety-lock">
@@ -954,24 +1416,26 @@ def render_overview():
         st.info("No ranked decisions are available yet. Run the pipeline to initialize the dashboard.")
         return
 
-    st.subheader("Decision command center")
-    render_decision_cards(context["ranked_decisions"].head(3))
+    flow_col, model_col = st.columns((1.05, 1))
+    with flow_col:
+        render_pipeline_funnel(context)
+    with model_col:
+        render_model_edge_map()
 
-    st.subheader("Model trust meter")
-    render_trust_meter(context)
-    with st.expander("Open system warnings"):
+    render_stock_signal_galaxy(context)
+
+    st.subheader("Top paper actions")
+    render_decision_cards(context["ranked_decisions"].head(4))
+
+    with st.expander("Trust meter and warnings"):
+        render_trust_meter(context)
         render_health_warnings(health)
         render_model_health_warnings(health)
         st.write(context["constraint_message"])
 
-    st.subheader("Market opportunity map")
-    render_signal_anatomy(watch.head(30), "overview")
-
-    st.subheader("Portfolio flow")
-    render_portfolio_flow(context)
-
-    st.subheader("Build roadmap")
-    render_roadmap_strip()
+    with st.expander("Portfolio and build roadmap"):
+        render_portfolio_flow(context)
+        render_roadmap_strip()
 
 
 def render_daily_decision_board():
@@ -1913,6 +2377,11 @@ def render_pipeline_controls():
         sim_min = right.number_input("Similarity minimum", 0.0, 0.99, 0.60, 0.01, format="%.2f")
         sim_cap = right.number_input("Similarity cap", 0.01, 1.0, 0.88, 0.01, format="%.2f")
         top_n_per_ticker = right.number_input("Neighbors per ticker", 1, 20, 3, 1)
+        model_candidates = right.multiselect(
+            "Model candidates",
+            ["sgd_logistic", "mlp_ann", "hist_gradient_boosting"],
+            default=["sgd_logistic", "mlp_ann", "hist_gradient_boosting"],
+        )
         confirmed = st.checkbox("I understand this starts a full GitHub Actions pipeline run.")
         submitted = st.form_submit_button("Run pipeline on GitHub", type="primary")
 
@@ -1923,6 +2392,9 @@ def render_pipeline_controls():
         if sim_min >= sim_cap:
             st.error("Similarity minimum must be lower than similarity cap.")
             return
+        if not model_candidates:
+            st.error("Choose at least one model candidate.")
+            return
         inputs = {
             "watchlist_limit": int(watchlist_limit),
             "persistence_bonus": f"{persistence_bonus:.2f}",
@@ -1932,6 +2404,7 @@ def render_pipeline_controls():
             "sim_min": f"{sim_min:.2f}",
             "sim_cap": f"{sim_cap:.2f}",
             "top_n_per_ticker": int(top_n_per_ticker),
+            "model_candidates": ",".join(model_candidates),
         }
         try:
             url = actions.dispatch_pipeline(inputs)
@@ -2074,55 +2547,61 @@ def render_model_lab():
         st.info("No model export is available yet. Run the cloud pipeline to build it.")
         return
 
-    tournament = data.model_tournament_evaluation()
+    tournament = _tournament_with_edges()
     if not tournament.empty:
         st.subheader("Model tournament")
         st.caption(
-            "Future runs compare candidate models by horizon and promote one champion "
-            "into the daily decision board."
+            "Candidates compete by horizon; the champion feeds the decision board."
         )
         tournament_display = tournament.rename(
             columns={
-                "horizon_days": "Horizon",
-                "model_label": "Model",
                 "fit_status": "Fit status",
-                "is_champion": "Champion",
                 "accuracy": "Accuracy",
+                "accuracy_lift": "Accuracy lift",
                 "roc_auc": "ROC AUC",
                 "brier_score": "Brier",
-                "selected_rows": "High-confidence rows",
+                "brier_skill": "Brier skill",
                 "selected_average_return": "High-confidence avg return",
+                "selected_return_edge": "Return edge",
                 "selected_win_rate": "High-confidence win rate",
+                "selected_win_lift": "Win lift",
                 "champion_score": "Champion score",
             }
         )
+        tournament_columns = [
+            "Horizon",
+            "Model",
+            "Fit status",
+            "Champion",
+            "Accuracy",
+            "Accuracy lift",
+            "ROC AUC",
+            "Brier",
+            "Brier skill",
+            "High-confidence rows",
+            "Return edge",
+            "Win lift",
+            "Champion score",
+        ]
+        tournament_columns = [
+            column for column in tournament_columns if column in tournament_display.columns
+        ]
         st.dataframe(
-            tournament_display[
-                [
-                    "Horizon",
-                    "Model",
-                    "Fit status",
-                    "Champion",
-                    "Accuracy",
-                    "ROC AUC",
-                    "Brier",
-                    "High-confidence rows",
-                    "High-confidence avg return",
-                    "High-confidence win rate",
-                    "Champion score",
-                ]
-            ],
+            tournament_display[tournament_columns],
             hide_index=True,
             use_container_width=True,
             column_config={
                 "Accuracy": st.column_config.NumberColumn(format="%.3f"),
+                "Accuracy lift": st.column_config.NumberColumn(format="%.2%"),
                 "ROC AUC": st.column_config.NumberColumn(format="%.3f"),
                 "Brier": st.column_config.NumberColumn(format="%.3f"),
-                "High-confidence avg return": st.column_config.NumberColumn(format="%.2%"),
-                "High-confidence win rate": st.column_config.NumberColumn(format="%.1%"),
+                "Brier skill": st.column_config.NumberColumn(format="%.2%"),
+                "Return edge": st.column_config.NumberColumn(format="%.2%"),
+                "Win lift": st.column_config.NumberColumn(format="%.1%"),
                 "Champion score": st.column_config.NumberColumn(format="%.3f"),
             },
         )
+        render_model_edge_map("model_lab")
 
     horizon = st.selectbox(
         "Prediction horizon",
@@ -2138,6 +2617,8 @@ def render_model_lab():
     cols[2].metric("Brier score", f"{row['brier_score']:.3f}")
     cols[3].metric("High-confidence ideas", f"{int(row['selected_rows']):,}")
     cols[4].metric("High-confidence win rate", percent(row["selected_win_rate"]))
+
+    render_candidate_prediction_spread(horizon)
 
     st.subheader("Time boundary")
     st.caption(

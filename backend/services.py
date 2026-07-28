@@ -266,7 +266,7 @@ def readiness_report():
         },
         {
             "key": "model_baseline",
-            "label": "Model baseline",
+            "label": "Model tournament",
             "status": "ready" if model_ready else "attention",
             "detail": (
                 "Model tables are present for the dashboard contract"

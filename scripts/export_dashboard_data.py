@@ -492,8 +492,18 @@ def export_health(history, source, destination, counts):
     latest_shortlist_date = source.execute(
         "SELECT MAX(begins_at) FROM WinnerUniverse"
     ).fetchone()[0] if table_exists(source, "WinnerUniverse") else None
+    run_id = os.getenv("GITHUB_RUN_ID", "")
+    repository = os.getenv("GITHUB_REPOSITORY", "")
+    server_url = os.getenv("GITHUB_SERVER_URL", "https://github.com")
+    run_url = f"{server_url}/{repository}/actions/runs/{run_id}" if run_id and repository else ""
     values = {
         "exported_at": datetime.now(timezone.utc).isoformat(),
+        "github_ref_name": os.getenv("GITHUB_REF_NAME", ""),
+        "github_run_attempt": os.getenv("GITHUB_RUN_ATTEMPT", ""),
+        "github_run_id": run_id,
+        "github_run_number": os.getenv("GITHUB_RUN_NUMBER", ""),
+        "github_run_url": run_url,
+        "github_sha": os.getenv("GITHUB_SHA", ""),
         "latest_market_date": latest_market_date or "",
         "latest_market_tickers": str(latest_market_tickers),
         "tracked_market_tickers": str(tracked_tickers),

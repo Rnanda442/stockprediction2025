@@ -88,6 +88,7 @@ def api_index():
             "/api/model/evaluation",
             "/api/model/tournament",
             "/api/model/predictions",
+            "/api/model/candidate-predictions",
             "/api/paper/status",
             "/api/paper/performance",
         ],
@@ -196,6 +197,21 @@ def model_predictions(
         lambda: {
             "horizon_days": horizon_days,
             "rows": _records(data.latest_model_predictions(horizon_days, limit), limit=limit),
+        }
+    )
+
+
+@app.get("/api/model/candidate-predictions")
+def model_candidate_predictions(
+    horizon_days: int = Query(20, ge=1, le=365),
+    limit_per_model: int = Query(20, ge=1, le=100),
+):
+    return _dashboard_call(
+        lambda: {
+            "horizon_days": horizon_days,
+            "rows": _records(
+                data.latest_model_candidate_predictions(horizon_days, limit_per_model)
+            ),
         }
     )
 

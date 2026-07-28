@@ -91,7 +91,7 @@ If you omit `-RunId`, the helper checks the latest `stock-run.yml` run:
 ```
 
 The summary includes pipeline health, latest market and shortlist dates, exported
-row counts, shortlist contents, top watchlist rows, model-baseline evaluation,
+row counts, shortlist contents, top watchlist rows, model-tournament evaluation,
 and shortlist/watchlist changes compared with the prior local dashboard DB.
 
 ## Dashboard
@@ -166,7 +166,7 @@ The dashboard includes:
 - plain-English guide to the pipeline and core variables
 - interactive historical Research Lab with adjustable slices and assumptions
 - Monte Carlo scenario fan and walk-forward signal evaluation
-- leakage-controlled 5d, 20d, and 60d logistic model baselines with a held-out time window
+- leakage-controlled 5d, 20d, and 60d model tournament with logistic, ANN, and tree candidates
 - Model Lab with visible training cutoff, embargo, test range, feature weights, and latest rankings
 - proposed paper-trade review notes saved to a local ignored ledger at `data/paper_trade_ledger.csv`
 - Portfolio Replay for comparing recent walk-forward rotation rules against a starting portfolio

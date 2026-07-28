@@ -5,7 +5,7 @@ param(
     [string]$Repo = "Rnanda442/stockprediction2025",
     [string]$Workflow = "stock-run.yml",
     [string]$GitHubCli = "C:\Program Files\GitHub CLI\gh.exe",
-    [string]$ModelCandidates = "sgd_logistic,mlp_ann",
+    [string]$ModelCandidates = "sgd_logistic,mlp_ann,hist_gradient_boosting",
     [switch]$Watch
 )
 

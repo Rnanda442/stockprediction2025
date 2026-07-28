@@ -492,6 +492,40 @@ def latest_model_predictions(horizon_days, limit=50):
     )
 
 
+def latest_model_candidate_predictions(horizon_days, limit_per_model=20):
+    if not table_exists("LatestModelCandidatePredictions"):
+        return pd.DataFrame()
+    columns = table_columns("LatestModelCandidatePredictions")
+    optional_columns = []
+    defaults = {
+        "probability_bucket": "'' AS probability_bucket",
+    }
+    for column, fallback in defaults.items():
+        if column in columns:
+            optional_columns.append(column)
+        else:
+            optional_columns.append(fallback)
+    return query(
+        f"""
+        WITH ranked AS (
+          SELECT *,
+                 ROW_NUMBER() OVER (
+                   PARTITION BY model_name
+                   ORDER BY model_rank
+                 ) AS model_row
+          FROM LatestModelCandidatePredictions
+          WHERE horizon_days=?
+        )
+        SELECT model_rank, ticker, model_name, model_label, model_version,
+               horizon_days, probability_up, {', '.join(optional_columns)}, as_of_date
+        FROM ranked
+        WHERE model_row <= ?
+        ORDER BY model_name, model_rank
+        """,
+        (horizon_days, limit_per_model),
+    )
+
+
 def trade_research_queue(horizon_days, limit=25):
     if not table_exists("LatestModelPredictions"):
         return pd.DataFrame()

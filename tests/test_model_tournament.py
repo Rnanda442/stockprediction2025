@@ -43,6 +43,15 @@ def test_model_tournament_builds_ann_candidate(monkeypatch):
 
     assert set(tournament["model_name"]) == {"sgd_logistic", "mlp_ann"}
     assert tournament["is_champion"].sum() == 1
+    assert {
+        "positive_rate",
+        "majority_accuracy",
+        "accuracy_lift",
+        "baseline_brier_score",
+        "brier_skill",
+        "selected_return_edge",
+        "selected_win_lift",
+    }.issubset(tournament.columns)
     assert predictions
     assert pd.concat(predictions)["model_name"].isin({"sgd_logistic", "mlp_ann"}).all()
     assert importances

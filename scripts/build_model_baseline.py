@@ -48,7 +48,7 @@ TEST_DATES = int(os.getenv("MODEL_TEST_DATES", "126"))
 MAX_TRAIN_ROWS = int(os.getenv("MODEL_MAX_TRAIN_ROWS", "350000"))
 MAX_TEST_ROWS = int(os.getenv("MODEL_MAX_TEST_ROWS", "150000"))
 RANDOM_SEED = int(os.getenv("MODEL_RANDOM_SEED", "17"))
-DEFAULT_CANDIDATES = "sgd_logistic,mlp_ann"
+DEFAULT_CANDIDATES = "sgd_logistic,mlp_ann,hist_gradient_boosting"
 
 
 MODEL_LABELS = {
@@ -146,6 +146,11 @@ def feature_driver_text(features, contributions, positive=True, limit=3):
 
 def build_estimator(model_name):
     if model_name == "sgd_logistic":
+        balanced_classes = os.getenv("MODEL_BALANCED_CLASSES", "true").lower() not in {
+            "0",
+            "false",
+            "no",
+        }
         return make_pipeline(
             SimpleImputer(strategy="median"),
             StandardScaler(),
@@ -153,6 +158,7 @@ def build_estimator(model_name):
                 loss="log_loss",
                 alpha=float(os.getenv("MODEL_SGD_ALPHA", "0.0005")),
                 max_iter=int(os.getenv("MODEL_SGD_MAX_ITER", "1500")),
+                class_weight="balanced" if balanced_classes else None,
                 random_state=RANDOM_SEED,
                 early_stopping=True,
                 validation_fraction=0.1,
@@ -278,15 +284,22 @@ def feature_importance(model, horizon, features, model_name):
 def champion_score(evaluation):
     if evaluation.get("fit_status") != "ok":
         return -1_000_000_000.0
+    score = 0.0
     auc = evaluation.get("roc_auc")
-    score = 0.0 if pd.isna(auc) else float(auc)
-    selected_return = evaluation.get("selected_average_return")
-    benchmark_return = evaluation.get("benchmark_average_return")
-    if not pd.isna(selected_return) and not pd.isna(benchmark_return):
-        score += float(np.clip(selected_return - benchmark_return, -0.05, 0.05))
-    win_rate = evaluation.get("selected_win_rate")
-    if not pd.isna(win_rate):
-        score += float(np.clip(win_rate - 0.5, -0.2, 0.2)) * 0.05
+    if not pd.isna(auc):
+        score += float(auc) - 0.5
+    accuracy_lift = evaluation.get("accuracy_lift")
+    if not pd.isna(accuracy_lift):
+        score += float(np.clip(accuracy_lift, -0.05, 0.05)) * 0.75
+    selected_return_edge = evaluation.get("selected_return_edge")
+    if not pd.isna(selected_return_edge):
+        score += float(np.clip(selected_return_edge, -0.05, 0.05)) * 1.5
+    selected_win_lift = evaluation.get("selected_win_lift")
+    if not pd.isna(selected_win_lift):
+        score += float(np.clip(selected_win_lift, -0.2, 0.2)) * 0.25
+    brier_skill = evaluation.get("brier_skill")
+    if not pd.isna(brier_skill):
+        score += float(np.clip(brier_skill, -0.2, 0.2)) * 0.25
     return score
 
 
@@ -300,7 +313,19 @@ def evaluate_model(model, model_name, horizon, train, test, train_dates, test_da
     probabilities = model.predict_proba(x_test)[:, 1]
     predictions = (probabilities >= 0.5).astype(int)
     selected = test.loc[probabilities >= 0.60, "forward_return"]
+    positive_rate = float(y_test.mean())
+    majority_accuracy = max(positive_rate, 1.0 - positive_rate)
     benchmark = float(test["forward_return"].mean())
+    selected_average_return = float(selected.mean()) if len(selected) else np.nan
+    selected_win_rate = float((selected > 0).mean()) if len(selected) else np.nan
+    brier = float(brier_score_loss(y_test, probabilities))
+    baseline_brier = float(
+        brier_score_loss(y_test, np.full(len(probabilities), positive_rate))
+    )
+    brier_skill = (
+        np.nan if baseline_brier <= 0 else float(1.0 - (brier / baseline_brier))
+    )
+    accuracy = float(accuracy_score(y_test, predictions))
     evaluation = {
         "horizon_days": horizon,
         "model_name": model_name,
@@ -315,13 +340,20 @@ def evaluate_model(model, model_name, horizon, train, test, train_dates, test_da
         "test_end": max(test_dates),
         "training_rows": len(train),
         "test_rows": len(test),
-        "accuracy": float(accuracy_score(y_test, predictions)),
+        "positive_rate": positive_rate,
+        "majority_accuracy": majority_accuracy,
+        "accuracy": accuracy,
+        "accuracy_lift": accuracy - majority_accuracy,
         "roc_auc": safe_auc(y_test, probabilities),
-        "brier_score": float(brier_score_loss(y_test, probabilities)),
+        "brier_score": brier,
+        "baseline_brier_score": baseline_brier,
+        "brier_skill": brier_skill,
         "benchmark_average_return": benchmark,
         "selected_rows": len(selected),
-        "selected_average_return": float(selected.mean()) if len(selected) else np.nan,
-        "selected_win_rate": float((selected > 0).mean()) if len(selected) else np.nan,
+        "selected_average_return": selected_average_return,
+        "selected_return_edge": selected_average_return - benchmark,
+        "selected_win_rate": selected_win_rate,
+        "selected_win_lift": selected_win_rate - positive_rate,
         "retained_features": len(features),
         "dropped_features": "",
     }
@@ -344,13 +376,20 @@ def failed_evaluation(model_name, horizon, error, train_dates, test_dates, featu
         "test_end": max(test_dates) if test_dates else "",
         "training_rows": 0,
         "test_rows": 0,
+        "positive_rate": np.nan,
+        "majority_accuracy": np.nan,
         "accuracy": np.nan,
+        "accuracy_lift": np.nan,
         "roc_auc": np.nan,
         "brier_score": np.nan,
+        "baseline_brier_score": np.nan,
+        "brier_skill": np.nan,
         "benchmark_average_return": np.nan,
         "selected_rows": 0,
         "selected_average_return": np.nan,
+        "selected_return_edge": np.nan,
         "selected_win_rate": np.nan,
+        "selected_win_lift": np.nan,
         "retained_features": len(features),
         "dropped_features": ", ".join(dropped_features),
         "champion_score": -1_000_000_000.0,
@@ -513,7 +552,10 @@ def main():
                 "fit_status",
                 "is_champion",
                 "accuracy",
+                "accuracy_lift",
                 "roc_auc",
+                "brier_skill",
+                "selected_return_edge",
                 "selected_average_return",
                 "selected_win_rate",
                 "champion_score",

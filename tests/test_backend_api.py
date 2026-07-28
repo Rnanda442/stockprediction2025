@@ -50,6 +50,18 @@ def test_model_tournament_endpoint_is_available():
     assert "rows" in response.json()
 
 
+def test_model_candidate_predictions_endpoint_is_available():
+    response = client.get(
+        "/api/model/candidate-predictions",
+        params={"horizon_days": 20, "limit_per_model": 3},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["horizon_days"] == 20
+    assert "rows" in payload
+
+
 def test_daily_decisions_exposes_streamlit_backend_context():
     response = client.get("/api/daily-decisions", params={"limit": 5})
     assert response.status_code == 200

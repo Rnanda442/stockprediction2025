@@ -182,8 +182,7 @@ Next-run model candidates:
 
 Runtime controls:
 
-- `MODEL_CANDIDATES=sgd_logistic,mlp_ann`
-- `MODEL_CANDIDATES=sgd_logistic,mlp_ann,hist_gradient_boosting`
+- Default next-run candidates: `sgd_logistic,mlp_ann,hist_gradient_boosting`
 - `MODEL_MLP_HIDDEN_LAYERS=32,16`
 - `MODEL_MLP_MAX_ITER=80`
 - `MODEL_MAX_TRAIN_ROWS=350000`
@@ -192,7 +191,7 @@ Runtime controls:
 Manual dispatch helper:
 
 ```powershell
-.\scripts\sync_and_run_stock_pipeline.ps1 -ModelCandidates "sgd_logistic,mlp_ann" -Watch
+.\scripts\sync_and_run_stock_pipeline.ps1 -ModelCandidates "sgd_logistic,mlp_ann,hist_gradient_boosting" -Watch
 ```
 
 Output tables:
