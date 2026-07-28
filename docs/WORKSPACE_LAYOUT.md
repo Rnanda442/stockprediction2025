@@ -14,6 +14,20 @@ The repository now has a Streamlit frontend over a shared backend/data contract.
 | `tests/` | Unit and smoke tests for contracts that should not drift. |
 | `docs/` | Product, architecture, runbook, and workspace notes. |
 
+There is no separate `frontend/` app. Streamlit in `dashboard/app.py` is the
+frontend, and `backend/` is only the reusable service/API layer.
+
+## Branch And Commit Hygiene
+
+Use `main` as the canonical long-lived branch once code changes are promoted.
+Temporary `codex/*` branches are only for staging and testing work before it is
+safe to replace or merge into `main`.
+
+Scheduled GitHub Actions runs should publish `stock-analysis-outputs` artifacts
+without committing generated snapshots back to `main`. To deliberately commit a
+refreshed tracked dashboard snapshot from a manual run, dispatch the workflow
+with `commit_generated_updates=true`.
+
 ## Generated And Local Data
 
 The current pipeline expects several generated artifacts at the repository root.

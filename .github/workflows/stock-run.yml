@@ -39,6 +39,10 @@ on:
         description: Model tournament candidates
         required: false
         default: "sgd_logistic,mlp_ann"
+      commit_generated_updates:
+        description: Commit refreshed tracked dashboard snapshot files
+        required: false
+        default: "false"
   schedule:
     - cron: "0 13 * * 1-5" # 13:00 UTC weekdays
 
@@ -240,6 +244,7 @@ jobs:
             logs/executed-notebook.ipynb
 
       - name: Commit generated updates
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.commit_generated_updates == 'true' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

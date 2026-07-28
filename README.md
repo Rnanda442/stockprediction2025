@@ -48,6 +48,11 @@ branch, pass it explicitly:
 .\sync_and_run_stock_pipeline.cmd -Branch main -Watch
 ```
 
+Scheduled workflow runs publish artifacts and caches but do not commit generated
+snapshot updates back to `main`. If you intentionally want a manual run to commit
+refreshed tracked snapshot files, dispatch it with
+`commit_generated_updates=true`.
+
 If PowerShell says the script is not recognized, this helper file is not in your
 current checkout yet. Use the manual commands below from the repository root;
 they do not require the helper script and they avoid hard-coding a branch name:
