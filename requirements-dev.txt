@@ -1,4 +1,0 @@
--r requirements-backend.txt
-pytest
-httpx
-scikit-learn

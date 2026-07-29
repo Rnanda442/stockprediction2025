@@ -1,2 +1,7 @@
--r requirements-dashboard.txt
+pandas
+streamlit
+numpy
+plotly
 scikit-learn
+fastapi
+uvicorn

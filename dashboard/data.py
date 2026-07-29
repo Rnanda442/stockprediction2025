@@ -24,7 +24,8 @@ def connect():
     path = database_path()
     if not path.exists():
         raise FileNotFoundError(
-            f"{path} is missing. Run: python scripts/export_dashboard_data.py"
+            f"{path} is missing. Sync a successful GitHub Actions artifact or "
+            "run: python scripts/export_dashboard_data.py"
         )
     uri = f"{path.resolve().as_uri()}?mode=ro"
     conn = sqlite3.connect(uri, uri=True)

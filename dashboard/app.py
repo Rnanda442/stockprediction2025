@@ -178,6 +178,16 @@ def short_model_label(value):
 
 
 def load_activity_board():
+    if not ACTIVITY_BOARD_PATH.exists():
+        return {
+            "updated": "not bundled",
+            "north_star": "Build a compact stock prediction workspace with Streamlit, backend services, paper decisions, and model tournament evidence.",
+            "current_milestone": "Lean source bundle",
+            "goals": [],
+            "deployment": [],
+            "next_commits": [],
+            "completed": [],
+        }
     with ACTIVITY_BOARD_PATH.open(encoding="utf-8") as board_file:
         return json.load(board_file)
 

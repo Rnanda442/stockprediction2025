@@ -12,7 +12,6 @@ config/robinhood_token-Copy1.txt
 *.sqlite
 *.sqlite3
 *.db-journal
-!dashboard_data.db
 
 # generated data / outputs
 *.csv
@@ -22,6 +21,7 @@ config/robinhood_token-Copy1.txt
 *.svg
 analytics/
 data/
+dashboard/paper_learning_snapshot.json
 
 # checkpoints / cache
 .auth-cache/
