@@ -28,6 +28,8 @@ data/
 .dashboard-sync/
 .dashboard-artifact/
 .dashboard-artifact.zip
+chatgpt_project_upload/
+chatgpt_project_upload.zip
 .tokens/
 .ipynb_checkpoints/
 */.ipynb_checkpoints/
