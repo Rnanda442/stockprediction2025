@@ -3,3 +3,5 @@ streamlit
 numpy
 plotly
 scikit-learn
+nbformat
+nbclient

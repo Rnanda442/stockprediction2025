@@ -1,6 +1,7 @@
 import os
 import sqlite3
-from contextlib import closing
+import time
+from contextlib import closing, contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -110,6 +111,17 @@ MODEL_LABELS = {
     "hist_gradient_boosting": "Histogram gradient boosting",
     SIMILARITY_ANN_MODEL: "ANN similarity + Monte Carlo",
 }
+
+
+@contextmanager
+def timed_stage(name):
+    started = time.monotonic()
+    print(f"[model-stage] {name} started", flush=True)
+    try:
+        yield
+    finally:
+        elapsed = time.monotonic() - started
+        print(f"[model-stage] {name} finished in {elapsed:.1f}s", flush=True)
 
 
 def parse_candidates():
@@ -1566,7 +1578,8 @@ def main():
     if not DB_PATH.exists():
         raise RuntimeError(f"{DB_PATH} is required")
     with closing(sqlite3.connect(DB_PATH)) as conn:
-        frame = load_frame(conn)
+        with timed_stage("load leakage-controlled frame"):
+            frame = load_frame(conn)
         created_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
         run_metadata = build_run_metadata(frame, created_at)
         evaluations = []
@@ -1575,28 +1588,30 @@ def main():
         predictions = []
         walk_forward_rows = []
         for horizon in HORIZONS:
-            (
-                horizon_evaluations,
-                horizon_importances,
-                horizon_ann_importances,
-                horizon_predictions,
-                horizon_walk_forward,
-            ) = build_horizon(frame, horizon)
+            with timed_stage(f"build {horizon}d model horizon"):
+                (
+                    horizon_evaluations,
+                    horizon_importances,
+                    horizon_ann_importances,
+                    horizon_predictions,
+                    horizon_walk_forward,
+                ) = build_horizon(frame, horizon)
             evaluations.extend(horizon_evaluations)
             importances.extend(horizon_importances)
             ann_importances.extend(horizon_ann_importances)
             predictions.extend(horizon_predictions)
             walk_forward_rows.extend(horizon_walk_forward)
-        champions, tournament = save_outputs(
-            conn,
-            frame,
-            evaluations,
-            importances,
-            ann_importances,
-            predictions,
-            walk_forward_rows,
-            run_metadata,
-        )
+        with timed_stage("save model outputs and compact history"):
+            champions, tournament = save_outputs(
+                conn,
+                frame,
+                evaluations,
+                importances,
+                ann_importances,
+                predictions,
+                walk_forward_rows,
+                run_metadata,
+            )
     print("Built leakage-controlled model tournament:")
     print(
         tournament[

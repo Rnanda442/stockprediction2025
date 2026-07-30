@@ -229,6 +229,8 @@ jobs:
             checkpoint_rejected.csv
             dashboard_data.db
             logs/executed-notebook.ipynb
+            logs/notebook_stage_manifest.json
+            logs/notebook_checkpoints/*.json
 
       - name: Commit generated updates
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.commit_generated_updates == 'true' }}

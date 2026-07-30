@@ -711,6 +711,9 @@ def health_warnings(health):
             f"The shortlist date ({latest_shortlist_date}) does not match "
             f"the latest market date ({market_day})."
         )
+    validation_status = str(health.get("validation_status", "")).strip().lower()
+    if validation_status and validation_status != "passed":
+        warnings.append(f"The latest pipeline validation status is {validation_status}.")
     return warnings
 
 
@@ -1022,28 +1025,43 @@ def champion_summary():
 def render_run_snapshot(context):
     health = context["health"]
     paper_status = data.paper_learning_status()
+    model_warnings = model_health_warnings(health)
     coverage = health_float(health, "latest_market_coverage")
     latest_market = short_date(health.get("latest_market_date"))
     latest_shortlist = short_date(health.get("latest_shortlist_date"))
     exported_at = health.get("exported_at")
+    commit_sha = str(health.get("github_sha", "") or "").strip()
+    validation_status = str(health.get("validation_status", "not checked") or "not checked")
+    validation_checked = health.get("validation_checked_at")
     run_url = health.get("github_run_url")
     coverage_text = "--" if coverage is None else f"{coverage:.1%}"
+    model_status = "ready" if not model_warnings else "check"
     cards = [
         (
-            "Last successful run",
+            "Latest run",
             format_run_timestamp(exported_at),
             f"{run_age_text(exported_at)} | market {latest_market}",
         ),
         (
-            "Coverage",
+            "Commit",
+            commit_sha[:7] if commit_sha else "--",
+            "source used by the run" if commit_sha else "not reported",
+        ),
+        (
+            "Data freshness",
             coverage_text,
             f"{compact_count(health.get('latest_market_tickers'))} / "
             f"{compact_count(health.get('tracked_market_tickers'))} tickers",
         ),
         (
-            "Champion ML",
-            champion_summary(),
-            "promoted by horizon",
+            "Model status",
+            model_status,
+            champion_summary() if not model_warnings else "incomplete outputs",
+        ),
+        (
+            "Validation",
+            validation_status,
+            format_run_timestamp(validation_checked) if validation_checked else "not checked",
         ),
         (
             "Paper loop",
@@ -1067,7 +1085,7 @@ def render_run_snapshot(context):
         <style>
         .run-snapshot {{
           display:grid;
-          grid-template-columns:1.25fr 0.8fr 1fr 1fr;
+          grid-template-columns:1.25fr .75fr .9fr .95fr .8fr 1fr;
           gap:.65rem;
           margin:.45rem 0 1rem;
         }}

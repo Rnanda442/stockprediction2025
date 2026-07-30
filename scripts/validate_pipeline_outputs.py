@@ -30,6 +30,31 @@ def warn(message):
     print(f"WARNING: {message}")
 
 
+def record_validation_status(status):
+    path = ROOT / "dashboard_data.db"
+    if not path.exists() or path.stat().st_size == 0:
+        print("dashboard_data.db is unavailable; validation status was not written.")
+        return
+    checked_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    with sqlite3.connect(path) as conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS PipelineHealth (
+              metric TEXT PRIMARY KEY, value TEXT NOT NULL
+            )
+            """
+        )
+        conn.executemany(
+            "INSERT OR REPLACE INTO PipelineHealth(metric, value) VALUES (?, ?)",
+            (
+                ("validation_status", status),
+                ("validation_checked_at", checked_at),
+            ),
+        )
+        conn.commit()
+    print(f"dashboard_data.db:PipelineHealth validation_status={status}")
+
+
 def check_csv(relative_path, required_columns, min_rows=1, max_rows=None, nonblank_columns=None):
     path = ROOT / relative_path
     if not path.exists():
@@ -719,7 +744,9 @@ def main(argv=None):
         checks.extend(local_build_checks())
     checks.extend(dashboard_export_checks())
 
-    if not all(checks):
+    passed = all(checks)
+    record_validation_status("passed" if passed else "failed")
+    if not passed:
         print("Pipeline output validation failed.")
         return 1
 
