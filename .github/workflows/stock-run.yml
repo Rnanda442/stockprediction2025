@@ -44,7 +44,7 @@ on:
         required: false
         default: "false"
   schedule:
-    - cron: "0 13 * * 1-5" # 13:00 UTC weekdays
+    - cron: "0 22 * * 1-5" # after U.S. market close weekdays
 
 permissions:
   contents: write

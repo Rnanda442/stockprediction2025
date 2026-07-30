@@ -13,7 +13,7 @@ large local artifacts.
 - Pipeline: `.github/workflows/stock-run.yml`
 - Core model builder: `scripts/build_model_baseline.py`
 - Main notebook: `notebook/2025summerstock-Copy6.ipynb`
-- Research sources: `sources/`
+- Weekly ML plan: `WEEKLY_ML_RUN_PLAN.md`
 - Live trading: disabled; this is research and paper-decision review only
 
 Latest successful full run used by the last committed dashboard snapshot before
@@ -35,8 +35,8 @@ the repo was trimmed:
 backend/                              Read-only service helpers
 dashboard/                            Streamlit frontend and domain helpers
 notebook/2025summerstock-Copy6.ipynb  Main data-refresh notebook
-sources/                              Stock prediction ML research PDFs
 scripts/                              Pipeline, model, export, and validation scripts
+WEEKLY_ML_RUN_PLAN.md                 Daily model run and review plan
 ```
 
 Generated files are deliberately not source:
