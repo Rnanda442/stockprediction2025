@@ -49,6 +49,30 @@ Generated files are deliberately not source:
 - large local `*.db` build databases
 - Robinhood tokens or session caches
 
+## ChatGPT Project Source Pack
+
+ChatGPT Projects use uploaded files as reference material. Instead of uploading
+this folder file by file, generate one source pack and upload that Markdown file
+to the ChatGPT Project:
+
+```powershell
+python scripts\build_chatgpt_source_pack.py
+```
+
+By default this writes:
+
+```text
+C:\Users\gargi\Downloads\stockprediction2025_chatgpt_source_pack.md
+```
+
+Regenerate and re-upload that one file after commits that change code, model
+logic, pipeline behavior, or project instructions. You do not need to refresh it
+only because a GitHub Actions run produced new databases or dashboard artifacts.
+
+If GitHub connection is available in your ChatGPT account, connecting the repo is
+cleaner than manual uploads because ChatGPT can read from the repository you
+authorize.
+
 ## Run The Cloud Pipeline
 
 Use the `Run Stock Pipeline` GitHub Actions workflow dispatch from the repo.
