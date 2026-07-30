@@ -1,6 +1,7 @@
 import os
 import sqlite3
 from contextlib import closing
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -49,6 +50,11 @@ MAX_TRAIN_ROWS = int(os.getenv("MODEL_MAX_TRAIN_ROWS", "350000"))
 MAX_TEST_ROWS = int(os.getenv("MODEL_MAX_TEST_ROWS", "150000"))
 RANDOM_SEED = int(os.getenv("MODEL_RANDOM_SEED", "17"))
 DEFAULT_CANDIDATES = "sgd_logistic,mlp_ann,hist_gradient_boosting"
+SELECTION_THRESHOLD = float(os.getenv("MODEL_SELECTION_THRESHOLD", "0.60"))
+WALK_FORWARD_SPLITS = int(os.getenv("MODEL_WALK_FORWARD_SPLITS", "5"))
+WALK_FORWARD_TEST_DATES = int(os.getenv("MODEL_WALK_FORWARD_TEST_DATES", "63"))
+WALK_FORWARD_MIN_TRAIN_DATES = int(os.getenv("MODEL_WALK_FORWARD_MIN_TRAIN_DATES", "252"))
+HISTORY_PREDICTION_LIMIT = int(os.getenv("MODEL_HISTORY_PREDICTION_LIMIT", "100"))
 
 
 MODEL_LABELS = {
@@ -70,6 +76,35 @@ def parse_candidates():
 
 
 MODEL_CANDIDATES = parse_candidates()
+
+
+def table_exists(conn, table):
+    return conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+        (table,),
+    ).fetchone() is not None
+
+
+def build_run_metadata(frame, created_at):
+    explicit_run = os.getenv("MODEL_RUN_ID") or os.getenv("GITHUB_RUN_ID")
+    run_id = explicit_run or created_at.replace("-", "").replace(":", "").replace("+", "_")
+    return {
+        "run_id": str(run_id),
+        "created_at": created_at,
+        "as_of_date": str(frame["begins_at"].max())[:10],
+        "model_version": MODEL_VERSION,
+        "model_candidates": ",".join(MODEL_CANDIDATES),
+        "horizons": ",".join(str(horizon) for horizon in HORIZONS),
+        "lookback_dates": LOOKBACK_DATES,
+        "test_dates": TEST_DATES,
+        "selection_threshold": SELECTION_THRESHOLD,
+        "walk_forward_splits_requested": WALK_FORWARD_SPLITS,
+        "walk_forward_test_dates": WALK_FORWARD_TEST_DATES,
+        "walk_forward_min_train_dates": WALK_FORWARD_MIN_TRAIN_DATES,
+        "random_seed": RANDOM_SEED,
+        "github_run_attempt": os.getenv("GITHUB_RUN_ATTEMPT", ""),
+        "github_sha": os.getenv("GITHUB_SHA", ""),
+    }
 
 
 def load_frame(conn):
@@ -303,6 +338,42 @@ def champion_score(evaluation):
     return score
 
 
+def evaluated_metric_block(test, y_test, probabilities, train_positive_rate):
+    predictions = (probabilities >= 0.5).astype(int)
+    selected = test.loc[probabilities >= SELECTION_THRESHOLD, "forward_return"]
+    positive_rate = float(y_test.mean())
+    majority_accuracy = max(positive_rate, 1.0 - positive_rate)
+    benchmark = float(test["forward_return"].mean())
+    selected_average_return = float(selected.mean()) if len(selected) else np.nan
+    selected_win_rate = float((selected > 0).mean()) if len(selected) else np.nan
+    brier = float(brier_score_loss(y_test, probabilities))
+    baseline_brier = float(
+        brier_score_loss(y_test, np.full(len(probabilities), train_positive_rate))
+    )
+    brier_skill = (
+        np.nan if baseline_brier <= 0 else float(1.0 - (brier / baseline_brier))
+    )
+    accuracy = float(accuracy_score(y_test, predictions))
+    return {
+        "train_positive_rate": train_positive_rate,
+        "positive_rate": positive_rate,
+        "majority_accuracy": majority_accuracy,
+        "accuracy": accuracy,
+        "accuracy_lift": accuracy - majority_accuracy,
+        "roc_auc": safe_auc(y_test, probabilities),
+        "brier_score": brier,
+        "baseline_brier_score": baseline_brier,
+        "brier_skill": brier_skill,
+        "benchmark_average_return": benchmark,
+        "selected_threshold": SELECTION_THRESHOLD,
+        "selected_rows": len(selected),
+        "selected_average_return": selected_average_return,
+        "selected_return_edge": selected_average_return - benchmark,
+        "selected_win_rate": selected_win_rate,
+        "selected_win_lift": selected_win_rate - positive_rate,
+    }
+
+
 def evaluate_model(model, model_name, horizon, train, test, train_dates, test_dates, features):
     x_train = train[list(features)]
     y_train = (train["forward_return"] > 0).astype(int)
@@ -311,21 +382,7 @@ def evaluate_model(model, model_name, horizon, train, test, train_dates, test_da
 
     model.fit(x_train, y_train)
     probabilities = model.predict_proba(x_test)[:, 1]
-    predictions = (probabilities >= 0.5).astype(int)
-    selected = test.loc[probabilities >= 0.60, "forward_return"]
-    positive_rate = float(y_test.mean())
-    majority_accuracy = max(positive_rate, 1.0 - positive_rate)
-    benchmark = float(test["forward_return"].mean())
-    selected_average_return = float(selected.mean()) if len(selected) else np.nan
-    selected_win_rate = float((selected > 0).mean()) if len(selected) else np.nan
-    brier = float(brier_score_loss(y_test, probabilities))
-    baseline_brier = float(
-        brier_score_loss(y_test, np.full(len(probabilities), positive_rate))
-    )
-    brier_skill = (
-        np.nan if baseline_brier <= 0 else float(1.0 - (brier / baseline_brier))
-    )
-    accuracy = float(accuracy_score(y_test, predictions))
+    train_positive_rate = float(y_train.mean())
     evaluation = {
         "horizon_days": horizon,
         "model_name": model_name,
@@ -340,24 +397,12 @@ def evaluate_model(model, model_name, horizon, train, test, train_dates, test_da
         "test_end": max(test_dates),
         "training_rows": len(train),
         "test_rows": len(test),
-        "positive_rate": positive_rate,
-        "majority_accuracy": majority_accuracy,
-        "accuracy": accuracy,
-        "accuracy_lift": accuracy - majority_accuracy,
-        "roc_auc": safe_auc(y_test, probabilities),
-        "brier_score": brier,
-        "baseline_brier_score": baseline_brier,
-        "brier_skill": brier_skill,
-        "benchmark_average_return": benchmark,
-        "selected_rows": len(selected),
-        "selected_average_return": selected_average_return,
-        "selected_return_edge": selected_average_return - benchmark,
-        "selected_win_rate": selected_win_rate,
-        "selected_win_lift": selected_win_rate - positive_rate,
         "retained_features": len(features),
         "dropped_features": "",
     }
+    evaluation.update(evaluated_metric_block(test, y_test, probabilities, train_positive_rate))
     evaluation["champion_score"] = champion_score(evaluation)
+    evaluation["holdout_score"] = evaluation["champion_score"]
     return evaluation
 
 
@@ -376,6 +421,7 @@ def failed_evaluation(model_name, horizon, error, train_dates, test_dates, featu
         "test_end": max(test_dates) if test_dates else "",
         "training_rows": 0,
         "test_rows": 0,
+        "train_positive_rate": np.nan,
         "positive_rate": np.nan,
         "majority_accuracy": np.nan,
         "accuracy": np.nan,
@@ -385,6 +431,7 @@ def failed_evaluation(model_name, horizon, error, train_dates, test_dates, featu
         "baseline_brier_score": np.nan,
         "brier_skill": np.nan,
         "benchmark_average_return": np.nan,
+        "selected_threshold": SELECTION_THRESHOLD,
         "selected_rows": 0,
         "selected_average_return": np.nan,
         "selected_return_edge": np.nan,
@@ -393,8 +440,209 @@ def failed_evaluation(model_name, horizon, error, train_dates, test_dates, featu
         "retained_features": len(features),
         "dropped_features": ", ".join(dropped_features),
         "champion_score": -1_000_000_000.0,
+        "holdout_score": -1_000_000_000.0,
+        "walk_forward_splits": 0,
+        "walk_forward_positive_splits": 0,
+        "walk_forward_avg_score": np.nan,
+        "walk_forward_score_std": np.nan,
+        "walk_forward_avg_return_edge": np.nan,
+        "walk_forward_avg_brier_skill": np.nan,
+        "walk_forward_avg_auc": np.nan,
     }
     return evaluation
+
+
+def walk_forward_windows(dates, horizon):
+    if WALK_FORWARD_SPLITS <= 0 or WALK_FORWARD_TEST_DATES <= 0:
+        return []
+    windows = []
+    step = WALK_FORWARD_TEST_DATES
+    for offset in range(WALK_FORWARD_SPLITS):
+        test_end_index = len(dates) - 1 - offset * step
+        test_start_index = test_end_index - step + 1
+        if test_start_index < 0:
+            break
+        embargo_start_index = max(0, test_start_index - horizon)
+        train_dates = dates[:embargo_start_index]
+        test_dates = dates[test_start_index : test_end_index + 1]
+        if len(train_dates) < WALK_FORWARD_MIN_TRAIN_DATES or not test_dates:
+            continue
+        windows.append((train_dates, test_dates))
+    return list(reversed(windows))
+
+
+def failed_walk_forward_evaluation(
+    model_name, horizon, split_id, error, train_dates, test_dates, features
+):
+    return {
+        "horizon_days": horizon,
+        "split_id": split_id,
+        "model_name": model_name,
+        "model_label": MODEL_LABELS[model_name],
+        "model_version": MODEL_VERSION,
+        "fit_status": "failed",
+        "fit_error": str(error)[:500],
+        "training_start": min(train_dates) if train_dates else "",
+        "training_end": max(train_dates) if train_dates else "",
+        "embargo_dates": horizon,
+        "test_start": min(test_dates) if test_dates else "",
+        "test_end": max(test_dates) if test_dates else "",
+        "training_rows": 0,
+        "test_rows": 0,
+        "train_positive_rate": np.nan,
+        "positive_rate": np.nan,
+        "majority_accuracy": np.nan,
+        "accuracy": np.nan,
+        "accuracy_lift": np.nan,
+        "roc_auc": np.nan,
+        "brier_score": np.nan,
+        "baseline_brier_score": np.nan,
+        "brier_skill": np.nan,
+        "benchmark_average_return": np.nan,
+        "selected_threshold": SELECTION_THRESHOLD,
+        "selected_rows": 0,
+        "selected_average_return": np.nan,
+        "selected_return_edge": np.nan,
+        "selected_win_rate": np.nan,
+        "selected_win_lift": np.nan,
+        "retained_features": len(features),
+        "champion_score": -1_000_000_000.0,
+    }
+
+
+def evaluate_walk_forward_split(model_name, horizon, split_id, train, test, train_dates, test_dates, features):
+    x_train = train[list(features)]
+    y_train = (train["forward_return"] > 0).astype(int)
+    x_test = test[list(features)]
+    y_test = (test["forward_return"] > 0).astype(int)
+    if y_train.nunique() < 2:
+        raise RuntimeError("training labels contain only one class")
+    if y_test.empty:
+        raise RuntimeError("test split has no labels")
+
+    model = build_estimator(model_name)
+    model.fit(x_train, y_train)
+    probabilities = model.predict_proba(x_test)[:, 1]
+    train_positive_rate = float(y_train.mean())
+    evaluation = {
+        "horizon_days": horizon,
+        "split_id": split_id,
+        "model_name": model_name,
+        "model_label": MODEL_LABELS[model_name],
+        "model_version": MODEL_VERSION,
+        "fit_status": "ok",
+        "fit_error": "",
+        "training_start": min(train_dates),
+        "training_end": max(train_dates),
+        "embargo_dates": horizon,
+        "test_start": min(test_dates),
+        "test_end": max(test_dates),
+        "training_rows": len(train),
+        "test_rows": len(test),
+        "retained_features": len(features),
+    }
+    evaluation.update(evaluated_metric_block(test, y_test, probabilities, train_positive_rate))
+    evaluation["champion_score"] = champion_score(evaluation)
+    return evaluation
+
+
+def walk_forward_horizon(labeled, horizon, features):
+    dates = sorted(labeled["begins_at"].unique())
+    rows = []
+    for split_id, (train_dates, test_dates) in enumerate(
+        walk_forward_windows(dates, horizon), start=1
+    ):
+        train_pool = labeled[labeled["begins_at"].isin(train_dates)]
+        test_pool = labeled[labeled["begins_at"].isin(test_dates)]
+        for model_name in MODEL_CANDIDATES:
+            train = sample_rows(
+                train_pool, model_row_limit(model_name, "train", MAX_TRAIN_ROWS)
+            )
+            test = sample_rows(
+                test_pool, model_row_limit(model_name, "test", MAX_TEST_ROWS)
+            )
+            try:
+                rows.append(
+                    evaluate_walk_forward_split(
+                        model_name,
+                        horizon,
+                        split_id,
+                        train,
+                        test,
+                        train_dates,
+                        test_dates,
+                        features,
+                    )
+                )
+            except Exception as exc:  # noqa: BLE001 - keep other candidates/splits alive.
+                rows.append(
+                    failed_walk_forward_evaluation(
+                        model_name, horizon, split_id, exc, train_dates, test_dates, features
+                    )
+                )
+                print(f"{horizon}d split {split_id} {model_name} failed: {exc}")
+    return rows
+
+
+def attach_walk_forward_summary(evaluations, walk_forward_rows):
+    if not evaluations:
+        return evaluations
+    ok_rows = [
+        row for row in walk_forward_rows
+        if row.get("fit_status") == "ok" and not pd.isna(row.get("champion_score"))
+    ]
+    summary = {}
+    if ok_rows:
+        frame = pd.DataFrame(ok_rows)
+        grouped = frame.groupby(["horizon_days", "model_name"], dropna=False)
+        for key, group in grouped:
+            scores = pd.to_numeric(group["champion_score"], errors="coerce").dropna()
+            summary[key] = {
+                "walk_forward_splits": int(len(group)),
+                "walk_forward_positive_splits": int((scores > 0).sum()),
+                "walk_forward_avg_score": float(scores.mean()) if len(scores) else np.nan,
+                "walk_forward_score_std": float(scores.std(ddof=0)) if len(scores) else np.nan,
+                "walk_forward_avg_return_edge": float(
+                    pd.to_numeric(group["selected_return_edge"], errors="coerce").mean()
+                ),
+                "walk_forward_avg_brier_skill": float(
+                    pd.to_numeric(group["brier_skill"], errors="coerce").mean()
+                ),
+                "walk_forward_avg_auc": float(
+                    pd.to_numeric(group["roc_auc"], errors="coerce").mean()
+                ),
+            }
+
+    for evaluation in evaluations:
+        key = (evaluation["horizon_days"], evaluation["model_name"])
+        values = summary.get(
+            key,
+            {
+                "walk_forward_splits": 0,
+                "walk_forward_positive_splits": 0,
+                "walk_forward_avg_score": np.nan,
+                "walk_forward_score_std": np.nan,
+                "walk_forward_avg_return_edge": np.nan,
+                "walk_forward_avg_brier_skill": np.nan,
+                "walk_forward_avg_auc": np.nan,
+            },
+        )
+        evaluation.update(values)
+        holdout_score = evaluation.get("holdout_score", evaluation.get("champion_score"))
+        if (
+            evaluation.get("fit_status") == "ok"
+            and values["walk_forward_splits"] > 0
+            and not pd.isna(values["walk_forward_avg_score"])
+        ):
+            consistency = values["walk_forward_positive_splits"] / values["walk_forward_splits"]
+            volatility_penalty = 0.0 if pd.isna(values["walk_forward_score_std"]) else values["walk_forward_score_std"]
+            evaluation["champion_score"] = (
+                0.55 * float(holdout_score)
+                + 0.45 * float(values["walk_forward_avg_score"])
+                + 0.02 * (consistency - 0.5)
+                - 0.10 * float(volatility_penalty)
+            )
+    return evaluations
 
 
 def build_horizon(frame, horizon):
@@ -448,7 +696,9 @@ def build_horizon(frame, horizon):
             print(f"{horizon}d {model_name} failed: {exc}")
         evaluation["dropped_features"] = ", ".join(dropped_features)
         evaluations.append(evaluation)
-    return evaluations, importances, predictions
+    walk_forward_rows = walk_forward_horizon(labeled, horizon, usable_features)
+    evaluations = attach_walk_forward_summary(evaluations, walk_forward_rows)
+    return evaluations, importances, predictions, walk_forward_rows
 
 
 def mark_champions(tournament):
@@ -476,11 +726,63 @@ def filter_champion_rows(frame, champions):
     return frame.loc[mask].copy()
 
 
-def save_outputs(conn, evaluations, importances, predictions):
+def with_run_columns(frame, run_metadata):
+    output = frame.copy()
+    output.insert(0, "run_as_of_date", run_metadata["as_of_date"])
+    output.insert(0, "run_created_at", run_metadata["created_at"])
+    output.insert(0, "run_id", run_metadata["run_id"])
+    return output
+
+
+def delete_existing_run(conn, table, run_id):
+    if table_exists(conn, table):
+        conn.execute(f'DELETE FROM "{table}" WHERE run_id=?', (run_id,))
+
+
+def append_run_frame(conn, table, frame, run_id):
+    if frame.empty:
+        return 0
+    delete_existing_run(conn, table, run_id)
+    frame.to_sql(table, conn, if_exists="append", index=False)
+    return len(frame)
+
+
+def prediction_history_rows(all_predictions, champions, run_metadata):
+    if all_predictions.empty:
+        return all_predictions
+    rows = all_predictions.sort_values(
+        ["horizon_days", "model_name", "model_rank"]
+    ).copy()
+    rows = (
+        rows.groupby(["horizon_days", "model_name"], group_keys=False)
+        .head(HISTORY_PREDICTION_LIMIT)
+        .copy()
+    )
+    champion_pairs = set(zip(champions["horizon_days"], champions["model_name"]))
+    rows["is_champion"] = [
+        (row.horizon_days, row.model_name) in champion_pairs
+        for row in rows.itertuples(index=False)
+    ]
+    return with_run_columns(rows, run_metadata)
+
+
+def champion_text(champions):
+    parts = []
+    for row in champions.sort_values("horizon_days").itertuples(index=False):
+        parts.append(f"{int(row.horizon_days)}d {row.model_name}")
+    return ", ".join(parts)
+
+
+def save_outputs(conn, evaluations, importances, predictions, walk_forward_rows, run_metadata):
     tournament = mark_champions(pd.DataFrame(evaluations))
     champions = tournament[tournament["is_champion"]].copy()
     all_predictions = pd.concat(predictions, ignore_index=True)
     latest = filter_champion_rows(all_predictions, champions)
+    walk_forward = (
+        pd.DataFrame(walk_forward_rows)
+        if walk_forward_rows
+        else pd.DataFrame()
+    )
 
     if importances:
         all_importance = pd.concat(importances, ignore_index=True)
@@ -507,6 +809,47 @@ def save_outputs(conn, evaluations, importances, predictions):
     all_importance.to_sql("ModelTournamentFeatureImportance", conn, if_exists="replace", index=False)
     latest.to_sql("LatestModelPredictions", conn, if_exists="replace", index=False)
     all_predictions.to_sql("LatestModelCandidatePredictions", conn, if_exists="replace", index=False)
+    if not walk_forward.empty:
+        walk_forward.to_sql("ModelWalkForwardEvaluation", conn, if_exists="replace", index=False)
+    else:
+        pd.DataFrame(
+            columns=[
+                "horizon_days",
+                "split_id",
+                "model_name",
+                "fit_status",
+                "champion_score",
+            ]
+        ).to_sql("ModelWalkForwardEvaluation", conn, if_exists="replace", index=False)
+
+    run_frame = pd.DataFrame(
+        [
+            {
+                **run_metadata,
+                "champions": champion_text(champions),
+                "tournament_rows": len(tournament),
+                "walk_forward_rows": len(walk_forward),
+                "candidate_prediction_rows": len(all_predictions),
+                "champion_prediction_rows": len(latest),
+            }
+        ]
+    )
+    append_run_frame(conn, "MLRunHistory", run_frame, run_metadata["run_id"])
+    append_run_frame(
+        conn,
+        "ModelEvaluationHistory",
+        with_run_columns(tournament, run_metadata),
+        run_metadata["run_id"],
+    )
+    if not walk_forward.empty:
+        append_run_frame(
+            conn,
+            "ModelWalkForwardEvaluationHistory",
+            with_run_columns(walk_forward, run_metadata),
+            run_metadata["run_id"],
+        )
+    prediction_history = prediction_history_rows(all_predictions, champions, run_metadata)
+    append_run_frame(conn, "ModelPredictionHistory", prediction_history, run_metadata["run_id"])
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_latest_model_predictions "
         "ON LatestModelPredictions(horizon_days, model_rank)"
@@ -515,15 +858,29 @@ def save_outputs(conn, evaluations, importances, predictions):
         "CREATE INDEX IF NOT EXISTS idx_latest_model_candidate_predictions "
         "ON LatestModelCandidatePredictions(horizon_days, model_name, model_rank)"
     )
+    for table in (
+        "MLRunHistory",
+        "ModelEvaluationHistory",
+        "ModelWalkForwardEvaluationHistory",
+        "ModelPredictionHistory",
+    ):
+        if table_exists(conn, table):
+            conn.execute(
+                f'CREATE INDEX IF NOT EXISTS idx_{table.lower()}_run '
+                f'ON "{table}"(run_id)'
+            )
     conn.commit()
 
     ANALYTICS_DIR.mkdir(exist_ok=True)
+    run_frame.to_csv(ANALYTICS_DIR / "model_run_summary.csv", index=False)
     champions.to_csv(ANALYTICS_DIR / "model_evaluation.csv", index=False)
     tournament.to_csv(ANALYTICS_DIR / "model_tournament_evaluation.csv", index=False)
+    walk_forward.to_csv(ANALYTICS_DIR / "model_walk_forward_evaluation.csv", index=False)
     importance.to_csv(ANALYTICS_DIR / "model_feature_importance.csv", index=False)
     all_importance.to_csv(ANALYTICS_DIR / "model_tournament_feature_importance.csv", index=False)
     latest.to_csv(ANALYTICS_DIR / "latest_model_predictions.csv", index=False)
     all_predictions.to_csv(ANALYTICS_DIR / "latest_model_candidate_predictions.csv", index=False)
+    prediction_history.to_csv(ANALYTICS_DIR / "model_prediction_history_latest.csv", index=False)
     return champions, tournament
 
 
@@ -532,17 +889,26 @@ def main():
         raise RuntimeError(f"{DB_PATH} is required")
     with closing(sqlite3.connect(DB_PATH)) as conn:
         frame = load_frame(conn)
+        created_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        run_metadata = build_run_metadata(frame, created_at)
         evaluations = []
         importances = []
         predictions = []
+        walk_forward_rows = []
         for horizon in HORIZONS:
-            horizon_evaluations, horizon_importances, horizon_predictions = build_horizon(
-                frame, horizon
-            )
+            (
+                horizon_evaluations,
+                horizon_importances,
+                horizon_predictions,
+                horizon_walk_forward,
+            ) = build_horizon(frame, horizon)
             evaluations.extend(horizon_evaluations)
             importances.extend(horizon_importances)
             predictions.extend(horizon_predictions)
-        champions, tournament = save_outputs(conn, evaluations, importances, predictions)
+            walk_forward_rows.extend(horizon_walk_forward)
+        champions, tournament = save_outputs(
+            conn, evaluations, importances, predictions, walk_forward_rows, run_metadata
+        )
     print("Built leakage-controlled model tournament:")
     print(
         tournament[
@@ -558,6 +924,9 @@ def main():
                 "selected_return_edge",
                 "selected_average_return",
                 "selected_win_rate",
+                "holdout_score",
+                "walk_forward_splits",
+                "walk_forward_avg_score",
                 "champion_score",
             ]
         ].to_string(index=False)

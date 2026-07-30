@@ -569,6 +569,21 @@ def main():
             "latest_model_candidate_predictions": export_optional_table(
                 source, destination, "LatestModelCandidatePredictions"
             ),
+            "ml_run_history": export_optional_table(
+                source, destination, "MLRunHistory"
+            ),
+            "model_evaluation_history": export_optional_table(
+                source, destination, "ModelEvaluationHistory"
+            ),
+            "model_walk_forward_evaluation": export_optional_table(
+                source, destination, "ModelWalkForwardEvaluation"
+            ),
+            "model_walk_forward_evaluation_history": export_optional_table(
+                source, destination, "ModelWalkForwardEvaluationHistory"
+            ),
+            "model_prediction_history": export_optional_table(
+                source, destination, "ModelPredictionHistory"
+            ),
         }
         export_health(history, source, destination, counts)
         destination.commit()

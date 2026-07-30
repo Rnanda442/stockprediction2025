@@ -7,6 +7,9 @@ TABLES = {
     "ModelEvaluation": 3,
     "ModelFeatureImportance": 1,
     "LatestModelPredictions": 1,
+    "MLRunHistory": 1,
+    "ModelEvaluationHistory": 3,
+    "ModelWalkForwardEvaluation": 3,
 }
 
 

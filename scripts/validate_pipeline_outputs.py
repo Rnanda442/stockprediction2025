@@ -493,9 +493,28 @@ def artifact_output_checks():
             required_columns=[
                 "horizon_days", "training_end", "embargo_dates", "test_start",
                 "accuracy", "roc_auc", "selected_average_return",
+                "holdout_score", "walk_forward_splits", "champion_score",
             ],
             min_rows=3,
             nonblank_columns=["horizon_days", "training_end", "embargo_dates", "test_start"],
+        ),
+        check_csv(
+            "analytics/model_run_summary.csv",
+            required_columns=[
+                "run_id", "created_at", "as_of_date", "model_candidates",
+                "selection_threshold", "walk_forward_rows", "champions",
+            ],
+            min_rows=1,
+            nonblank_columns=["run_id", "created_at", "as_of_date", "model_candidates"],
+        ),
+        check_csv(
+            "analytics/model_walk_forward_evaluation.csv",
+            required_columns=[
+                "horizon_days", "split_id", "model_name", "fit_status",
+                "training_end", "test_start", "test_end", "champion_score",
+            ],
+            min_rows=3,
+            nonblank_columns=["horizon_days", "split_id", "model_name", "fit_status"],
         ),
         check_csv(
             "analytics/shortlist_history.csv",
@@ -552,6 +571,11 @@ def local_build_checks():
         check_table("vectorized.db", "ModelEvaluation", min_rows=3),
         check_table("vectorized.db", "ModelFeatureImportance", min_rows=1),
         check_table("vectorized.db", "LatestModelPredictions", min_rows=1),
+        check_table("vectorized.db", "MLRunHistory", min_rows=1),
+        check_table("vectorized.db", "ModelEvaluationHistory", min_rows=3),
+        check_table("vectorized.db", "ModelWalkForwardEvaluation", min_rows=3),
+        check_table("vectorized.db", "ModelWalkForwardEvaluationHistory", min_rows=3),
+        check_table("vectorized.db", "ModelPredictionHistory", min_rows=1),
         check_table_columns(
             "vectorized.db",
             "LatestModelPredictions",
@@ -583,6 +607,11 @@ def dashboard_export_checks():
         check_table("dashboard_data.db", "ModelEvaluation", min_rows=3),
         check_table("dashboard_data.db", "ModelFeatureImportance", min_rows=1),
         check_table("dashboard_data.db", "LatestModelPredictions", min_rows=1),
+        check_table("dashboard_data.db", "MLRunHistory", min_rows=1),
+        check_table("dashboard_data.db", "ModelEvaluationHistory", min_rows=3),
+        check_table("dashboard_data.db", "ModelWalkForwardEvaluation", min_rows=3),
+        check_table("dashboard_data.db", "ModelWalkForwardEvaluationHistory", min_rows=3),
+        check_table("dashboard_data.db", "ModelPredictionHistory", min_rows=1),
         check_table_columns(
             "dashboard_data.db",
             "LatestModelPredictions",
