@@ -3127,18 +3127,30 @@ def render_model_lab():
         tournament_columns = [
             column for column in tournament_columns if column in tournament_display.columns
         ]
+        percentage_columns = [
+            "Accuracy lift",
+            "Brier skill",
+            "Return edge",
+            "Win lift",
+        ]
+        tournament_table = tournament_display[tournament_columns].copy()
+        for column in percentage_columns:
+            if column in tournament_table.columns:
+                tournament_table[column] = pd.to_numeric(
+                    tournament_table[column], errors="coerce"
+                ) * 100
         st.dataframe(
-            tournament_display[tournament_columns],
+            tournament_table,
             hide_index=True,
             use_container_width=True,
             column_config={
                 "Accuracy": st.column_config.NumberColumn(format="%.3f"),
-                "Accuracy lift": st.column_config.NumberColumn(format="%.2%"),
+                "Accuracy lift": st.column_config.NumberColumn(format="%.2f%%"),
                 "ROC AUC": st.column_config.NumberColumn(format="%.3f"),
                 "Brier": st.column_config.NumberColumn(format="%.3f"),
-                "Brier skill": st.column_config.NumberColumn(format="%.2%"),
-                "Return edge": st.column_config.NumberColumn(format="%.2%"),
-                "Win lift": st.column_config.NumberColumn(format="%.1%"),
+                "Brier skill": st.column_config.NumberColumn(format="%.2f%%"),
+                "Return edge": st.column_config.NumberColumn(format="%.2f%%"),
+                "Win lift": st.column_config.NumberColumn(format="%.1f%%"),
                 "Champion score": st.column_config.NumberColumn(format="%.3f"),
             },
         )
