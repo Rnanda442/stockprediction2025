@@ -1115,6 +1115,215 @@ def render_run_snapshot(context):
         st.warning(f"Shortlist date {latest_shortlist} does not match market date {latest_market}.")
 
 
+def _project_stage(context, data_warnings, model_warnings, paper_status):
+    if data_warnings:
+        return (
+            "Needs fresh data",
+            "Run or sync the latest pipeline artifact before trusting new picks.",
+            "attention",
+        )
+    if model_warnings:
+        return (
+            "Model output incomplete",
+            "The dashboard has data, but model-backed decisions need a clean export.",
+            "attention",
+        )
+    if context["ranked_decisions"].empty:
+        return (
+            "Waiting for decisions",
+            "The pipeline is not producing a ranked decision board yet.",
+            "attention",
+        )
+    if paper_status["matured"] <= 0:
+        return (
+            "Paper-learning warmup",
+            "Models and decisions exist; the next job is collecting matured outcomes.",
+            "learning",
+        )
+    if paper_status["matured"] < 20:
+        return (
+            "Evidence building",
+            "Use the board for review, but keep weights conservative until outcomes grow.",
+            "learning",
+        )
+    return (
+        "Review-ready research",
+        "There is enough paper evidence to start tuning model and decision weights.",
+        "ready",
+    )
+
+
+def _next_move(context, data_warnings, model_warnings, paper_status):
+    if data_warnings:
+        return "Run the cloud pipeline after market close and refresh the dashboard artifact."
+    if model_warnings:
+        return "Rerun the model tournament with all candidates enabled."
+    if context["ranked_decisions"].empty:
+        return "Get the daily decision board populated before reviewing stock moves."
+    if paper_status["matured"] <= 0:
+        return "Let the weekday runs collect 5d paper outcomes before changing weights."
+    if paper_status["matured"] < 20:
+        return "Compare paper outcomes by action and horizon, then keep the best rules stable for another week."
+
+    top = context["ranked_decisions"].iloc[0]
+    ticker = str(top.get("ticker", "")).upper()
+    decision = str(top.get("decision", "review")).replace("_", " ").title()
+    return f"Review {ticker} first: {decision}. Confirm model, risk, liquidity, and portfolio fit."
+
+
+def _main_risk(context, data_warnings, model_warnings, paper_status):
+    if data_warnings:
+        return "Stale or incomplete market coverage can make rankings misleading."
+    if model_warnings:
+        return "The app may fall back to rules without complete model probabilities."
+    if paper_status["matured"] <= 0:
+        return "No matured paper trades yet, so the system has not proved its picks."
+    if context["constraint_status"] not in {"safe", "pdt cushion"}:
+        return context["constraint_message"]
+    return "Model confidence can still be overfit; trust agreement across signals, not one score."
+
+
+def _inspect_targets(context, paper_status):
+    targets = []
+    if not context["ranked_decisions"].empty:
+        targets.append(("Decisions", "Top paper actions and why each ticker was ranked."))
+    targets.append(("Model Lab", "Champion model by horizon and candidate disagreement."))
+    if paper_status["outcome_events"] > 0:
+        targets.append(("Paper Performance", "Which paper actions are actually working."))
+    else:
+        targets.append(("Paper Performance", "Outcome page will matter once trades mature."))
+    targets.append(("Pipeline Health", "Freshness, coverage, and exported table status."))
+    return targets[:4]
+
+
+def _render_step_rows(items):
+    rows = "".join(
+        f"""
+        <div class="step-row">
+          <b>{html.escape(title)}</b>
+          <span>{html.escape(detail)}</span>
+        </div>
+        """
+        for title, detail in items
+    )
+    st.markdown(
+        f"""
+        <div class="step-list">{rows}</div>
+        <style>
+        .step-list {{
+          display:grid;
+          gap:.45rem;
+          margin:.35rem 0 .85rem;
+        }}
+        .step-row {{
+          border-left:3px solid #2e6fbb;
+          padding:.45rem .7rem;
+          background:rgba(46,111,187,.055);
+        }}
+        .step-row b, .step-row span {{ display:block; }}
+        .step-row span {{ color:rgba(70,76,86,.9); font-size:.88rem; }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_project_compass(context):
+    health = context["health"]
+    paper_status = data.paper_learning_status()
+    data_warnings = health_warnings(health)
+    model_warnings = model_health_warnings(health)
+    stage, stage_detail, stage_status = _project_stage(
+        context, data_warnings, model_warnings, paper_status
+    )
+    next_move = _next_move(context, data_warnings, model_warnings, paper_status)
+    main_risk = _main_risk(context, data_warnings, model_warnings, paper_status)
+
+    status_color = {
+        "ready": "#1f8f5f",
+        "learning": "#d88912",
+        "attention": "#c4587a",
+    }.get(stage_status, "#77808f")
+    cards = [
+        ("You are here", stage, stage_detail, status_color),
+        ("Next move", next_move, "Do this before tuning weights or trusting picks.", "#2e6fbb"),
+        ("Main risk", main_risk, "This is what can make the dashboard lie.", "#c4587a"),
+        ("Trading status", "Locked", "Paper decisions only. No real order execution.", "#6f7782"),
+    ]
+    card_html = "".join(
+        f"""
+        <div class="compass-card" style="border-top-color:{color};">
+          <small>{html.escape(label)}</small>
+          <strong>{html.escape(value)}</strong>
+          <span>{html.escape(detail)}</span>
+        </div>
+        """
+        for label, value, detail, color in cards
+    )
+    st.markdown(
+        f"""
+        <div class="compass-grid">{card_html}</div>
+        <style>
+        .compass-grid {{
+          display:grid;
+          grid-template-columns:1fr 1.35fr 1.2fr .9fr;
+          gap:.65rem;
+          margin:.6rem 0 1rem;
+        }}
+        .compass-card {{
+          border:1px solid rgba(128,128,128,.22);
+          border-top:4px solid;
+          border-radius:.65rem;
+          padding:.8rem .85rem;
+          background:rgba(128,128,128,.035);
+          min-height:6.4rem;
+        }}
+        .compass-card small {{
+          display:block;
+          color:rgba(90,96,106,.95);
+          font-size:.7rem;
+          text-transform:uppercase;
+          letter-spacing:.06em;
+        }}
+        .compass-card strong {{
+          display:block;
+          margin-top:.18rem;
+          font-size:1rem;
+          line-height:1.25;
+        }}
+        .compass-card span {{
+          display:block;
+          margin-top:.28rem;
+          color:rgba(70,76,86,.9);
+          font-size:.84rem;
+          line-height:1.3;
+        }}
+        @media (max-width: 980px) {{
+          .compass-grid {{ grid-template-columns:1fr 1fr; }}
+        }}
+        @media (max-width: 560px) {{
+          .compass-grid {{ grid-template-columns:1fr; }}
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    left, right = st.columns((1, 1))
+    with left:
+        st.subheader("What to inspect next")
+        _render_step_rows(_inspect_targets(context, paper_status))
+    with right:
+        st.subheader("This week's decision rule")
+        _render_step_rows(
+            [
+                ("Run daily", "Let the weekday pipeline build a comparable run history."),
+                ("Compare horizons", "Judge 5d, 20d, and 60d separately."),
+                ("Tune later", "Change weights only after paper outcomes mature."),
+            ]
+        )
+
+
 def render_pipeline_funnel(context):
     health = context["health"]
     board = context["board"]
@@ -1397,31 +1606,9 @@ def render_overview():
     health = context["health"]
 
     st.title("Stock Prediction Command Center")
-    st.caption("Freshness, model edge, stock risk, and paper decisions on one page.")
+    st.caption("Start here: current stage, next move, model edge, risk, and paper decisions.")
     render_run_snapshot(context)
-    st.markdown(
-        """
-        <div class="safety-lock">
-          <b>LIVE TRADING LOCKED</b>
-          <span>paper decisions only</span>
-        </div>
-        <style>
-        .safety-lock {
-          display:flex;
-          align-items:center;
-          justify-content:space-between;
-          border:1px solid rgba(216,137,18,.55);
-          border-radius:.9rem;
-          padding:.75rem .9rem;
-          margin:.35rem 0 1rem;
-          background:rgba(216,137,18,.08);
-        }
-        .safety-lock b { color:#b26d00; font-size:.82rem; letter-spacing:.06em; }
-        .safety-lock span { opacity:.72; }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
+    render_project_compass(context)
     if context["ranked_decisions"].empty:
         st.info("No ranked decisions are available yet. Run the pipeline to initialize the dashboard.")
         return
@@ -3323,4 +3510,14 @@ try:
     else:
         render_health()
 except FileNotFoundError as exc:
-    st.error(str(exc))
+    st.warning(str(exc))
+    st.subheader("You are here")
+    st.info(
+        "The Streamlit app code is loaded, but it cannot show project status until "
+        "`dashboard_data.db` exists. Sync a successful GitHub Actions artifact or "
+        "run the export script after local databases are available."
+    )
+    st.link_button(
+        "Open GitHub Actions runs",
+        "https://github.com/Rnanda442/stockprediction2025/actions/workflows/stock-run.yml",
+    )
