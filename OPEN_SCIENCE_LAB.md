@@ -19,6 +19,14 @@ The local `warehouse/` folder is created by:
 python scripts/setup_open_science_lab.py
 ```
 
+The same script also manages the warehouse:
+
+```bash
+python scripts/setup_open_science_lab.py status
+python scripts/setup_open_science_lab.py export-run --source /path/to/stock-analysis-outputs
+python scripts/setup_open_science_lab.py summarize
+```
+
 The script creates this local-only structure:
 
 ```text
@@ -49,9 +57,39 @@ It also adds local Git exclude rules so `warehouse/` does not show up as untrack
 
 1. Pull the repo in Open Science Lab.
 2. Run `python scripts/setup_open_science_lab.py`.
-3. Keep large raw data, Parquet files, DuckDB files, and run archives in `warehouse/`.
-4. Push only code changes or compact summary logic back to GitHub.
-5. Let Streamlit read compact dashboard summaries instead of full raw datasets.
+3. Download or place a GitHub Actions artifact folder in Open Science Lab.
+4. Run `python scripts/setup_open_science_lab.py export-run --source PATH_TO_ARTIFACT`.
+5. Run `python scripts/setup_open_science_lab.py summarize`.
+6. Keep large raw data, Parquet files, DuckDB files, and run archives in `warehouse/`.
+7. Push only code changes or compact summary logic back to GitHub.
+8. Let Streamlit read compact dashboard summaries instead of full raw datasets.
+
+## Commands
+
+Check the warehouse:
+
+```bash
+python scripts/setup_open_science_lab.py status
+```
+
+Export one run from a GitHub Actions artifact folder:
+
+```bash
+python scripts/setup_open_science_lab.py export-run --source ~/stock-analysis-outputs
+```
+
+Build summary CSVs from all saved run archives:
+
+```bash
+python scripts/setup_open_science_lab.py summarize
+```
+
+Use a different large storage location:
+
+```bash
+python scripts/setup_open_science_lab.py setup --warehouse /path/to/big/storage
+python scripts/setup_open_science_lab.py export-run --warehouse /path/to/big/storage --source ~/stock-analysis-outputs
+```
 
 ## Why This Helps
 
