@@ -1601,17 +1601,361 @@ def render_stock_signal_galaxy(context):
     )
 
 
+def _numeric_column(frame, column):
+    if column not in frame.columns:
+        return pd.Series(np.nan, index=frame.index, dtype="float64")
+    return pd.to_numeric(frame[column], errors="coerce")
+
+
+def _display_ticker(row):
+    value = row.get("ticker", "--")
+    if pd.isna(value):
+        return "--"
+    return str(value).upper() if str(value).strip() else "--"
+
+
+def _display_action(row):
+    value = row.get("decision", "review")
+    if pd.isna(value):
+        return "Review"
+    return str(value).replace("_", " ").title()
+
+
+def _row_probability(row):
+    value = pd.to_numeric(row.get("model_probability_up"), errors="coerce")
+    return "n/a" if pd.isna(value) else f"{float(value):.1%}"
+
+
+def _row_risk(row):
+    value = pd.to_numeric(row.get("vol_60d"), errors="coerce")
+    return "n/a" if pd.isna(value) else f"{float(value):.1%}"
+
+
+def _row_confidence(row):
+    value = pd.to_numeric(row.get("confidence"), errors="coerce")
+    return "n/a" if pd.isna(value) else f"{float(value):.1f}"
+
+
+def _best_horizon_summary():
+    evaluation = data.model_evaluation()
+    if evaluation.empty:
+        return "Waiting", "No champion export yet"
+    shown = evaluation.copy()
+    for column in ("horizon_days", "champion_score", "roc_auc", "selected_win_rate"):
+        if column in shown.columns:
+            shown[column] = pd.to_numeric(shown[column], errors="coerce")
+    sort_column = "champion_score" if "champion_score" in shown.columns else "horizon_days"
+    row = shown.sort_values(sort_column, ascending=False).iloc[0]
+    horizon = pd.to_numeric(row.get("horizon_days"), errors="coerce")
+    horizon_text = "--" if pd.isna(horizon) else f"{int(horizon)}d"
+    label_value = row.get("model_label")
+    if pd.isna(label_value) or not str(label_value).strip():
+        label_value = row.get("model_name")
+    model_label = short_model_label(label_value)
+    roc = pd.to_numeric(row.get("roc_auc"), errors="coerce")
+    win = pd.to_numeric(row.get("selected_win_rate"), errors="coerce")
+    detail_parts = []
+    if not pd.isna(roc):
+        detail_parts.append(f"ROC {float(roc):.3f}")
+    if not pd.isna(win):
+        detail_parts.append(f"win {float(win):.1%}")
+    return f"{horizon_text} {model_label}", " | ".join(detail_parts) or "champion selected"
+
+
+def render_overview_readiness(context):
+    health = context["health"]
+    paper_status = data.paper_learning_status()
+    data_warnings = health_warnings(health)
+    model_warnings = model_health_warnings(health)
+    constraint_status = context["constraint_status"]
+    latest_market = short_date(health.get("latest_market_date"))
+    exported_at = health.get("exported_at")
+    cards = [
+        (
+            "Run",
+            "Fresh" if not data_warnings else "Check",
+            f"{format_run_timestamp(exported_at)} / market {latest_market}",
+            "ready" if not data_warnings else "check",
+        ),
+        (
+            "Models",
+            "Online" if not model_warnings else "Limited",
+            champion_summary(),
+            "ready" if not model_warnings else "check",
+        ),
+        (
+            "Paper loop",
+            "Learning" if paper_status["matured"] else "Warming",
+            f"{paper_status['matured']} matured / {paper_status['open']} open",
+            "ready" if paper_status["matured"] else "check",
+        ),
+        (
+            "Trade gate",
+            "Paper only",
+            constraint_status,
+            "ready" if constraint_status in {"safe", "pdt cushion"} else "blocked",
+        ),
+    ]
+    colors = {
+        "ready": "#1f8f5f",
+        "check": "#d88912",
+        "blocked": "#c4587a",
+    }
+    html_cards = "".join(
+        f"""
+        <div class="readiness-card readiness-{status}">
+          <span style="background:{colors[status]};"></span>
+          <small>{html.escape(label)}</small>
+          <strong>{html.escape(value)}</strong>
+          <em>{html.escape(detail)}</em>
+        </div>
+        """
+        for label, value, detail, status in cards
+    )
+    st.markdown(
+        f"""
+        <div class="readiness-grid">{html_cards}</div>
+        <style>
+        .readiness-grid {{
+          display:grid;
+          grid-template-columns:repeat(4,1fr);
+          gap:.65rem;
+          margin:.35rem 0 1rem;
+        }}
+        .readiness-card {{
+          position:relative;
+          border:1px solid rgba(128,128,128,.22);
+          border-radius:8px;
+          padding:.75rem .8rem .75rem 1rem;
+          background:rgba(128,128,128,.035);
+          min-height:5.4rem;
+        }}
+        .readiness-card span {{
+          position:absolute;
+          left:0;
+          top:0;
+          bottom:0;
+          width:.28rem;
+          border-radius:8px 0 0 8px;
+        }}
+        .readiness-card small {{
+          display:block;
+          color:rgba(80,86,96,.92);
+          font-size:.7rem;
+          text-transform:uppercase;
+          letter-spacing:.06em;
+        }}
+        .readiness-card strong {{
+          display:block;
+          margin-top:.14rem;
+          font-size:1.02rem;
+          line-height:1.2;
+        }}
+        .readiness-card em {{
+          display:block;
+          margin-top:.22rem;
+          color:rgba(70,76,86,.9);
+          font-size:.82rem;
+          font-style:normal;
+          line-height:1.25;
+        }}
+        @media (max-width: 900px) {{
+          .readiness-grid {{ grid-template-columns:1fr 1fr; }}
+        }}
+        @media (max-width: 560px) {{
+          .readiness-grid {{ grid-template-columns:1fr; }}
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _prediction_cockpit_cards(context):
+    ranked = context["ranked_decisions"].copy()
+    if ranked.empty:
+        return []
+
+    ranked["model_probability_num"] = _numeric_column(ranked, "model_probability_up")
+    ranked["confidence_num"] = _numeric_column(ranked, "confidence")
+    ranked["risk_num"] = _numeric_column(ranked, "vol_60d")
+    max_confidence = ranked["confidence_num"].max()
+    confidence_score = (
+        ranked["confidence_num"].fillna(0) / max_confidence
+        if pd.notna(max_confidence) and max_confidence > 0
+        else pd.Series(0.0, index=ranked.index)
+    )
+    risk_rank = ranked["risk_num"].rank(pct=True, ascending=True).fillna(0.5)
+    ranked["clean_signal_score"] = (
+        ranked["model_probability_num"].fillna(0) * 0.55
+        + confidence_score * 0.30
+        + (1 - risk_rank) * 0.15
+    )
+
+    review = ranked.iloc[0]
+    strongest = ranked.sort_values("model_probability_num", ascending=False).iloc[0]
+    cleanest = ranked.sort_values("clean_signal_score", ascending=False).iloc[0]
+    best_horizon, horizon_detail = _best_horizon_summary()
+    return [
+        (
+            "Review first",
+            _display_ticker(review),
+            f"{_display_action(review)} | model {_row_probability(review)}",
+            "#2e6fbb",
+        ),
+        (
+            "Strongest ML",
+            _display_ticker(strongest),
+            f"{_row_probability(strongest)} up | risk {_row_risk(strongest)}",
+            "#1f8f5f",
+        ),
+        (
+            "Cleanest setup",
+            _display_ticker(cleanest),
+            f"confidence {_row_confidence(cleanest)} | risk {_row_risk(cleanest)}",
+            "#d88912",
+        ),
+        (
+            "Best horizon",
+            best_horizon,
+            horizon_detail,
+            "#6f7782",
+        ),
+    ]
+
+
+def render_prediction_cockpit(context):
+    cards = _prediction_cockpit_cards(context)
+    if not cards:
+        st.info("Prediction cockpit will populate after the daily decision board exists.")
+        return
+    card_html = "".join(
+        f"""
+        <div class="cockpit-card" style="border-top-color:{color};">
+          <small>{html.escape(label)}</small>
+          <strong>{html.escape(value)}</strong>
+          <span>{html.escape(detail)}</span>
+        </div>
+        """
+        for label, value, detail, color in cards
+    )
+    st.markdown(
+        f"""
+        <div class="cockpit-grid">{card_html}</div>
+        <style>
+        .cockpit-grid {{
+          display:grid;
+          grid-template-columns:repeat(4,1fr);
+          gap:.65rem;
+          margin:.25rem 0 1rem;
+        }}
+        .cockpit-card {{
+          border:1px solid rgba(128,128,128,.22);
+          border-top:4px solid;
+          border-radius:8px;
+          padding:.75rem .85rem;
+          background:rgba(128,128,128,.03);
+          min-height:5.8rem;
+        }}
+        .cockpit-card small {{
+          display:block;
+          color:rgba(80,86,96,.92);
+          font-size:.7rem;
+          text-transform:uppercase;
+          letter-spacing:.06em;
+        }}
+        .cockpit-card strong {{
+          display:block;
+          margin-top:.18rem;
+          font-size:1.22rem;
+          line-height:1.1;
+        }}
+        .cockpit-card span {{
+          display:block;
+          margin-top:.28rem;
+          color:rgba(70,76,86,.9);
+          font-size:.84rem;
+          line-height:1.25;
+        }}
+        @media (max-width: 900px) {{
+          .cockpit-grid {{ grid-template-columns:1fr 1fr; }}
+        }}
+        @media (max-width: 560px) {{
+          .cockpit-grid {{ grid-template-columns:1fr; }}
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    horizons = data.model_horizon_status()
+    if horizons.empty:
+        return
+    market_day = short_date(context["health"].get("latest_market_date"))
+    horizons = horizons.copy()
+    horizons["horizon_days"] = pd.to_numeric(
+        horizons["horizon_days"], errors="coerce"
+    ).astype("Int64")
+    expected = pd.DataFrame({"horizon_days": [5, 20, 60]})
+    shown = expected.merge(horizons, on="horizon_days", how="left")
+    shown["latest_prediction_date"] = shown["latest_prediction_date"].fillna("--")
+    shown["rows"] = pd.to_numeric(shown["rows"], errors="coerce").fillna(0).astype(int)
+    shown["Status"] = shown["latest_prediction_date"].astype(str).str[:10].eq(market_day)
+    chips = "".join(
+        f"""
+        <div class="horizon-chip horizon-{'ready' if row.Status else 'check'}">
+          <b>{int(row.horizon_days)}d</b>
+          <span>{int(row.rows):,} rows</span>
+          <small>{html.escape(str(row.latest_prediction_date)[:10])}</small>
+        </div>
+        """
+        for row in shown.itertuples(index=False)
+    )
+    st.markdown(
+        f"""
+        <div class="horizon-strip">{chips}</div>
+        <style>
+        .horizon-strip {{
+          display:grid;
+          grid-template-columns:repeat(3,1fr);
+          gap:.55rem;
+          margin:.1rem 0 1rem;
+        }}
+        .horizon-chip {{
+          border:1px solid rgba(128,128,128,.22);
+          border-radius:8px;
+          padding:.55rem .65rem;
+          background:rgba(128,128,128,.025);
+        }}
+        .horizon-ready {{ border-left:4px solid #1f8f5f; }}
+        .horizon-check {{ border-left:4px solid #d88912; }}
+        .horizon-chip b, .horizon-chip span, .horizon-chip small {{ display:block; }}
+        .horizon-chip span {{ font-size:.86rem; }}
+        .horizon-chip small {{ color:rgba(70,76,86,.82); }}
+        @media (max-width: 560px) {{
+          .horizon-strip {{ grid-template-columns:1fr; }}
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_overview():
     context = _daily_decision_context()
     health = context["health"]
 
     st.title("Stock Prediction Command Center")
-    st.caption("Start here: current stage, next move, model edge, risk, and paper decisions.")
+    st.caption("Freshness, trust gates, model edge, risk, and paper actions in one place.")
     render_run_snapshot(context)
+    render_overview_readiness(context)
     render_project_compass(context)
     if context["ranked_decisions"].empty:
         st.info("No ranked decisions are available yet. Run the pipeline to initialize the dashboard.")
         return
+
+    st.subheader("Prediction cockpit")
+    render_prediction_cockpit(context)
 
     flow_col, model_col = st.columns((1.05, 1))
     with flow_col:
