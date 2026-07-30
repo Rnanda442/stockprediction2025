@@ -1188,6 +1188,7 @@ def _inspect_targets(context, paper_status):
     if not context["ranked_decisions"].empty:
         targets.append(("Decisions", "Top paper actions and why each ticker was ranked."))
     targets.append(("Model Lab", "Champion model by horizon and candidate disagreement."))
+    targets.append(("Model Memory", "Saved run evidence for model tuning decisions."))
     if paper_status["outcome_events"] > 0:
         targets.append(("Paper Performance", "Which paper actions are actually working."))
     else:
@@ -3570,6 +3571,415 @@ def render_ann_similarity_lab():
     )
 
 
+def _memory_horizons(*frames):
+    horizons = set()
+    for frame in frames:
+        if not frame.empty and "horizon_days" in frame.columns:
+            values = pd.to_numeric(frame["horizon_days"], errors="coerce").dropna()
+            horizons.update(int(value) for value in values)
+    return sorted(horizons)
+
+
+def _run_count(frame):
+    if frame.empty or "run_id" not in frame.columns:
+        return 0
+    return int(frame["run_id"].astype(str).nunique())
+
+
+def _latest_run_label(frame):
+    if frame.empty:
+        return "--"
+    column = "created_at" if "created_at" in frame.columns else "run_created_at"
+    if column not in frame.columns:
+        return "--"
+    latest = pd.to_datetime(frame[column], errors="coerce", utc=True).max()
+    if pd.isna(latest):
+        return "--"
+    return format_run_timestamp(latest.isoformat())
+
+
+def _memory_cards(run_history, evaluation_history, monte_carlo_history, paper_status):
+    run_count = _run_count(run_history)
+    model_count = _run_count(evaluation_history)
+    simulation_count = _run_count(monte_carlo_history)
+    maturity = "learning" if paper_status["matured"] >= 10 else "warming"
+    cards = [
+        ("Saved runs", str(run_count), f"latest {_latest_run_label(run_history)}", "#2e6fbb"),
+        ("Model score history", str(model_count), "champion and challenger rows", "#d88912"),
+        ("Monte Carlo history", str(simulation_count), "risk and target paths", "#5c8f41"),
+        ("Outcome maturity", maturity.title(), f"{paper_status['matured']} matured decisions", "#c4587a"),
+    ]
+    html_cards = "".join(
+        f"""
+        <div class="memory-card" style="border-top-color:{color};">
+          <small>{html.escape(label)}</small>
+          <strong>{html.escape(value)}</strong>
+          <span>{html.escape(detail)}</span>
+        </div>
+        """
+        for label, value, detail, color in cards
+    )
+    st.markdown(
+        f"""
+        <div class="memory-grid">{html_cards}</div>
+        <style>
+        .memory-grid {{
+          display:grid; grid-template-columns:repeat(4,1fr);
+          gap:.65rem; margin:.45rem 0 1rem;
+        }}
+        .memory-card {{
+          border:1px solid rgba(128,128,128,.22);
+          border-top:4px solid;
+          border-radius:8px;
+          padding:.75rem .85rem;
+          background:rgba(128,128,128,.035);
+          min-height:5.6rem;
+        }}
+        .memory-card small {{
+          display:block; color:rgba(90,96,106,.95);
+          font-size:.7rem; text-transform:uppercase; letter-spacing:.06em;
+        }}
+        .memory-card strong {{
+          display:block; margin-top:.15rem; font-size:1.1rem; line-height:1.2;
+        }}
+        .memory-card span {{
+          display:block; margin-top:.25rem; color:rgba(70,76,86,.9);
+          font-size:.84rem; line-height:1.25;
+        }}
+        @media (max-width: 900px) {{ .memory-grid {{ grid-template-columns:1fr 1fr; }} }}
+        @media (max-width: 560px) {{ .memory-grid {{ grid-template-columns:1fr; }} }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_tuning_notes(evaluation, monte_carlo, paper_status, run_count):
+    notes = []
+    if run_count < 3:
+        notes.append(("Collect runs", "Use at least three daily runs before changing model settings."))
+    if paper_status["matured"] < 10:
+        notes.append(("Wait for outcomes", "Treat Monte Carlo and model-score charts as diagnostics until more paper trades mature."))
+    if not evaluation.empty:
+        scored = evaluation[evaluation["fit_status"].eq("ok")].copy()
+        for column in ("champion_score", "selected_return_edge", "horizon_days"):
+            scored[column] = pd.to_numeric(scored[column], errors="coerce")
+        grouped = (
+            scored.groupby(["horizon_days", "model_label"], dropna=False)
+            .agg(
+                runs=("run_id", "nunique"),
+                average_score=("champion_score", "mean"),
+                average_edge=("selected_return_edge", "mean"),
+            )
+            .reset_index()
+        )
+        grouped = grouped[grouped["runs"] >= 1].sort_values(
+            ["average_score", "average_edge"], ascending=False
+        )
+        if not grouped.empty:
+            row = grouped.iloc[0]
+            notes.append(
+                (
+                    "Best early model",
+                    f"{int(row['horizon_days'])}d {row['model_label']} has the highest average score so far.",
+                )
+            )
+    if not monte_carlo.empty:
+        mc = monte_carlo.copy()
+        for column in ("median_return", "target_probability", "drawdown_probability"):
+            mc[column] = pd.to_numeric(mc[column], errors="coerce")
+        grouped = (
+            mc.groupby("stock_type", dropna=False)
+            .agg(
+                median_return=("median_return", "mean"),
+                target_probability=("target_probability", "mean"),
+                drawdown_probability=("drawdown_probability", "mean"),
+                rows=("ticker", "count"),
+            )
+            .reset_index()
+        )
+        grouped["risk_adjusted_signal"] = (
+            grouped["median_return"]
+            + grouped["target_probability"] * 0.02
+            - grouped["drawdown_probability"] * 0.02
+        )
+        grouped = grouped.sort_values("risk_adjusted_signal", ascending=False)
+        if not grouped.empty:
+            row = grouped.iloc[0]
+            notes.append(
+                (
+                    "Best simulated pocket",
+                    f"{row['stock_type']} has the cleanest average Monte Carlo profile in saved runs.",
+                )
+            )
+    notes = notes[:4]
+    rows = "".join(
+        f"""
+        <div class="memory-note">
+          <b>{html.escape(title)}</b>
+          <span>{html.escape(body)}</span>
+        </div>
+        """
+        for title, body in notes
+    )
+    st.markdown(
+        f"""
+        <div class="memory-notes">{rows}</div>
+        <style>
+        .memory-notes {{ display:grid; gap:.45rem; margin:.35rem 0 1rem; }}
+        .memory-note {{
+          border-left:3px solid #2e6fbb; padding:.48rem .72rem;
+          background:rgba(46,111,187,.055);
+        }}
+        .memory-note b, .memory-note span {{ display:block; }}
+        .memory-note span {{ color:rgba(70,76,86,.9); font-size:.88rem; }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_model_memory():
+    st.title("Model Memory")
+    st.caption(
+        "Saved run evidence for deciding how to tune models after repeated daily runs."
+    )
+    run_history = data.ml_run_history(limit=60)
+    evaluation = data.model_evaluation_history(limit=3000)
+    predictions = data.model_prediction_history(limit=5000)
+    ann_history = data.ann_feature_group_importance_history(limit=5000)
+    monte_carlo = data.monte_carlo_simulation_history(limit=5000)
+    paper_status = data.paper_learning_status()
+
+    if run_history.empty and evaluation.empty and monte_carlo.empty:
+        st.info("Model memory will populate after the next pipeline run exports history tables.")
+        return
+
+    _memory_cards(run_history, evaluation, monte_carlo, paper_status)
+    run_count = max(_run_count(run_history), _run_count(evaluation), _run_count(monte_carlo))
+
+    horizons = _memory_horizons(evaluation, predictions, ann_history, monte_carlo)
+    selected_horizon = st.selectbox(
+        "Horizon",
+        horizons or [5, 20, 60],
+        format_func=lambda value: f"{value} trading days",
+    )
+
+    eval_horizon = evaluation.copy()
+    if not eval_horizon.empty:
+        eval_horizon["horizon_days"] = pd.to_numeric(
+            eval_horizon["horizon_days"], errors="coerce"
+        )
+        eval_horizon = eval_horizon[eval_horizon["horizon_days"].eq(selected_horizon)]
+        eval_horizon["run_created_at"] = pd.to_datetime(
+            eval_horizon["run_created_at"], errors="coerce", utc=True
+        )
+        for column in (
+            "champion_score",
+            "selected_return_edge",
+            "roc_auc",
+            "brier_skill",
+            "walk_forward_avg_score",
+        ):
+            if column in eval_horizon.columns:
+                eval_horizon[column] = pd.to_numeric(eval_horizon[column], errors="coerce")
+        eval_horizon["Model"] = eval_horizon["model_label"].fillna(
+            eval_horizon["model_name"]
+        )
+
+    mc_horizon = monte_carlo.copy()
+    if not mc_horizon.empty:
+        mc_horizon["horizon_days"] = pd.to_numeric(
+            mc_horizon["horizon_days"], errors="coerce"
+        )
+        mc_horizon = mc_horizon[mc_horizon["horizon_days"].eq(selected_horizon)]
+        mc_horizon["run_created_at"] = pd.to_datetime(
+            mc_horizon["run_created_at"], errors="coerce", utc=True
+        )
+        for column in (
+            "probability_up",
+            "median_return",
+            "target_probability",
+            "drawdown_probability",
+            "p10_return",
+            "p90_return",
+        ):
+            if column in mc_horizon.columns:
+                mc_horizon[column] = pd.to_numeric(mc_horizon[column], errors="coerce")
+
+    st.subheader("Next tuning signal")
+    _render_tuning_notes(eval_horizon, mc_horizon, paper_status, run_count)
+
+    if not eval_horizon.empty:
+        st.subheader("Model score drift")
+        shown = eval_horizon[eval_horizon["fit_status"].eq("ok")].sort_values(
+            "run_created_at"
+        )
+        if not shown.empty:
+            figure = px.line(
+                shown,
+                x="run_created_at",
+                y="champion_score",
+                color="Model",
+                markers=True,
+                hover_data={
+                    "roc_auc": ":.3f",
+                    "selected_return_edge": ":.2%",
+                    "walk_forward_avg_score": ":.3f",
+                    "is_champion": True,
+                },
+                title=f"{selected_horizon}d model score by run",
+                color_discrete_sequence=["#2e6fbb", "#d88912", "#5c8f41", "#c4587a"],
+            )
+            figure.update_layout(
+                height=390,
+                margin=dict(l=20, r=20, t=55, b=20),
+                xaxis_title="Run",
+                yaxis_title="Champion score",
+                legend=dict(orientation="h", yanchor="bottom", y=-0.28, xanchor="left", x=0),
+            )
+            st.plotly_chart(figure, use_container_width=True, key=f"memory_score_{selected_horizon}")
+
+            champion_mask = shown["is_champion"].astype(str).str.lower().isin(
+                {"true", "1", "yes"}
+            )
+            champion_counts = (
+                shown[champion_mask]
+                .groupby("Model", as_index=False)
+                .agg(champion_runs=("run_id", "nunique"))
+                .sort_values("champion_runs")
+            )
+            if not champion_counts.empty:
+                st.plotly_chart(
+                    px.bar(
+                        champion_counts,
+                        x="champion_runs",
+                        y="Model",
+                        orientation="h",
+                        title=f"{selected_horizon}d champion count",
+                        color_discrete_sequence=["#2e6fbb"],
+                    ).update_layout(height=300, margin=dict(l=20, r=20, t=55, b=20), yaxis_title="", xaxis_title="Runs"),
+                    use_container_width=True,
+                    key=f"memory_champions_{selected_horizon}",
+                )
+
+    if not mc_horizon.empty:
+        st.subheader("Monte Carlo control panel")
+        mc_grouped = (
+            mc_horizon.groupby(["run_created_at", "stock_type"], dropna=False)
+            .agg(
+                tickers=("ticker", "count"),
+                probability_up=("probability_up", "mean"),
+                median_return=("median_return", "mean"),
+                target_probability=("target_probability", "mean"),
+                drawdown_probability=("drawdown_probability", "mean"),
+            )
+            .reset_index()
+        )
+        if not mc_grouped.empty:
+            mc_grouped["Median return"] = mc_grouped["median_return"] * 100
+            mc_grouped["Drawdown chance"] = mc_grouped["drawdown_probability"] * 100
+            mc_grouped["Target chance"] = mc_grouped["target_probability"] * 100
+            figure = px.scatter(
+                mc_grouped,
+                x="Drawdown chance",
+                y="Median return",
+                color="stock_type",
+                size="Target chance",
+                hover_data=["tickers", "probability_up"],
+                title=f"{selected_horizon}d stock-type risk/return by saved run",
+                color_discrete_sequence=["#2e6fbb", "#d88912", "#5c8f41", "#c4587a", "#6f7782"],
+            )
+            figure.add_hline(y=0, line_color="rgba(80,80,80,.45)", line_width=1)
+            figure.update_layout(
+                height=430,
+                margin=dict(l=20, r=20, t=55, b=20),
+                xaxis_title="Average drawdown chance",
+                yaxis_title="Average MC median return",
+                legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="left", x=0),
+            )
+            figure.update_xaxes(ticksuffix="%")
+            figure.update_yaxes(ticksuffix="%")
+            st.plotly_chart(figure, use_container_width=True, key=f"memory_mc_{selected_horizon}")
+
+    ann_horizon = ann_history.copy()
+    if not ann_horizon.empty:
+        ann_horizon["horizon_days"] = pd.to_numeric(
+            ann_horizon["horizon_days"], errors="coerce"
+        )
+        ann_horizon = ann_horizon[ann_horizon["horizon_days"].eq(selected_horizon)]
+        ann_horizon["importance_delta"] = pd.to_numeric(
+            ann_horizon["importance_delta"], errors="coerce"
+        )
+        heat = ann_horizon.pivot_table(
+            index="stock_type",
+            columns="feature_group",
+            values="importance_delta",
+            aggfunc="mean",
+        ).fillna(0.0)
+        if not heat.empty:
+            st.subheader("Feature stability")
+            figure = px.imshow(
+                heat,
+                aspect="auto",
+                color_continuous_scale=["#f3f4f6", "#d88912", "#2e6fbb"],
+                labels=dict(x="Feature group", y="Stock type", color="Avg impact"),
+                title=f"{selected_horizon}d ANN feature-group importance across saved runs",
+            )
+            figure.update_layout(
+                height=max(330, 48 * len(heat.index) + 140),
+                margin=dict(l=20, r=20, t=55, b=30),
+            )
+            st.plotly_chart(figure, use_container_width=True, key=f"memory_ann_heat_{selected_horizon}")
+
+    if not predictions.empty:
+        pred_horizon = predictions.copy()
+        pred_horizon["horizon_days"] = pd.to_numeric(
+            pred_horizon["horizon_days"], errors="coerce"
+        )
+        pred_horizon["model_rank"] = pd.to_numeric(
+            pred_horizon["model_rank"], errors="coerce"
+        )
+        pred_horizon = pred_horizon[
+            pred_horizon["horizon_days"].eq(selected_horizon)
+            & pred_horizon["model_rank"].le(20)
+        ]
+        recurring = (
+            pred_horizon.groupby("ticker", as_index=False)
+            .agg(
+                appearances=("run_id", "nunique"),
+                average_rank=("model_rank", "mean"),
+                average_probability=("probability_up", "mean"),
+            )
+            .sort_values(["appearances", "average_probability"], ascending=False)
+            .head(12)
+        )
+        if not recurring.empty:
+            recurring = recurring.sort_values("appearances")
+            st.subheader("Recurring top-ranked tickers")
+            figure = px.bar(
+                recurring,
+                x="appearances",
+                y="ticker",
+                orientation="h",
+                hover_data={"average_rank": ":.1f", "average_probability": ":.1%"},
+                title=f"{selected_horizon}d names repeatedly ranked in the top 20",
+                color_discrete_sequence=["#d88912"],
+            )
+            figure.update_layout(
+                height=360,
+                margin=dict(l=20, r=20, t=55, b=20),
+                xaxis_title="Saved runs",
+                yaxis_title="",
+            )
+            st.plotly_chart(figure, use_container_width=True, key=f"memory_recurring_{selected_horizon}")
+
+    st.caption(
+        "Model memory is a tuning aid. Real profitability conclusions should wait for "
+        "paper outcomes to mature at the same horizon."
+    )
+
+
 def render_portfolio_replay():
     st.title("Portfolio Replay")
     st.caption(
@@ -4090,6 +4500,7 @@ elif page_group == "Model Lab":
         "Model view",
         (
             "Model Lab",
+            "Model Memory",
             "ANN + Similarity Lab",
             "How It Works",
             "Research Lab",
@@ -4123,6 +4534,8 @@ try:
         render_research_lab()
     elif page == "Model Lab":
         render_model_lab()
+    elif page == "Model Memory":
+        render_model_memory()
     elif page == "ANN + Similarity Lab":
         render_ann_similarity_lab()
     elif page == "Portfolio Replay":

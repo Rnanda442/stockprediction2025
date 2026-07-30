@@ -386,6 +386,8 @@ def model_status():
         ("ANNFeatureGroupImportance", "ann_feature_group_importance_rows", 1),
         ("LatestMonteCarloSimulations", "latest_monte_carlo_simulations_rows", 1),
         ("LatestMonteCarloPaths", "latest_monte_carlo_paths_rows", 1),
+        ("ANNFeatureGroupImportanceHistory", "ann_feature_group_importance_history_rows", 1),
+        ("MonteCarloSimulationHistory", "monte_carlo_simulation_history_rows", 1),
         ("SimilarityPairs", "similarity_pairs_rows", 1),
         ("SimilarityFamilies", "similarity_families_rows", 1),
     ]
@@ -647,6 +649,76 @@ def similarity_families(ticker=None):
         FROM SimilarityFamilies
         ORDER BY Family, variant_is_chosen DESC, ticker
         """
+    )
+
+
+def ml_run_history(limit=30):
+    if not table_exists("MLRunHistory"):
+        return pd.DataFrame()
+    return query(
+        """
+        SELECT *
+        FROM MLRunHistory
+        ORDER BY created_at DESC
+        LIMIT ?
+        """,
+        (limit,),
+    )
+
+
+def model_evaluation_history(limit=1000):
+    if not table_exists("ModelEvaluationHistory"):
+        return pd.DataFrame()
+    return query(
+        """
+        SELECT *
+        FROM ModelEvaluationHistory
+        ORDER BY run_created_at DESC, horizon_days, model_name
+        LIMIT ?
+        """,
+        (limit,),
+    )
+
+
+def model_prediction_history(limit=3000):
+    if not table_exists("ModelPredictionHistory"):
+        return pd.DataFrame()
+    return query(
+        """
+        SELECT *
+        FROM ModelPredictionHistory
+        ORDER BY run_created_at DESC, horizon_days, model_name, model_rank
+        LIMIT ?
+        """,
+        (limit,),
+    )
+
+
+def ann_feature_group_importance_history(limit=5000):
+    if not table_exists("ANNFeatureGroupImportanceHistory"):
+        return pd.DataFrame()
+    return query(
+        """
+        SELECT *
+        FROM ANNFeatureGroupImportanceHistory
+        ORDER BY run_created_at DESC, horizon_days, stock_type, importance_delta DESC
+        LIMIT ?
+        """,
+        (limit,),
+    )
+
+
+def monte_carlo_simulation_history(limit=5000):
+    if not table_exists("MonteCarloSimulationHistory"):
+        return pd.DataFrame()
+    return query(
+        """
+        SELECT *
+        FROM MonteCarloSimulationHistory
+        ORDER BY run_created_at DESC, horizon_days, model_rank
+        LIMIT ?
+        """,
+        (limit,),
     )
 
 

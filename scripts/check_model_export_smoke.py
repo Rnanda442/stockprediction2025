@@ -12,6 +12,8 @@ TABLES = {
     "ANNFeatureGroupImportance": 1,
     "LatestMonteCarloSimulations": 1,
     "LatestMonteCarloPaths": 1,
+    "ANNFeatureGroupImportanceHistory": 1,
+    "MonteCarloSimulationHistory": 1,
     "SimilarityPairs": 1,
     "SimilarityFamilies": 1,
     "MLRunHistory": 1,
@@ -115,6 +117,8 @@ def check_database(path):
                 "ann_feature_group_importance_rows",
                 "latest_monte_carlo_simulations_rows",
                 "latest_monte_carlo_paths_rows",
+                "ann_feature_group_importance_history_rows",
+                "monte_carlo_simulation_history_rows",
             ):
                 if metric not in health:
                     errors.append(f"{path}:PipelineHealth missing {metric}")

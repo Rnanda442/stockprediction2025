@@ -1,7 +1,7 @@
 import os
 import sqlite3
 from contextlib import closing
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import numpy as np
@@ -94,6 +94,7 @@ WALK_FORWARD_SPLITS = int(os.getenv("MODEL_WALK_FORWARD_SPLITS", "5"))
 WALK_FORWARD_TEST_DATES = int(os.getenv("MODEL_WALK_FORWARD_TEST_DATES", "63"))
 WALK_FORWARD_MIN_TRAIN_DATES = int(os.getenv("MODEL_WALK_FORWARD_MIN_TRAIN_DATES", "252"))
 HISTORY_PREDICTION_LIMIT = int(os.getenv("MODEL_HISTORY_PREDICTION_LIMIT", "100"))
+MODEL_MEMORY_RETENTION_DAYS = int(os.getenv("MODEL_MEMORY_RETENTION_DAYS", "180"))
 ANN_IMPORTANCE_SAMPLE_ROWS = int(os.getenv("MODEL_ANN_IMPORTANCE_SAMPLE_ROWS", "12000"))
 MONTE_CARLO_LIMIT_PER_HORIZON = int(os.getenv("MODEL_MONTE_CARLO_LIMIT_PER_HORIZON", "60"))
 MONTE_CARLO_SIMULATIONS = int(os.getenv("MODEL_MONTE_CARLO_SIMULATIONS", "1000"))
@@ -1054,6 +1055,32 @@ def append_run_frame(conn, table, frame, run_id):
     return len(frame)
 
 
+def prune_history_table(conn, table, created_at):
+    if MODEL_MEMORY_RETENTION_DAYS <= 0 or not table_exists(conn, table):
+        return
+    columns = {row[1] for row in conn.execute(f'PRAGMA table_info("{table}")')}
+    if "run_created_at" not in columns:
+        return
+    parsed = datetime.fromisoformat(str(created_at).replace("Z", "+00:00"))
+    cutoff = parsed - timedelta(days=MODEL_MEMORY_RETENTION_DAYS)
+    conn.execute(
+        f'DELETE FROM "{table}" WHERE run_created_at < ?',
+        (cutoff.isoformat(timespec="seconds"),),
+    )
+
+
+def prune_model_memory(conn, run_metadata):
+    for table in (
+        "MLRunHistory",
+        "ModelEvaluationHistory",
+        "ModelWalkForwardEvaluationHistory",
+        "ModelPredictionHistory",
+        "ANNFeatureGroupImportanceHistory",
+        "MonteCarloSimulationHistory",
+    ):
+        prune_history_table(conn, table, run_metadata["created_at"])
+
+
 def prediction_history_rows(all_predictions, champions, run_metadata):
     if all_predictions.empty:
         return all_predictions
@@ -1449,6 +1476,21 @@ def save_outputs(
         )
     prediction_history = prediction_history_rows(all_predictions, champions, run_metadata)
     append_run_frame(conn, "ModelPredictionHistory", prediction_history, run_metadata["run_id"])
+    ann_importance_history = with_run_columns(all_ann_importance, run_metadata)
+    monte_carlo_history = with_run_columns(monte_carlo_summary, run_metadata)
+    append_run_frame(
+        conn,
+        "ANNFeatureGroupImportanceHistory",
+        ann_importance_history,
+        run_metadata["run_id"],
+    )
+    append_run_frame(
+        conn,
+        "MonteCarloSimulationHistory",
+        monte_carlo_history,
+        run_metadata["run_id"],
+    )
+    prune_model_memory(conn, run_metadata)
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_latest_model_predictions "
         "ON LatestModelPredictions(horizon_days, model_rank)"
@@ -1469,11 +1511,21 @@ def save_outputs(
         "CREATE INDEX IF NOT EXISTS idx_latest_monte_carlo_paths "
         "ON LatestMonteCarloPaths(ticker, horizon_days, trading_day)"
     )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_ann_feature_group_importance_history "
+        "ON ANNFeatureGroupImportanceHistory(run_created_at, horizon_days, stock_type, feature_group)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_monte_carlo_simulation_history "
+        "ON MonteCarloSimulationHistory(run_created_at, horizon_days, ticker)"
+    )
     for table in (
         "MLRunHistory",
         "ModelEvaluationHistory",
         "ModelWalkForwardEvaluationHistory",
         "ModelPredictionHistory",
+        "ANNFeatureGroupImportanceHistory",
+        "MonteCarloSimulationHistory",
     ):
         if table_exists(conn, table):
             conn.execute(
@@ -1496,6 +1548,12 @@ def save_outputs(
         ANALYTICS_DIR / "latest_monte_carlo_simulations.csv", index=False
     )
     monte_carlo_paths.to_csv(ANALYTICS_DIR / "latest_monte_carlo_paths.csv", index=False)
+    ann_importance_history.to_csv(
+        ANALYTICS_DIR / "ann_feature_group_importance_history_latest.csv", index=False
+    )
+    monte_carlo_history.to_csv(
+        ANALYTICS_DIR / "monte_carlo_simulation_history_latest.csv", index=False
+    )
     load_similarity_pairs().to_csv(ANALYTICS_DIR / "similarity_pairs_export.csv", index=False)
     similarity_family_table().to_csv(
         ANALYTICS_DIR / "similarity_families_export.csv", index=False

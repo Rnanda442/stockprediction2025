@@ -566,6 +566,9 @@ def main():
             "ann_feature_group_importance": export_optional_table(
                 source, destination, "ANNFeatureGroupImportance"
             ),
+            "ann_feature_group_importance_history": export_optional_table(
+                source, destination, "ANNFeatureGroupImportanceHistory"
+            ),
             "latest_model_predictions": export_optional_table(
                 source, destination, "LatestModelPredictions"
             ),
@@ -577,6 +580,9 @@ def main():
             ),
             "latest_monte_carlo_paths": export_optional_table(
                 source, destination, "LatestMonteCarloPaths"
+            ),
+            "monte_carlo_simulation_history": export_optional_table(
+                source, destination, "MonteCarloSimulationHistory"
             ),
             "similarity_pairs": export_optional_table(
                 source, destination, "SimilarityPairs"

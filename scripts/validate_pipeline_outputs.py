@@ -566,6 +566,25 @@ def artifact_output_checks():
             nonblank_columns=["as_of_date", "ticker", "horizon_days", "trading_day"],
         ),
         check_csv(
+            "analytics/ann_feature_group_importance_history_latest.csv",
+            required_columns=[
+                "run_id", "run_created_at", "run_as_of_date", "horizon_days",
+                "model_name", "stock_type", "feature_group", "importance_delta",
+            ],
+            min_rows=1,
+            nonblank_columns=["run_id", "run_created_at", "horizon_days", "feature_group"],
+        ),
+        check_csv(
+            "analytics/monte_carlo_simulation_history_latest.csv",
+            required_columns=[
+                "run_id", "run_created_at", "run_as_of_date", "as_of_date",
+                "ticker", "horizon_days", "probability_up", "median_return",
+                "drawdown_probability", "target_probability",
+            ],
+            min_rows=1,
+            nonblank_columns=["run_id", "run_created_at", "ticker", "horizon_days"],
+        ),
+        check_csv(
             "analytics/similarity_pairs_export.csv",
             required_columns=["A", "B", "similarity"],
             min_rows=1,
@@ -614,6 +633,8 @@ def local_build_checks():
         check_table("vectorized.db", "ANNFeatureGroupImportance", min_rows=1),
         check_table("vectorized.db", "LatestMonteCarloSimulations", min_rows=1),
         check_table("vectorized.db", "LatestMonteCarloPaths", min_rows=1),
+        check_table("vectorized.db", "ANNFeatureGroupImportanceHistory", min_rows=1),
+        check_table("vectorized.db", "MonteCarloSimulationHistory", min_rows=1),
         check_table("vectorized.db", "SimilarityPairs", min_rows=1),
         check_table("vectorized.db", "SimilarityFamilies", min_rows=1),
         check_table("vectorized.db", "MLRunHistory", min_rows=1),
@@ -655,6 +676,8 @@ def dashboard_export_checks():
         check_table("dashboard_data.db", "ANNFeatureGroupImportance", min_rows=1),
         check_table("dashboard_data.db", "LatestMonteCarloSimulations", min_rows=1),
         check_table("dashboard_data.db", "LatestMonteCarloPaths", min_rows=1),
+        check_table("dashboard_data.db", "ANNFeatureGroupImportanceHistory", min_rows=1),
+        check_table("dashboard_data.db", "MonteCarloSimulationHistory", min_rows=1),
         check_table("dashboard_data.db", "SimilarityPairs", min_rows=1),
         check_table("dashboard_data.db", "SimilarityFamilies", min_rows=1),
         check_table("dashboard_data.db", "MLRunHistory", min_rows=1),
