@@ -383,6 +383,11 @@ def model_status():
         ("ModelEvaluation", "model_evaluation_rows", 3),
         ("ModelFeatureImportance", "model_feature_importance_rows", 1),
         ("LatestModelPredictions", "latest_model_predictions_rows", 1),
+        ("ANNFeatureGroupImportance", "ann_feature_group_importance_rows", 1),
+        ("LatestMonteCarloSimulations", "latest_monte_carlo_simulations_rows", 1),
+        ("LatestMonteCarloPaths", "latest_monte_carlo_paths_rows", 1),
+        ("SimilarityPairs", "similarity_pairs_rows", 1),
+        ("SimilarityFamilies", "similarity_families_rows", 1),
     ]
     health_values = health()
     rows = []
@@ -524,6 +529,124 @@ def latest_model_candidate_predictions(horizon_days, limit_per_model=20):
         ORDER BY model_name, model_rank
         """,
         (horizon_days, limit_per_model),
+    )
+
+
+def ann_feature_group_importance(horizon_days=None):
+    if not table_exists("ANNFeatureGroupImportance"):
+        return pd.DataFrame()
+    if horizon_days is None:
+        return query(
+            """
+            SELECT *
+            FROM ANNFeatureGroupImportance
+            ORDER BY horizon_days, stock_type, importance_delta DESC
+            """
+        )
+    return query(
+        """
+        SELECT *
+        FROM ANNFeatureGroupImportance
+        WHERE horizon_days=?
+        ORDER BY stock_type, importance_delta DESC
+        """,
+        (horizon_days,),
+    )
+
+
+def latest_monte_carlo_simulations(horizon_days=None, limit=80):
+    if not table_exists("LatestMonteCarloSimulations"):
+        return pd.DataFrame()
+    if horizon_days is None:
+        return query(
+            """
+            SELECT *
+            FROM LatestMonteCarloSimulations
+            ORDER BY horizon_days, model_rank
+            LIMIT ?
+            """,
+            (limit,),
+        )
+    return query(
+        """
+        SELECT *
+        FROM LatestMonteCarloSimulations
+        WHERE horizon_days=?
+        ORDER BY model_rank
+        LIMIT ?
+        """,
+        (horizon_days, limit),
+    )
+
+
+def latest_monte_carlo_paths(ticker, horizon_days):
+    if not table_exists("LatestMonteCarloPaths") or not ticker:
+        return pd.DataFrame()
+    return query(
+        """
+        SELECT *
+        FROM LatestMonteCarloPaths
+        WHERE ticker=? AND horizon_days=?
+        ORDER BY trading_day
+        """,
+        (str(ticker).upper(), horizon_days),
+    )
+
+
+def similarity_pairs(ticker, limit=30):
+    if not table_exists("SimilarityPairs") or not ticker:
+        return pd.DataFrame()
+    ticker = str(ticker).upper()
+    return query(
+        """
+        SELECT *
+        FROM (
+          SELECT A AS ticker, B AS neighbor, similarity,
+                 A_slope AS ticker_slope, A_ret60 AS ticker_ret60,
+                 A_vol60 AS ticker_vol60, A_dv20 AS ticker_dv20,
+                 B_slope AS neighbor_slope, B_ret60 AS neighbor_ret60,
+                 B_vol60 AS neighbor_vol60, B_dv20 AS neighbor_dv20,
+                 winner
+          FROM SimilarityPairs
+          WHERE A=?
+          UNION ALL
+          SELECT B AS ticker, A AS neighbor, similarity,
+                 B_slope AS ticker_slope, B_ret60 AS ticker_ret60,
+                 B_vol60 AS ticker_vol60, B_dv20 AS ticker_dv20,
+                 A_slope AS neighbor_slope, A_ret60 AS neighbor_ret60,
+                 A_vol60 AS neighbor_vol60, A_dv20 AS neighbor_dv20,
+                 winner
+          FROM SimilarityPairs
+          WHERE B=?
+        )
+        ORDER BY similarity DESC
+        LIMIT ?
+        """,
+        (ticker, ticker, limit),
+    )
+
+
+def similarity_families(ticker=None):
+    if not table_exists("SimilarityFamilies"):
+        return pd.DataFrame()
+    if ticker:
+        return query(
+            """
+            SELECT *
+            FROM SimilarityFamilies
+            WHERE Family IN (
+              SELECT Family FROM SimilarityFamilies WHERE ticker=?
+            )
+            ORDER BY Family, variant_is_chosen DESC, ticker
+            """,
+            (str(ticker).upper(),),
+        )
+    return query(
+        """
+        SELECT *
+        FROM SimilarityFamilies
+        ORDER BY Family, variant_is_chosen DESC, ticker
+        """
     )
 
 

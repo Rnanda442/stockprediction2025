@@ -38,7 +38,7 @@ on:
       model_candidates:
         description: Model tournament candidates
         required: false
-        default: "sgd_logistic,mlp_ann,hist_gradient_boosting"
+        default: "sgd_logistic,mlp_ann,hist_gradient_boosting,similarity_ann_monte_carlo"
       commit_generated_updates:
         description: Commit refreshed tracked dashboard snapshot files
         required: false
@@ -69,7 +69,7 @@ jobs:
       PIPELINE_SIM_MIN: ${{ inputs.sim_min || '0.60' }}
       PIPELINE_SIM_CAP: ${{ inputs.sim_cap || '0.88' }}
       PIPELINE_TOP_N_PER_TICKER: ${{ inputs.top_n_per_ticker || '3' }}
-      MODEL_CANDIDATES: ${{ inputs.model_candidates || 'sgd_logistic,mlp_ann,hist_gradient_boosting' }}
+      MODEL_CANDIDATES: ${{ inputs.model_candidates || 'sgd_logistic,mlp_ann,hist_gradient_boosting,similarity_ann_monte_carlo' }}
       PYTHONUNBUFFERED: "1"
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 

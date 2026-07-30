@@ -20,6 +20,7 @@ DB_PATH = Path(os.getenv("MODEL_DB_PATH", ROOT / "vectorized.db"))
 ANALYTICS_DIR = Path(os.getenv("MODEL_ANALYTICS_DIR", ROOT / "analytics"))
 MODEL_VERSION = os.getenv("MODEL_VERSION", "tournament_v1")
 HORIZONS = (5, 20, 60)
+SIMILARITY_ANN_MODEL = "similarity_ann_monte_carlo"
 FEATURES = (
     "pct_1d",
     "pct_2d",
@@ -44,23 +45,69 @@ FEATURES = (
     "max_dd_60d",
     "time_since_max_60d",
 )
+ANN_EXTRA_FEATURES = (
+    "log_dollar_vol_20d",
+    "volatility_ratio_20_60",
+    "return_trend_alignment",
+    "liquidity_rank_pct",
+    "volatility_rank_pct",
+    "trend_rank_pct",
+    "return_rank_pct",
+    "stock_type_code",
+    "variant_family_size",
+    "variant_is_chosen",
+)
+ANN_FEATURES = FEATURES + ANN_EXTRA_FEATURES
+FEATURE_GROUPS = {
+    "Short returns": ("pct_1d", "pct_2d", "pct_3d", "pct_5d"),
+    "Momentum": ("ret_10d", "ret_20d", "ret_60d", "riskadj_mom_60d", "ma_crossover"),
+    "Risk": (
+        "volatility_5d",
+        "volatility_10d",
+        "vol_20d",
+        "vol_60d",
+        "max_dd_60d",
+        "bb_width_20d",
+    ),
+    "Trend shape": ("trend_slope_60d", "trend_r2_60d", "z_ma20", "time_since_max_60d"),
+    "Liquidity": ("dollar_vol_20d", "log_dollar_vol_20d"),
+    "Stock type": (
+        "liquidity_rank_pct",
+        "volatility_rank_pct",
+        "trend_rank_pct",
+        "return_rank_pct",
+        "stock_type_code",
+    ),
+    "Variant family": ("variant_family_size", "variant_is_chosen"),
+}
 LOOKBACK_DATES = int(os.getenv("MODEL_LOOKBACK_DATES", "756"))
 TEST_DATES = int(os.getenv("MODEL_TEST_DATES", "126"))
 MAX_TRAIN_ROWS = int(os.getenv("MODEL_MAX_TRAIN_ROWS", "350000"))
 MAX_TEST_ROWS = int(os.getenv("MODEL_MAX_TEST_ROWS", "150000"))
 RANDOM_SEED = int(os.getenv("MODEL_RANDOM_SEED", "17"))
-DEFAULT_CANDIDATES = "sgd_logistic,mlp_ann,hist_gradient_boosting"
+DEFAULT_CANDIDATES = (
+    "sgd_logistic,mlp_ann,hist_gradient_boosting,"
+    f"{SIMILARITY_ANN_MODEL}"
+)
 SELECTION_THRESHOLD = float(os.getenv("MODEL_SELECTION_THRESHOLD", "0.60"))
 WALK_FORWARD_SPLITS = int(os.getenv("MODEL_WALK_FORWARD_SPLITS", "5"))
 WALK_FORWARD_TEST_DATES = int(os.getenv("MODEL_WALK_FORWARD_TEST_DATES", "63"))
 WALK_FORWARD_MIN_TRAIN_DATES = int(os.getenv("MODEL_WALK_FORWARD_MIN_TRAIN_DATES", "252"))
 HISTORY_PREDICTION_LIMIT = int(os.getenv("MODEL_HISTORY_PREDICTION_LIMIT", "100"))
+ANN_IMPORTANCE_SAMPLE_ROWS = int(os.getenv("MODEL_ANN_IMPORTANCE_SAMPLE_ROWS", "12000"))
+MONTE_CARLO_LIMIT_PER_HORIZON = int(os.getenv("MODEL_MONTE_CARLO_LIMIT_PER_HORIZON", "60"))
+MONTE_CARLO_SIMULATIONS = int(os.getenv("MODEL_MONTE_CARLO_SIMULATIONS", "1000"))
+MONTE_CARLO_PATH_LIMIT_PER_HORIZON = int(os.getenv("MODEL_MONTE_CARLO_PATH_LIMIT_PER_HORIZON", "12"))
+MONTE_CARLO_NEIGHBOR_LIMIT = int(os.getenv("MODEL_MONTE_CARLO_NEIGHBOR_LIMIT", "8"))
+MONTE_CARLO_DRAWDOWN_THRESHOLD = float(os.getenv("MODEL_MONTE_CARLO_DRAWDOWN_THRESHOLD", "-0.05"))
+MONTE_CARLO_TARGET_THRESHOLD = float(os.getenv("MODEL_MONTE_CARLO_TARGET_THRESHOLD", "0.05"))
 
 
 MODEL_LABELS = {
     "sgd_logistic": "SGD logistic baseline",
     "mlp_ann": "ANN MLP classifier",
     "hist_gradient_boosting": "Histogram gradient boosting",
+    SIMILARITY_ANN_MODEL: "ANN similarity + Monte Carlo",
 }
 
 
@@ -107,6 +154,148 @@ def build_run_metadata(frame, created_at):
     }
 
 
+def read_csv_if_exists(path):
+    if not path.exists():
+        return pd.DataFrame()
+    try:
+        return pd.read_csv(path)
+    except Exception as exc:  # noqa: BLE001 - optional artifacts should not kill modeling.
+        print(f"Could not read optional artifact {path}: {exc}")
+        return pd.DataFrame()
+
+
+def normalize_ticker(value):
+    if pd.isna(value):
+        return ""
+    return str(value).strip().upper()
+
+
+def load_similarity_pairs():
+    pairs = read_csv_if_exists(ANALYTICS_DIR / "flipcorr_pairs_5y.csv")
+    columns = [
+        "A",
+        "B",
+        "similarity",
+        "A_slope",
+        "A_ret60",
+        "A_vol60",
+        "A_dv20",
+        "B_slope",
+        "B_ret60",
+        "B_vol60",
+        "B_dv20",
+        "winner",
+    ]
+    if pairs.empty or not {"A", "B", "similarity"}.issubset(pairs.columns):
+        return pd.DataFrame(columns=columns)
+    pairs = pairs.copy()
+    for column in columns:
+        if column not in pairs.columns:
+            pairs[column] = np.nan
+    pairs["A"] = pairs["A"].map(normalize_ticker)
+    pairs["B"] = pairs["B"].map(normalize_ticker)
+    pairs["winner"] = pairs["winner"].map(normalize_ticker)
+    pairs["similarity"] = pd.to_numeric(pairs["similarity"], errors="coerce")
+    pairs = pairs.dropna(subset=["similarity"])
+    pairs = pairs[(pairs["A"] != "") & (pairs["B"] != "") & (pairs["A"] != pairs["B"])]
+    return pairs[columns].drop_duplicates(["A", "B"]).reset_index(drop=True)
+
+
+def variant_family_features():
+    families = read_csv_if_exists(ANALYTICS_DIR / "variant_families.csv")
+    columns = [
+        "ticker",
+        "variant_family_size",
+        "variant_is_chosen",
+    ]
+    if families.empty or not {"Family", "Member"}.issubset(families.columns):
+        return pd.DataFrame(columns=columns)
+    frame = families.copy()
+    frame["ticker"] = frame["Member"].astype(str).str.upper()
+    frame["variant_family_size"] = frame.groupby("Family")["Member"].transform("count")
+    if "Chosen" in frame.columns:
+        frame["variant_is_chosen"] = frame["Chosen"].astype(str).str.lower().isin(
+            {"true", "1", "yes"}
+        ).astype(int)
+    else:
+        frame["variant_is_chosen"] = 0
+    return frame[columns].drop_duplicates("ticker")
+
+
+def _rank_pct(frame, source_column, output_column):
+    frame[output_column] = (
+        frame.groupby("begins_at")[source_column]
+        .rank(pct=True, method="average")
+        .fillna(0.5)
+    )
+
+
+def attach_ann_features(frame):
+    frame = frame.copy()
+    _rank_pct(frame, "dollar_vol_20d", "liquidity_rank_pct")
+    _rank_pct(frame, "vol_60d", "volatility_rank_pct")
+    _rank_pct(frame, "trend_slope_60d", "trend_rank_pct")
+    _rank_pct(frame, "ret_60d", "return_rank_pct")
+
+    dollar_volume = pd.to_numeric(frame["dollar_vol_20d"], errors="coerce").clip(lower=0)
+    frame["log_dollar_vol_20d"] = np.log1p(dollar_volume)
+    frame["volatility_ratio_20_60"] = (
+        pd.to_numeric(frame["vol_20d"], errors="coerce")
+        / (pd.to_numeric(frame["vol_60d"], errors="coerce").abs() + 1e-9)
+    )
+    frame["return_trend_alignment"] = (
+        pd.to_numeric(frame["ret_20d"], errors="coerce")
+        * np.sign(pd.to_numeric(frame["trend_slope_60d"], errors="coerce").fillna(0))
+    )
+    labels = np.select(
+        [
+            frame["volatility_rank_pct"] >= 0.75,
+            (frame["liquidity_rank_pct"] >= 0.75) & (frame["trend_rank_pct"] >= 0.60),
+            frame["trend_rank_pct"] >= 0.75,
+            frame["return_rank_pct"] <= 0.25,
+        ],
+        [
+            "High volatility",
+            "Liquid leader",
+            "Trend leader",
+            "Recent laggard",
+        ],
+        default="Core",
+    )
+    stock_type_order = {
+        "Core": 0,
+        "High volatility": 1,
+        "Liquid leader": 2,
+        "Trend leader": 3,
+        "Recent laggard": 4,
+    }
+    frame["stock_type"] = labels
+    frame["stock_type_code"] = pd.Series(labels, index=frame.index).map(stock_type_order)
+
+    families = variant_family_features()
+    if not families.empty:
+        frame = frame.merge(families, on="ticker", how="left")
+    else:
+        frame["variant_family_size"] = 1
+        frame["variant_is_chosen"] = 1
+    frame["variant_family_size"] = pd.to_numeric(
+        frame["variant_family_size"], errors="coerce"
+    ).fillna(1)
+    frame["variant_is_chosen"] = pd.to_numeric(
+        frame["variant_is_chosen"], errors="coerce"
+    ).fillna(1)
+    frame[list(ANN_EXTRA_FEATURES)] = frame[list(ANN_EXTRA_FEATURES)].replace(
+        [np.inf, -np.inf], np.nan
+    )
+    return frame
+
+
+def features_for_model(model_name, usable_features):
+    if model_name == SIMILARITY_ANN_MODEL:
+        return tuple(feature for feature in ANN_FEATURES if feature in usable_features)
+    return tuple(feature for feature in FEATURES if feature in usable_features)
+
+
 def load_frame(conn):
     dates = [
         row[0]
@@ -140,7 +329,7 @@ def load_frame(conn):
     grouped_prices = frame.groupby("ticker", sort=False)["close_price"]
     for horizon in HORIZONS:
         frame[f"future_price_{horizon}d"] = grouped_prices.shift(-horizon)
-    return frame
+    return attach_ann_features(frame)
 
 
 def sample_rows(frame, limit):
@@ -232,6 +421,28 @@ def build_estimator(model_name):
                 random_state=RANDOM_SEED,
             ),
         )
+    if model_name == SIMILARITY_ANN_MODEL:
+        hidden_layers = tuple(
+            int(part)
+            for part in os.getenv("MODEL_SIMILARITY_ANN_HIDDEN_LAYERS", "64,32").split(",")
+            if part.strip()
+        )
+        return make_pipeline(
+            SimpleImputer(strategy="median"),
+            StandardScaler(),
+            MLPClassifier(
+                hidden_layer_sizes=hidden_layers,
+                alpha=float(os.getenv("MODEL_SIMILARITY_ANN_ALPHA", "0.0008")),
+                learning_rate_init=float(
+                    os.getenv("MODEL_SIMILARITY_ANN_LEARNING_RATE", "0.001")
+                ),
+                max_iter=int(os.getenv("MODEL_SIMILARITY_ANN_MAX_ITER", "100")),
+                early_stopping=True,
+                validation_fraction=0.1,
+                n_iter_no_change=8,
+                random_state=RANDOM_SEED,
+            ),
+        )
     raise RuntimeError(f"Unknown model candidate: {model_name}")
 
 
@@ -314,6 +525,68 @@ def feature_importance(model, horizon, features, model_name):
     )
     importance["absolute_coefficient"] = importance["coefficient"].abs()
     return importance.sort_values("absolute_coefficient", ascending=False)
+
+
+def ann_feature_group_importance(model, model_name, horizon, test, features):
+    if model_name != SIMILARITY_ANN_MODEL or test.empty:
+        return pd.DataFrame()
+    available_groups = {
+        group: [feature for feature in group_features if feature in features]
+        for group, group_features in FEATURE_GROUPS.items()
+    }
+    available_groups = {
+        group: group_features
+        for group, group_features in available_groups.items()
+        if group_features
+    }
+    if not available_groups:
+        return pd.DataFrame()
+
+    sample = test.copy()
+    if len(sample) > ANN_IMPORTANCE_SAMPLE_ROWS:
+        sample = sample.sample(ANN_IMPORTANCE_SAMPLE_ROWS, random_state=RANDOM_SEED + horizon)
+    sample["__label"] = (sample["forward_return"] > 0).astype(int)
+
+    rows = []
+    rng = np.random.default_rng(RANDOM_SEED + horizon)
+    segments = [("All", sample)]
+    if "stock_type" in sample.columns:
+        for stock_type, segment in sample.groupby("stock_type", dropna=False):
+            if len(segment) >= 25:
+                segments.append((str(stock_type), segment))
+
+    for stock_type, segment in segments:
+        labels = segment["__label"].astype(int)
+        feature_frame = segment[list(features)].copy()
+        baseline_probabilities = model.predict_proba(feature_frame)[:, 1]
+        baseline_brier = float(brier_score_loss(labels, baseline_probabilities))
+        for group, group_features in available_groups.items():
+            permuted = feature_frame.copy()
+            for feature in group_features:
+                values = permuted[feature].to_numpy(copy=True)
+                rng.shuffle(values)
+                permuted[feature] = values
+            permuted_probabilities = model.predict_proba(permuted)[:, 1]
+            permuted_brier = float(brier_score_loss(labels, permuted_probabilities))
+            rows.append(
+                {
+                    "horizon_days": horizon,
+                    "model_name": model_name,
+                    "model_label": MODEL_LABELS[model_name],
+                    "model_version": MODEL_VERSION,
+                    "stock_type": stock_type,
+                    "feature_group": group,
+                    "feature_count": len(group_features),
+                    "sample_rows": len(segment),
+                    "baseline_brier": baseline_brier,
+                    "permuted_brier": permuted_brier,
+                    "importance_delta": permuted_brier - baseline_brier,
+                }
+            )
+    return pd.DataFrame(rows).sort_values(
+        ["horizon_days", "stock_type", "importance_delta"],
+        ascending=[True, True, False],
+    )
 
 
 def champion_score(evaluation):
@@ -546,7 +819,7 @@ def evaluate_walk_forward_split(model_name, horizon, split_id, train, test, trai
     return evaluation
 
 
-def walk_forward_horizon(labeled, horizon, features):
+def walk_forward_horizon(labeled, horizon, usable_features):
     dates = sorted(labeled["begins_at"].unique())
     rows = []
     for split_id, (train_dates, test_dates) in enumerate(
@@ -555,6 +828,7 @@ def walk_forward_horizon(labeled, horizon, features):
         train_pool = labeled[labeled["begins_at"].isin(train_dates)]
         test_pool = labeled[labeled["begins_at"].isin(test_dates)]
         for model_name in MODEL_CANDIDATES:
+            features = features_for_model(model_name, usable_features)
             train = sample_rows(
                 train_pool, model_row_limit(model_name, "train", MAX_TRAIN_ROWS)
             )
@@ -659,8 +933,10 @@ def build_horizon(frame, horizon):
 
     train_pool = labeled[labeled["begins_at"].isin(train_dates)]
     test_pool = labeled[labeled["begins_at"].isin(test_dates)]
-    usable_features = tuple(feature for feature in FEATURES if train_pool[feature].notna().any())
-    dropped_features = tuple(feature for feature in FEATURES if feature not in usable_features)
+    usable_features = tuple(
+        feature for feature in ANN_FEATURES if train_pool[feature].notna().any()
+    )
+    dropped_features = tuple(feature for feature in ANN_FEATURES if feature not in usable_features)
     if not usable_features:
         raise RuntimeError(f"No usable model features remain for the {horizon}d model")
     if dropped_features:
@@ -671,8 +947,14 @@ def build_horizon(frame, horizon):
 
     evaluations = []
     importances = []
+    ann_importances = []
     predictions = []
     for model_name in MODEL_CANDIDATES:
+        model_features = features_for_model(model_name, usable_features)
+        expected_features = ANN_FEATURES if model_name == SIMILARITY_ANN_MODEL else FEATURES
+        model_dropped_features = tuple(
+            feature for feature in expected_features if feature not in model_features
+        )
         train = sample_rows(
             train_pool, model_row_limit(model_name, "train", MAX_TRAIN_ROWS)
         )
@@ -681,24 +963,37 @@ def build_horizon(frame, horizon):
         )
         model = build_estimator(model_name)
         try:
+            if not model_features:
+                raise RuntimeError("no usable features for model candidate")
             evaluation = evaluate_model(
-                model, model_name, horizon, train, test, train_dates, test_dates, usable_features
+                model, model_name, horizon, train, test, train_dates, test_dates, model_features
             )
-            latest = latest_predictions(model, frame, horizon, usable_features, model_name)
-            importance = feature_importance(model, horizon, usable_features, model_name)
+            latest = latest_predictions(model, frame, horizon, model_features, model_name)
+            importance = feature_importance(model, horizon, model_features, model_name)
+            ann_importance = ann_feature_group_importance(
+                model, model_name, horizon, test, model_features
+            )
             predictions.append(latest)
             if not importance.empty:
                 importances.append(importance)
+            if not ann_importance.empty:
+                ann_importances.append(ann_importance)
         except Exception as exc:  # noqa: BLE001 - keep pipeline alive if one candidate fails.
             evaluation = failed_evaluation(
-                model_name, horizon, exc, train_dates, test_dates, usable_features, dropped_features
+                model_name,
+                horizon,
+                exc,
+                train_dates,
+                test_dates,
+                model_features,
+                model_dropped_features,
             )
             print(f"{horizon}d {model_name} failed: {exc}")
-        evaluation["dropped_features"] = ", ".join(dropped_features)
+        evaluation["dropped_features"] = ", ".join(model_dropped_features)
         evaluations.append(evaluation)
     walk_forward_rows = walk_forward_horizon(labeled, horizon, usable_features)
     evaluations = attach_walk_forward_summary(evaluations, walk_forward_rows)
-    return evaluations, importances, predictions, walk_forward_rows
+    return evaluations, importances, ann_importances, predictions, walk_forward_rows
 
 
 def mark_champions(tournament):
@@ -739,9 +1034,21 @@ def delete_existing_run(conn, table, run_id):
         conn.execute(f'DELETE FROM "{table}" WHERE run_id=?', (run_id,))
 
 
+def ensure_append_columns(conn, table, frame):
+    if not table_exists(conn, table):
+        return
+    existing = {
+        row[1] for row in conn.execute(f'PRAGMA table_info("{table}")')
+    }
+    for column in frame.columns:
+        if column not in existing:
+            conn.execute(f'ALTER TABLE "{table}" ADD COLUMN "{column}" TEXT')
+
+
 def append_run_frame(conn, table, frame, run_id):
     if frame.empty:
         return 0
+    ensure_append_columns(conn, table, frame)
     delete_existing_run(conn, table, run_id)
     frame.to_sql(table, conn, if_exists="append", index=False)
     return len(frame)
@@ -773,7 +1080,266 @@ def champion_text(champions):
     return ", ".join(parts)
 
 
-def save_outputs(conn, evaluations, importances, predictions, walk_forward_rows, run_metadata):
+def similarity_family_table():
+    families = read_csv_if_exists(ANALYTICS_DIR / "variant_families.csv")
+    columns = [
+        "Family",
+        "ticker",
+        "Chosen",
+        "Reason",
+        "variant_family_size",
+        "variant_is_chosen",
+    ]
+    if families.empty or not {"Family", "Member"}.issubset(families.columns):
+        return pd.DataFrame(columns=columns)
+    frame = families.copy()
+    for column in ("Chosen", "Reason"):
+        if column not in frame.columns:
+            frame[column] = ""
+    frame["ticker"] = frame["Member"].map(normalize_ticker)
+    frame["variant_family_size"] = frame.groupby("Family")["Member"].transform("count")
+    frame["variant_is_chosen"] = frame["Chosen"].astype(str).str.lower().isin(
+        {"true", "1", "yes"}
+    ).astype(int)
+    return frame[columns].drop_duplicates(["Family", "ticker"]).reset_index(drop=True)
+
+
+def persist_similarity_artifacts(conn):
+    pairs = load_similarity_pairs()
+    families = similarity_family_table()
+    pairs.to_sql("SimilarityPairs", conn, if_exists="replace", index=False)
+    families.to_sql("SimilarityFamilies", conn, if_exists="replace", index=False)
+    if table_exists(conn, "SimilarityPairs"):
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_similarity_pairs_a "
+            "ON SimilarityPairs(A, similarity)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_similarity_pairs_b "
+            "ON SimilarityPairs(B, similarity)"
+        )
+    if table_exists(conn, "SimilarityFamilies"):
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_similarity_families_ticker "
+            "ON SimilarityFamilies(ticker)"
+        )
+    return {"similarity_pairs": len(pairs), "similarity_families": len(families)}
+
+
+def neighbor_map_from_pairs(pairs):
+    neighbors = {}
+    if pairs.empty:
+        return neighbors
+    for row in pairs.sort_values("similarity", ascending=False).itertuples(index=False):
+        a = normalize_ticker(getattr(row, "A"))
+        b = normalize_ticker(getattr(row, "B"))
+        similarity = pd.to_numeric(getattr(row, "similarity"), errors="coerce")
+        if not a or not b or pd.isna(similarity):
+            continue
+        neighbors.setdefault(a, []).append((b, float(similarity)))
+        neighbors.setdefault(b, []).append((a, float(similarity)))
+    return {
+        ticker: [
+            neighbor
+            for neighbor, _ in sorted(items, key=lambda item: item[1], reverse=True)[
+                :MONTE_CARLO_NEIGHBOR_LIMIT
+            ]
+        ]
+        for ticker, items in neighbors.items()
+    }
+
+
+def historical_forward_returns(frame, horizon):
+    target_column = f"future_price_{horizon}d"
+    returns = frame[["ticker", "close_price", target_column]].copy()
+    returns["ticker"] = returns["ticker"].map(normalize_ticker)
+    returns["forward_return"] = (
+        pd.to_numeric(returns[target_column], errors="coerce")
+        / pd.to_numeric(returns["close_price"], errors="coerce")
+        - 1.0
+    )
+    returns["forward_return"] = returns["forward_return"].replace([np.inf, -np.inf], np.nan)
+    return returns.dropna(subset=["forward_return"])
+
+
+def monte_carlo_return_draws(rng, return_pool, probability_up):
+    pool = np.asarray(return_pool, dtype=float)
+    pool = pool[np.isfinite(pool)]
+    if len(pool) == 0:
+        return np.zeros(MONTE_CARLO_SIMULATIONS, dtype=float)
+
+    probability = float(np.clip(probability_up, 0.0, 1.0))
+    positive_pool = pool[pool > 0]
+    negative_pool = pool[pool <= 0]
+    if len(positive_pool) == 0 or len(negative_pool) == 0:
+        return rng.choice(pool, size=MONTE_CARLO_SIMULATIONS, replace=True)
+
+    positive_mask = rng.random(MONTE_CARLO_SIMULATIONS) < probability
+    draws = np.empty(MONTE_CARLO_SIMULATIONS, dtype=float)
+    draws[positive_mask] = rng.choice(
+        positive_pool,
+        size=int(positive_mask.sum()),
+        replace=True,
+    )
+    draws[~positive_mask] = rng.choice(
+        negative_pool,
+        size=int((~positive_mask).sum()),
+        replace=True,
+    )
+    return draws
+
+
+def simulation_candidates(all_predictions, champions):
+    preferred = all_predictions[all_predictions["model_name"].eq(SIMILARITY_ANN_MODEL)].copy()
+    if preferred.empty:
+        return filter_champion_rows(all_predictions, champions)
+    return preferred
+
+
+def monte_carlo_outputs(frame, all_predictions, champions):
+    summary_columns = [
+        "as_of_date",
+        "ticker",
+        "horizon_days",
+        "model_name",
+        "model_label",
+        "model_version",
+        "model_rank",
+        "probability_up",
+        "current_price",
+        "stock_type",
+        "simulations",
+        "neighbor_count",
+        "median_return",
+        "p10_return",
+        "p90_return",
+        "expected_return",
+        "simulated_probability_up",
+        "drawdown_probability",
+        "target_probability",
+    ]
+    path_columns = [
+        "as_of_date",
+        "ticker",
+        "horizon_days",
+        "model_name",
+        "model_label",
+        "model_version",
+        "trading_day",
+        "current_price",
+        "p10_price",
+        "median_price",
+        "p90_price",
+    ]
+    if all_predictions.empty:
+        return pd.DataFrame(columns=summary_columns), pd.DataFrame(columns=path_columns)
+
+    latest_context = (
+        frame.sort_values(["ticker", "begins_at"])
+        .groupby("ticker", as_index=False)
+        .tail(1)[["ticker", "close_price", "stock_type"]]
+        .copy()
+    )
+    latest_context["ticker"] = latest_context["ticker"].map(normalize_ticker)
+    latest_context = latest_context.rename(columns={"close_price": "current_price"})
+    candidates = simulation_candidates(all_predictions, champions).copy()
+    candidates["ticker"] = candidates["ticker"].map(normalize_ticker)
+    candidates = candidates.merge(latest_context, on="ticker", how="left")
+
+    pairs = load_similarity_pairs()
+    neighbors = neighbor_map_from_pairs(pairs)
+    rng = np.random.default_rng(RANDOM_SEED)
+    summary_rows = []
+    path_rows = []
+
+    for horizon, horizon_candidates in candidates.groupby("horizon_days"):
+        horizon = int(horizon)
+        returns = historical_forward_returns(frame, horizon)
+        by_ticker = {
+            ticker: group["forward_return"].to_numpy(dtype=float)
+            for ticker, group in returns.groupby("ticker")
+        }
+        market_pool = returns["forward_return"].to_numpy(dtype=float)
+        shown = horizon_candidates.sort_values("model_rank").head(
+            MONTE_CARLO_LIMIT_PER_HORIZON
+        )
+        for path_rank, row in enumerate(shown.itertuples(index=False), start=1):
+            ticker = normalize_ticker(row.ticker)
+            peer_tickers = [ticker, *neighbors.get(ticker, [])]
+            pools = [by_ticker[peer] for peer in peer_tickers if peer in by_ticker]
+            return_pool = np.concatenate(pools) if pools else market_pool
+            probability = pd.to_numeric(getattr(row, "probability_up"), errors="coerce")
+            if pd.isna(probability):
+                probability = 0.5
+            draws = monte_carlo_return_draws(rng, return_pool, probability)
+            current_price = pd.to_numeric(getattr(row, "current_price"), errors="coerce")
+            stock_type = getattr(row, "stock_type", "Unknown")
+            stock_type = "Unknown" if pd.isna(stock_type) else str(stock_type)
+            summary = {
+                "as_of_date": getattr(row, "as_of_date"),
+                "ticker": ticker,
+                "horizon_days": horizon,
+                "model_name": getattr(row, "model_name"),
+                "model_label": getattr(row, "model_label"),
+                "model_version": getattr(row, "model_version"),
+                "model_rank": int(getattr(row, "model_rank")),
+                "probability_up": float(probability),
+                "current_price": np.nan if pd.isna(current_price) else float(current_price),
+                "stock_type": stock_type,
+                "simulations": MONTE_CARLO_SIMULATIONS,
+                "neighbor_count": max(0, len(peer_tickers) - 1),
+                "median_return": float(np.quantile(draws, 0.50)),
+                "p10_return": float(np.quantile(draws, 0.10)),
+                "p90_return": float(np.quantile(draws, 0.90)),
+                "expected_return": float(np.mean(draws)),
+                "simulated_probability_up": float(np.mean(draws > 0)),
+                "drawdown_probability": float(np.mean(draws <= MONTE_CARLO_DRAWDOWN_THRESHOLD)),
+                "target_probability": float(np.mean(draws >= MONTE_CARLO_TARGET_THRESHOLD)),
+            }
+            summary_rows.append(summary)
+
+            if (
+                path_rank <= MONTE_CARLO_PATH_LIMIT_PER_HORIZON
+                and not pd.isna(current_price)
+                and float(current_price) > 0
+            ):
+                for trading_day in range(horizon + 1):
+                    fraction = trading_day / horizon
+                    path_rows.append(
+                        {
+                            "as_of_date": summary["as_of_date"],
+                            "ticker": ticker,
+                            "horizon_days": horizon,
+                            "model_name": summary["model_name"],
+                            "model_label": summary["model_label"],
+                            "model_version": summary["model_version"],
+                            "trading_day": trading_day,
+                            "current_price": float(current_price),
+                            "p10_price": float(current_price)
+                            * (1.0 + summary["p10_return"] * fraction),
+                            "median_price": float(current_price)
+                            * (1.0 + summary["median_return"] * fraction),
+                            "p90_price": float(current_price)
+                            * (1.0 + summary["p90_return"] * fraction),
+                        }
+                    )
+
+    return (
+        pd.DataFrame(summary_rows, columns=summary_columns),
+        pd.DataFrame(path_rows, columns=path_columns),
+    )
+
+
+def save_outputs(
+    conn,
+    frame,
+    evaluations,
+    importances,
+    ann_importances,
+    predictions,
+    walk_forward_rows,
+    run_metadata,
+):
     tournament = mark_champions(pd.DataFrame(evaluations))
     champions = tournament[tournament["is_champion"]].copy()
     all_predictions = pd.concat(predictions, ignore_index=True)
@@ -803,12 +1369,42 @@ def save_outputs(conn, evaluations, importances, predictions, walk_forward_rows,
         )
         importance = all_importance.copy()
 
+    if ann_importances:
+        all_ann_importance = pd.concat(ann_importances, ignore_index=True)
+    else:
+        all_ann_importance = pd.DataFrame(
+            columns=[
+                "horizon_days",
+                "model_name",
+                "model_label",
+                "model_version",
+                "stock_type",
+                "feature_group",
+                "feature_count",
+                "sample_rows",
+                "baseline_brier",
+                "permuted_brier",
+                "importance_delta",
+            ]
+        )
+    monte_carlo_summary, monte_carlo_paths = monte_carlo_outputs(
+        frame, all_predictions, champions
+    )
+    similarity_counts = persist_similarity_artifacts(conn)
+
     champions.to_sql("ModelEvaluation", conn, if_exists="replace", index=False)
     tournament.to_sql("ModelTournamentEvaluation", conn, if_exists="replace", index=False)
     importance.to_sql("ModelFeatureImportance", conn, if_exists="replace", index=False)
     all_importance.to_sql("ModelTournamentFeatureImportance", conn, if_exists="replace", index=False)
+    all_ann_importance.to_sql(
+        "ANNFeatureGroupImportance", conn, if_exists="replace", index=False
+    )
     latest.to_sql("LatestModelPredictions", conn, if_exists="replace", index=False)
     all_predictions.to_sql("LatestModelCandidatePredictions", conn, if_exists="replace", index=False)
+    monte_carlo_summary.to_sql(
+        "LatestMonteCarloSimulations", conn, if_exists="replace", index=False
+    )
+    monte_carlo_paths.to_sql("LatestMonteCarloPaths", conn, if_exists="replace", index=False)
     if not walk_forward.empty:
         walk_forward.to_sql("ModelWalkForwardEvaluation", conn, if_exists="replace", index=False)
     else:
@@ -829,6 +1425,9 @@ def save_outputs(conn, evaluations, importances, predictions, walk_forward_rows,
                 "champions": champion_text(champions),
                 "tournament_rows": len(tournament),
                 "walk_forward_rows": len(walk_forward),
+                "ann_feature_group_rows": len(all_ann_importance),
+                "monte_carlo_rows": len(monte_carlo_summary),
+                **similarity_counts,
                 "candidate_prediction_rows": len(all_predictions),
                 "champion_prediction_rows": len(latest),
             }
@@ -858,6 +1457,18 @@ def save_outputs(conn, evaluations, importances, predictions, walk_forward_rows,
         "CREATE INDEX IF NOT EXISTS idx_latest_model_candidate_predictions "
         "ON LatestModelCandidatePredictions(horizon_days, model_name, model_rank)"
     )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_ann_feature_group_importance "
+        "ON ANNFeatureGroupImportance(horizon_days, stock_type, feature_group)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_latest_monte_carlo_simulations "
+        "ON LatestMonteCarloSimulations(horizon_days, model_rank)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_latest_monte_carlo_paths "
+        "ON LatestMonteCarloPaths(ticker, horizon_days, trading_day)"
+    )
     for table in (
         "MLRunHistory",
         "ModelEvaluationHistory",
@@ -878,8 +1489,17 @@ def save_outputs(conn, evaluations, importances, predictions, walk_forward_rows,
     walk_forward.to_csv(ANALYTICS_DIR / "model_walk_forward_evaluation.csv", index=False)
     importance.to_csv(ANALYTICS_DIR / "model_feature_importance.csv", index=False)
     all_importance.to_csv(ANALYTICS_DIR / "model_tournament_feature_importance.csv", index=False)
+    all_ann_importance.to_csv(ANALYTICS_DIR / "ann_feature_group_importance.csv", index=False)
     latest.to_csv(ANALYTICS_DIR / "latest_model_predictions.csv", index=False)
     all_predictions.to_csv(ANALYTICS_DIR / "latest_model_candidate_predictions.csv", index=False)
+    monte_carlo_summary.to_csv(
+        ANALYTICS_DIR / "latest_monte_carlo_simulations.csv", index=False
+    )
+    monte_carlo_paths.to_csv(ANALYTICS_DIR / "latest_monte_carlo_paths.csv", index=False)
+    load_similarity_pairs().to_csv(ANALYTICS_DIR / "similarity_pairs_export.csv", index=False)
+    similarity_family_table().to_csv(
+        ANALYTICS_DIR / "similarity_families_export.csv", index=False
+    )
     prediction_history.to_csv(ANALYTICS_DIR / "model_prediction_history_latest.csv", index=False)
     return champions, tournament
 
@@ -893,21 +1513,31 @@ def main():
         run_metadata = build_run_metadata(frame, created_at)
         evaluations = []
         importances = []
+        ann_importances = []
         predictions = []
         walk_forward_rows = []
         for horizon in HORIZONS:
             (
                 horizon_evaluations,
                 horizon_importances,
+                horizon_ann_importances,
                 horizon_predictions,
                 horizon_walk_forward,
             ) = build_horizon(frame, horizon)
             evaluations.extend(horizon_evaluations)
             importances.extend(horizon_importances)
+            ann_importances.extend(horizon_ann_importances)
             predictions.extend(horizon_predictions)
             walk_forward_rows.extend(horizon_walk_forward)
         champions, tournament = save_outputs(
-            conn, evaluations, importances, predictions, walk_forward_rows, run_metadata
+            conn,
+            frame,
+            evaluations,
+            importances,
+            ann_importances,
+            predictions,
+            walk_forward_rows,
+            run_metadata,
         )
     print("Built leakage-controlled model tournament:")
     print(

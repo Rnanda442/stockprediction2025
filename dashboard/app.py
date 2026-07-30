@@ -2920,8 +2920,18 @@ def render_pipeline_controls():
         top_n_per_ticker = right.number_input("Neighbors per ticker", 1, 20, 3, 1)
         model_candidates = right.multiselect(
             "Model candidates",
-            ["sgd_logistic", "mlp_ann", "hist_gradient_boosting"],
-            default=["sgd_logistic", "mlp_ann", "hist_gradient_boosting"],
+            [
+                "sgd_logistic",
+                "mlp_ann",
+                "hist_gradient_boosting",
+                "similarity_ann_monte_carlo",
+            ],
+            default=[
+                "sgd_logistic",
+                "mlp_ann",
+                "hist_gradient_boosting",
+                "similarity_ann_monte_carlo",
+            ],
         )
         confirmed = st.checkbox("I understand this starts a full GitHub Actions pipeline run.")
         submitted = st.form_submit_button("Run pipeline on GitHub", type="primary")
@@ -3291,6 +3301,271 @@ def render_model_lab():
                 min_value=0.0,
                 max_value=100.0,
             ),
+        },
+    )
+
+
+def _ann_lab_horizons(tournament, simulations, importance):
+    horizons = set()
+    for frame in (tournament, simulations, importance):
+        if not frame.empty and "horizon_days" in frame.columns:
+            values = pd.to_numeric(frame["horizon_days"], errors="coerce").dropna()
+            horizons.update(int(value) for value in values)
+    return sorted(horizons)
+
+
+def _ann_metric_row(tournament, horizon):
+    if tournament.empty or "model_name" not in tournament.columns:
+        return pd.Series(dtype="object")
+    rows = tournament[
+        tournament["model_name"].eq("similarity_ann_monte_carlo")
+        & pd.to_numeric(tournament["horizon_days"], errors="coerce").eq(horizon)
+    ]
+    if rows.empty:
+        return pd.Series(dtype="object")
+    return rows.iloc[0]
+
+
+def render_ann_similarity_lab():
+    st.title("ANN + Similarity Lab")
+    health = data.health()
+    st.caption(
+        f"Last run: {format_run_timestamp(health.get('exported_at'))} | "
+        f"market {short_date(health.get('latest_market_date'))}"
+    )
+
+    tournament = _tournament_with_edges()
+    simulations_all = data.latest_monte_carlo_simulations(None, limit=5000)
+    importance_all = data.ann_feature_group_importance()
+    horizons = _ann_lab_horizons(tournament, simulations_all, importance_all)
+    if not horizons:
+        st.info("ANN similarity outputs are not available yet. Run the full pipeline with the ANN candidate enabled.")
+        return
+
+    horizon = st.selectbox(
+        "Horizon",
+        horizons,
+        format_func=lambda value: f"{value} trading days",
+    )
+    ann_row = _ann_metric_row(tournament, horizon)
+    if ann_row.empty:
+        st.warning("The ANN candidate did not produce a tournament row for this horizon.")
+    else:
+        roc_auc = pd.to_numeric(ann_row.get("roc_auc"), errors="coerce")
+        walk_forward_splits = pd.to_numeric(
+            ann_row.get("walk_forward_splits"), errors="coerce"
+        )
+        cols = st.columns(5)
+        cols[0].metric("ANN status", str(ann_row.get("fit_status", "--")))
+        cols[1].metric("ROC AUC", "--" if pd.isna(roc_auc) else f"{float(roc_auc):.3f}")
+        cols[2].metric("Brier skill", percent(pd.to_numeric(ann_row.get("brier_skill"), errors="coerce")))
+        cols[3].metric("Return edge", percent(pd.to_numeric(ann_row.get("selected_return_edge"), errors="coerce")))
+        cols[4].metric(
+            "Walk-forward splits",
+            "--" if pd.isna(walk_forward_splits) else f"{int(walk_forward_splits)}",
+        )
+
+    importance = data.ann_feature_group_importance(horizon)
+    if not importance.empty:
+        importance = importance.copy()
+        importance["importance_delta"] = pd.to_numeric(
+            importance["importance_delta"], errors="coerce"
+        )
+        heat = importance.pivot_table(
+            index="stock_type",
+            columns="feature_group",
+            values="importance_delta",
+            aggfunc="mean",
+        ).fillna(0.0)
+        st.subheader("What the ANN is using")
+        fig = px.imshow(
+            heat,
+            aspect="auto",
+            color_continuous_scale=["#f3f4f6", "#d88912", "#2e6fbb"],
+            labels=dict(x="Feature group", y="Stock type", color="Brier impact"),
+            title="ANN feature-group importance by stock type",
+        )
+        fig.update_layout(height=max(330, 48 * len(heat.index) + 140), margin=dict(l=20, r=20, t=55, b=30))
+        st.plotly_chart(fig, use_container_width=True, key=f"ann_importance_heatmap_{horizon}")
+
+        stock_types = ["All", *sorted(value for value in importance["stock_type"].dropna().unique() if value != "All")]
+        selected_type = st.selectbox("Stock type", stock_types)
+        bars = (
+            importance[importance["stock_type"].eq(selected_type)]
+            .sort_values("importance_delta", ascending=True)
+            .tail(8)
+        )
+        if not bars.empty:
+            st.plotly_chart(
+                px.bar(
+                    bars,
+                    x="importance_delta",
+                    y="feature_group",
+                    orientation="h",
+                    hover_data=["feature_count", "sample_rows", "baseline_brier", "permuted_brier"],
+                    title=f"{selected_type}: strongest ANN input groups",
+                    color_discrete_sequence=["#2e6fbb"],
+                ).update_layout(height=320, margin=dict(l=20, r=20, t=55, b=20), yaxis_title="", xaxis_title="Brier-score impact"),
+                use_container_width=True,
+                key=f"ann_importance_bar_{horizon}_{selected_type}",
+            )
+    else:
+        st.info("Feature-group attribution is not available for this horizon.")
+
+    simulations = data.latest_monte_carlo_simulations(horizon, limit=120)
+    if simulations.empty:
+        st.info("Monte Carlo simulations are not available yet.")
+        return
+    simulations = simulations.copy()
+    for column in (
+        "probability_up",
+        "median_return",
+        "p10_return",
+        "p90_return",
+        "expected_return",
+        "drawdown_probability",
+        "target_probability",
+        "current_price",
+    ):
+        if column in simulations.columns:
+            simulations[column] = pd.to_numeric(simulations[column], errors="coerce")
+    simulations["Probability up"] = simulations["probability_up"] * 100
+    simulations["Median return"] = simulations["median_return"] * 100
+    simulations["Downside risk"] = simulations["drawdown_probability"] * 100
+    simulations["Target chance"] = simulations["target_probability"] * 100
+
+    st.subheader("Prediction map")
+    fig = px.scatter(
+        simulations,
+        x="Probability up",
+        y="Median return",
+        color="stock_type",
+        size="Target chance",
+        hover_name="ticker",
+        hover_data={
+            "model_rank": True,
+            "current_price": ":$,.2f",
+            "p10_return": ":.2%",
+            "p90_return": ":.2%",
+            "Downside risk": ":.1f",
+            "neighbor_count": True,
+        },
+        title="ANN probability vs Monte Carlo median return",
+        color_discrete_sequence=["#2e6fbb", "#d88912", "#5c8f41", "#c4587a", "#6f7782"],
+    )
+    fig.add_hline(y=0, line_color="rgba(80,80,80,.45)", line_width=1)
+    fig.add_vline(x=50, line_color="rgba(80,80,80,.45)", line_width=1)
+    fig.update_traces(marker=dict(opacity=0.78, line=dict(width=1)))
+    fig.update_layout(
+        height=500,
+        margin=dict(l=20, r=20, t=55, b=20),
+        xaxis_title="ANN probability up",
+        yaxis_title="Monte Carlo median return",
+        legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="left", x=0),
+    )
+    fig.update_xaxes(ticksuffix="%")
+    fig.update_yaxes(ticksuffix="%")
+    st.plotly_chart(fig, use_container_width=True, key=f"ann_mc_map_{horizon}")
+
+    top_tickers = simulations.sort_values("model_rank")["ticker"].astype(str).tolist()
+    selected_ticker = st.selectbox("Ticker scenario", top_tickers)
+    paths = data.latest_monte_carlo_paths(selected_ticker, horizon)
+    left, right = st.columns((1.2, 0.8))
+    with left:
+        if paths.empty:
+            st.info("Price fan is available for the top simulated names.")
+        else:
+            path_chart = paths.melt(
+                id_vars=["trading_day"],
+                value_vars=["p10_price", "median_price", "p90_price"],
+                var_name="Scenario",
+                value_name="Price",
+            )
+            path_chart["Scenario"] = path_chart["Scenario"].map(
+                {
+                    "p10_price": "P10",
+                    "median_price": "Median",
+                    "p90_price": "P90",
+                }
+            )
+            st.plotly_chart(
+                px.line(
+                    path_chart,
+                    x="trading_day",
+                    y="Price",
+                    color="Scenario",
+                    title=f"{selected_ticker}: Monte Carlo price fan",
+                    color_discrete_map={"P10": "#c4587a", "Median": "#2e6fbb", "P90": "#5c8f41"},
+                ).update_layout(height=360, margin=dict(l=20, r=20, t=55, b=20), xaxis_title="Trading day"),
+                use_container_width=True,
+                key=f"ann_mc_path_{horizon}_{selected_ticker}",
+            )
+    with right:
+        neighbors = data.similarity_pairs(selected_ticker, limit=12)
+        st.subheader("Nearest behavior neighbors")
+        if neighbors.empty:
+            st.info("No similarity neighbors were exported for this ticker.")
+        else:
+            neighbor_chart = neighbors.copy()
+            neighbor_chart["similarity"] = pd.to_numeric(
+                neighbor_chart["similarity"], errors="coerce"
+            )
+            neighbor_chart = neighbor_chart.sort_values("similarity", ascending=True)
+            st.plotly_chart(
+                px.bar(
+                    neighbor_chart,
+                    x="similarity",
+                    y="neighbor",
+                    orientation="h",
+                    hover_data=["winner", "ticker_ret60", "neighbor_ret60", "ticker_vol60", "neighbor_vol60"],
+                    title=f"{selected_ticker}: closest movement matches",
+                    color_discrete_sequence=["#d88912"],
+                ).update_layout(height=360, margin=dict(l=20, r=20, t=55, b=20), yaxis_title="", xaxis_title="Similarity"),
+                use_container_width=True,
+                key=f"ann_neighbors_{selected_ticker}",
+            )
+
+    display = simulations.rename(
+        columns={
+            "model_rank": "Rank",
+            "ticker": "Ticker",
+            "stock_type": "Type",
+            "Probability up": "ANN probability up",
+            "Median return": "MC median return",
+            "p10_return": "MC p10 return",
+            "p90_return": "MC p90 return",
+            "Downside risk": "Drawdown chance",
+            "Target chance": "Target chance",
+            "neighbor_count": "Neighbors",
+        }
+    )
+    for column in ("MC p10 return", "MC p90 return"):
+        display[column] = pd.to_numeric(display[column], errors="coerce") * 100
+    st.subheader("Simulation table")
+    st.dataframe(
+        display[
+            [
+                "Rank",
+                "Ticker",
+                "Type",
+                "ANN probability up",
+                "MC median return",
+                "MC p10 return",
+                "MC p90 return",
+                "Drawdown chance",
+                "Target chance",
+                "Neighbors",
+            ]
+        ],
+        hide_index=True,
+        use_container_width=True,
+        column_config={
+            "ANN probability up": st.column_config.NumberColumn(format="%.1f%%"),
+            "MC median return": st.column_config.NumberColumn(format="%.2f%%"),
+            "MC p10 return": st.column_config.NumberColumn(format="%.2f%%"),
+            "MC p90 return": st.column_config.NumberColumn(format="%.2f%%"),
+            "Drawdown chance": st.column_config.NumberColumn(format="%.1f%%"),
+            "Target chance": st.column_config.NumberColumn(format="%.1f%%"),
         },
     )
 
@@ -3815,6 +4090,7 @@ elif page_group == "Model Lab":
         "Model view",
         (
             "Model Lab",
+            "ANN + Similarity Lab",
             "How It Works",
             "Research Lab",
             "Ticker Explorer",
@@ -3847,6 +4123,8 @@ try:
         render_research_lab()
     elif page == "Model Lab":
         render_model_lab()
+    elif page == "ANN + Similarity Lab":
+        render_ann_similarity_lab()
     elif page == "Portfolio Replay":
         render_portfolio_replay()
     elif page == "Pipeline Controls":

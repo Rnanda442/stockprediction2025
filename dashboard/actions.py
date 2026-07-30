@@ -9,6 +9,7 @@ MODEL_CANDIDATES = {
     "sgd_logistic",
     "mlp_ann",
     "hist_gradient_boosting",
+    "similarity_ann_monte_carlo",
 }
 RANGES = {
     "watchlist_limit": (10, 200, int),

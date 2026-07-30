@@ -563,11 +563,26 @@ def main():
             "model_tournament_feature_importance": export_optional_table(
                 source, destination, "ModelTournamentFeatureImportance"
             ),
+            "ann_feature_group_importance": export_optional_table(
+                source, destination, "ANNFeatureGroupImportance"
+            ),
             "latest_model_predictions": export_optional_table(
                 source, destination, "LatestModelPredictions"
             ),
             "latest_model_candidate_predictions": export_optional_table(
                 source, destination, "LatestModelCandidatePredictions"
+            ),
+            "latest_monte_carlo_simulations": export_optional_table(
+                source, destination, "LatestMonteCarloSimulations"
+            ),
+            "latest_monte_carlo_paths": export_optional_table(
+                source, destination, "LatestMonteCarloPaths"
+            ),
+            "similarity_pairs": export_optional_table(
+                source, destination, "SimilarityPairs"
+            ),
+            "similarity_families": export_optional_table(
+                source, destination, "SimilarityFamilies"
             ),
             "ml_run_history": export_optional_table(
                 source, destination, "MLRunHistory"

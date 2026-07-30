@@ -5,8 +5,15 @@ from pathlib import Path
 EXPECTED_HORIZONS = {5, 20, 60}
 TABLES = {
     "ModelEvaluation": 3,
+    "ModelTournamentEvaluation": 3,
     "ModelFeatureImportance": 1,
     "LatestModelPredictions": 1,
+    "LatestModelCandidatePredictions": 1,
+    "ANNFeatureGroupImportance": 1,
+    "LatestMonteCarloSimulations": 1,
+    "LatestMonteCarloPaths": 1,
+    "SimilarityPairs": 1,
+    "SimilarityFamilies": 1,
     "MLRunHistory": 1,
     "ModelEvaluationHistory": 3,
     "ModelWalkForwardEvaluation": 3,
@@ -105,6 +112,9 @@ def check_database(path):
                 "model_evaluation_rows",
                 "model_feature_importance_rows",
                 "latest_model_predictions_rows",
+                "ann_feature_group_importance_rows",
+                "latest_monte_carlo_simulations_rows",
+                "latest_monte_carlo_paths_rows",
             ):
                 if metric not in health:
                     errors.append(f"{path}:PipelineHealth missing {metric}")
