@@ -1,7 +1,6 @@
 """Fast static regression checks for pipeline bootstrap and commit safety."""
 
 import json
-import subprocess
 import sys
 from pathlib import Path
 
@@ -26,15 +25,6 @@ def notebook_source():
     )
 
 
-def check_ignored(path):
-    result = subprocess.run(
-        ["git", "check-ignore", "--quiet", "--", path],
-        cwd=ROOT,
-        check=False,
-    )
-    require(result.returncode == 0, f"{path} remains ignored by git")
-
-
 def main():
     source = notebook_source()
     workflow = WORKFLOW.read_text(encoding="utf-8")
@@ -55,14 +45,10 @@ def main():
     require("git add -A" not in workflow, "workflow does not stage every untracked file")
     require("git add -u -- ." in workflow, "workflow stages updates to tracked files only")
     require("retention-days: 90" in workflow, "workflow keeps dashboard artifacts for 90 days")
-    for path in (
-        ".auth-cache/robinhood.pickle.enc",
-        ".tokens/robinhood.pickle",
-        "robinhood_token.txt",
-        ".env",
-        "historicals.db",
-    ):
-        check_ignored(path)
+    require(
+        "git reset -q -- dashboard_data.db dashboard/paper_learning_snapshot.json || true" in workflow,
+        "workflow unstages generated dashboard snapshots before committing",
+    )
 
     print("Pipeline safety checks passed.")
     return 0

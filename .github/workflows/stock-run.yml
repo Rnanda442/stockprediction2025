@@ -128,17 +128,9 @@ jobs:
         run: |
           python scripts/sync_robinhood_session.py restore
 
-      - name: Inspect restored pipeline state
-        run: |
-          python scripts/inspect_pipeline_state.py
-
       - name: Normalize restored databases
         run: |
           python scripts/promote_pipeline_databases.py
-
-      - name: Inspect normalized pipeline state
-        run: |
-          python scripts/inspect_pipeline_state.py
 
       - name: Check pipeline safety invariants
         run: |
@@ -191,11 +183,6 @@ jobs:
       - name: Check model export smoke
         run: |
           python scripts/check_model_export_smoke.py
-
-      - name: Inspect generated pipeline state
-        if: always()
-        run: |
-          python scripts/inspect_pipeline_state.py
 
       - name: Validate generated outputs
         run: |

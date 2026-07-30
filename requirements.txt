@@ -3,5 +3,3 @@ streamlit
 numpy
 plotly
 scikit-learn
-fastapi
-uvicorn

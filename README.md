@@ -9,10 +9,11 @@ large local artifacts.
 ## Current System
 
 - Frontend: Streamlit in `dashboard/app.py`
-- Backend/API: `backend/main.py` and `backend/services.py`
+- Backend helpers: `backend/services.py`
 - Pipeline: `.github/workflows/stock-run.yml`
 - Core model builder: `scripts/build_model_baseline.py`
 - Main notebook: `notebook/2025summerstock-Copy6.ipynb`
+- Research sources: `sources/`
 - Live trading: disabled; this is research and paper-decision review only
 
 Latest successful full run used by the last committed dashboard snapshot before
@@ -31,9 +32,10 @@ the repo was trimmed:
 
 ```text
 .github/workflows/stock-run.yml       Cloud pipeline
-backend/                              Read-only service/API layer
+backend/                              Read-only service helpers
 dashboard/                            Streamlit frontend and domain helpers
 notebook/2025summerstock-Copy6.ipynb  Main data-refresh notebook
+sources/                              Stock prediction ML research PDFs
 scripts/                              Pipeline, model, export, and validation scripts
 ```
 
@@ -49,9 +51,7 @@ Generated files are deliberately not source:
 
 ## Run The Cloud Pipeline
 
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\sync_and_run_stock_pipeline.ps1 -Watch
-```
+Use the `Run Stock Pipeline` GitHub Actions workflow dispatch from the repo.
 
 The workflow restores cached databases/session material, runs the notebook,
 builds the model tournament, exports `dashboard_data.db`, records paper
@@ -79,13 +79,6 @@ To start Streamlit after `dashboard_data.db` exists:
 ```powershell
 $env:DASHBOARD_PASSWORD = "choose-a-local-password"
 python -m streamlit run dashboard/app.py --server.headless=true --server.address=127.0.0.1 --server.port=8501
-```
-
-To start the backend API after `dashboard_data.db` exists:
-
-```powershell
-python -m pip install -r requirements.txt
-python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
 ```
 
 ## Validation
