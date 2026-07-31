@@ -31,6 +31,13 @@ SUMMARY_FILES = {
     "feature_groups": "summaries/daily/feature_group_stability.csv",
     "paper_outcomes": "summaries/daily/paper_outcome_summary.csv",
     "weekly_scores": "summaries/weekly/model_score_weekly.csv",
+    "artifact_health": "summaries/analysis/artifact_health.csv",
+    "quality_gates": "summaries/analysis/model_quality_gates.csv",
+    "quality_gate_summary": "summaries/analysis/model_quality_gate_summary.csv",
+    "prediction_shape": "summaries/analysis/prediction_signal_shape.csv",
+    "calibration_proxy": "summaries/analysis/paper_decision_calibration_proxy.csv",
+    "leakage_audit": "summaries/analysis/leakage_audit_summary.csv",
+    "analysis_priorities": "summaries/analysis/analysis_priorities.csv",
 }
 
 
@@ -129,13 +136,28 @@ def number(value: object) -> str:
         return "--"
 
 
+def coalesced_datetime(frame: pd.DataFrame, columns: list[str]) -> pd.Series:
+    values = pd.Series(pd.NaT, index=frame.index)
+    for column in columns:
+        if column in frame.columns:
+            parsed = pd.to_datetime(frame[column], errors="coerce", utc=True).dt.tz_convert(None)
+            values = values.where(values.notna(), parsed)
+    return values
+
+
 def latest_inventory(inventory: pd.DataFrame) -> dict[str, str]:
     if inventory.empty:
         return {}
     frame = inventory.copy()
-    if "warehouse_exported_at" in frame.columns:
-        frame["_sort"] = pd.to_datetime(frame["warehouse_exported_at"], errors="coerce", utc=True)
-        frame = frame.sort_values("_sort")
+    frame["_context_sort"] = coalesced_datetime(
+        frame, ["model_as_of_date", "latest_market_date", "warehouse_exported_at"]
+    )
+    frame["_export_sort"] = coalesced_datetime(frame, ["warehouse_exported_at"])
+    if "bytes_copied" in frame.columns:
+        frame["_bytes_sort"] = pd.to_numeric(frame["bytes_copied"], errors="coerce").fillna(0)
+    else:
+        frame["_bytes_sort"] = 0
+    frame = frame.sort_values(["_context_sort", "_bytes_sort", "_export_sort"])
     row = frame.iloc[-1].to_dict()
     return {key: "" if pd.isna(value) else str(value) for key, value in row.items()}
 
@@ -227,6 +249,31 @@ def build_markdown(summaries: dict[str, pd.DataFrame]) -> str:
         summaries["paper_outcomes"],
         ["evaluation_horizon_days", "evaluated", "avg_return", "median_return", "win_rate"],
     )
+    quality_gates = to_numeric(
+        summaries["quality_gates"],
+        [
+            "horizon_days",
+            "roc_auc",
+            "brier_skill",
+            "selected_return_edge",
+            "walk_forward_avg_score",
+            "test_rows",
+        ],
+    )
+    calibration_proxy = to_numeric(
+        summaries["calibration_proxy"],
+        [
+            "horizon_days",
+            "evaluation_horizon_days",
+            "evaluated",
+            "avg_probability_up",
+            "observed_win_rate",
+            "calibration_gap",
+            "avg_return",
+        ],
+    )
+    leakage_audit = summaries["leakage_audit"]
+    analysis_priorities = summaries["analysis_priorities"]
 
     trust, warnings = model_trust_call(model_history)
 
@@ -252,6 +299,25 @@ def build_markdown(summaries: dict[str, pd.DataFrame]) -> str:
         paper_outcomes = paper_outcomes.sort_values(
             ["evaluation_horizon_days", "avg_return"], ascending=[True, False]
         )
+    if not quality_gates.empty:
+        champion_mask = (
+            quality_gates["is_champion_gate"].astype(str).str.lower().isin({"true", "1"})
+            if "is_champion_gate" in quality_gates.columns
+            else pd.Series(False, index=quality_gates.index)
+        )
+        quality_gates = quality_gates[champion_mask].sort_values(["horizon_days", "model_name"])
+    if not calibration_proxy.empty:
+        matching_mask = (
+            calibration_proxy["matching_horizon"].astype(str).str.lower().isin({"true", "1"})
+            if "matching_horizon" in calibration_proxy.columns
+            else pd.Series(False, index=calibration_proxy.index)
+        )
+        calibration_proxy = calibration_proxy[matching_mask].sort_values(
+            ["evaluation_horizon_days", "evaluated"], ascending=[True, False]
+        )
+    leakage_issues = pd.DataFrame()
+    if not leakage_audit.empty and "leakage_audit_status" in leakage_audit.columns:
+        leakage_issues = leakage_audit[~leakage_audit["leakage_audit_status"].eq("ok")]
 
     lines = [
         "# Stockprediction2025 Warehouse Summary",
@@ -276,6 +342,33 @@ def build_markdown(summaries: dict[str, pd.DataFrame]) -> str:
     lines.extend(
         [
             "",
+            "## Analysis Priorities",
+            "",
+            markdown_table(
+                analysis_priorities,
+                ["priority", "area", "evidence", "next_step"],
+                limit=6,
+            ),
+            "",
+            "## Model Quality Gates",
+            "",
+            markdown_table(
+                quality_gates,
+                [
+                    "horizon_days",
+                    "model_name",
+                    "trust_tier",
+                    "auc_gate",
+                    "brier_gate",
+                    "return_edge_gate",
+                    "walk_forward_gate",
+                    "roc_auc",
+                    "brier_skill",
+                    "selected_return_edge",
+                ],
+                limit=9,
+            ),
+            "",
             "## Model Score By Model",
             "",
             markdown_table(
@@ -289,6 +382,44 @@ def build_markdown(summaries: dict[str, pd.DataFrame]) -> str:
                     "avg_brier_skill",
                     "avg_walk_forward_score",
                 ],
+            ),
+            "",
+            "## Paper Calibration Proxy",
+            "",
+            markdown_table(
+                calibration_proxy,
+                [
+                    "action",
+                    "horizon_days",
+                    "evaluation_horizon_days",
+                    "probability_bucket",
+                    "evaluated",
+                    "avg_probability_up",
+                    "observed_win_rate",
+                    "calibration_gap",
+                    "avg_return",
+                ],
+                limit=10,
+            ),
+            "",
+            "## Leakage Audit",
+            "",
+            (
+                "All compact leakage audit rows are `ok`."
+                if leakage_issues.empty
+                else markdown_table(
+                    leakage_issues,
+                    [
+                        "run_id",
+                        "horizon_days",
+                        "model_name",
+                        "training_end",
+                        "test_start",
+                        "embargo_dates",
+                        "leakage_audit_status",
+                    ],
+                    limit=10,
+                )
             ),
             "",
             "## Recurring Model Picks",
@@ -349,7 +480,7 @@ def build_markdown(summaries: dict[str, pd.DataFrame]) -> str:
             "",
             "## Next Analysis Work",
             "",
-            "- Export row-level test predictions so calibration curves can compare predicted probability to actual win rate.",
+            "- Export true row-level holdout predictions so calibration curves are not only paper-decision proxies.",
             "- Add leakage-audit summaries for feature availability dates, train/test windows, and embargo gaps.",
             "- Compare paper outcomes against market, sector, and same-rank watchlist baselines.",
             "- Keep large artifacts inside Open Science Lab; push only scripts, docs, and compact summary logic to GitHub.",

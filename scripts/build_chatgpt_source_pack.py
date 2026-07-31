@@ -22,6 +22,7 @@ SKIP_PATHS = {
     "CHATGPT_SOURCE_PACK.md",
     "package.json",
     "pnpm-lock.yaml",
+    "scripts/check_model_export_smoke.py",
     "scripts/check_robinhood_auth_preflight.py",
     "notebook/robinhood_auth_login.py",
     "scripts/sync_robinhood_session.py",

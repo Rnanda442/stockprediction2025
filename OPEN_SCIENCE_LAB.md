@@ -31,11 +31,12 @@ After GitHub CLI is installed and authenticated in Open Science Lab, sync all
 new successful run artifacts with one command:
 
 ```bash
-python scripts/sync_github_artifacts_to_warehouse.py --limit 10
+python scripts/run_open_science_lab_workflow.py --limit 10 --to your_email@gmail.com
 ```
 
 Runs whose artifacts are expired or missing are reported and skipped; successful
-downloads still get summarized.
+downloads still get summarized, converted into Gmail-ready reports, and uploaded
+to Google Drive when `rclone` is configured.
 
 Build a Gmail-ready summary report from the warehouse:
 
@@ -85,6 +86,8 @@ warehouse/
   summaries/
     daily/
     weekly/
+    analysis/
+    email/
   manifests/
   logs/
   scratch/
@@ -106,12 +109,10 @@ It also adds local Git exclude rules so `warehouse/` does not show up as untrack
 Once `gh` is authenticated, replace steps 3-5 with:
 
 ```bash
-python scripts/sync_github_artifacts_to_warehouse.py --limit 10
-python scripts/email_warehouse_summary.py --to your_email@gmail.com
-python scripts/upload_warehouse_to_drive.py
+python scripts/run_open_science_lab_workflow.py --limit 10 --to your_email@gmail.com
 ```
 
-Use `--send` only after Gmail SMTP secrets are configured in Open Science Lab.
+Use `--send-email` only after Gmail SMTP secrets are configured in Open Science Lab.
 Do not commit Gmail tokens, Google Drive tokens, app passwords, downloaded
 artifacts, or warehouse contents.
 
@@ -152,5 +153,6 @@ The dashboard can show clean summaries such as:
 - Which feature groups stay useful across runs.
 - Which paper decisions actually matured into profitable outcomes.
 - Which latest successful runs are already archived and which were skipped.
+- Which model quality, leakage, probability, and paper-calibration checks need attention next.
 
 The large warehouse keeps the evidence. GitHub stays easy to upload into ChatGPT projects.

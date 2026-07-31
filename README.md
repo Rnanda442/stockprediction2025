@@ -101,13 +101,16 @@ After `gh` is installed and authenticated in Open Science Lab:
 ```bash
 cd /home/jovyan/stockprediction2025
 git pull origin main
-python scripts/sync_github_artifacts_to_warehouse.py --limit 10
-python scripts/email_warehouse_summary.py --to your_email@gmail.com
-python scripts/upload_warehouse_to_drive.py
+python scripts/run_open_science_lab_workflow.py --limit 10 --to your_email@gmail.com
 ```
 
-The sync command reports and skips older runs whose artifacts are expired or
-missing, then rebuilds the compact warehouse summaries from whatever is present.
+The workflow command reports and skips older runs whose artifacts are expired or
+missing, rebuilds compact warehouse summaries, writes Gmail-ready report files,
+and uploads compact outputs to Google Drive.
+
+Compact analysis outputs include model quality gates, leakage checks,
+probability-bucket shape, paper-decision calibration proxies, artifact health,
+and prioritized next actions.
 
 The Drive upload command uses `rclone` and uploads compact warehouse outputs to
 `gdrive:stockprediction2025/warehouse` by default. One-time setup in OSL:
@@ -120,7 +123,7 @@ rclone config
 Create a Google Drive remote named `gdrive`. To also push larger run archives:
 
 ```bash
-python scripts/upload_warehouse_to_drive.py --include-run-archives
+python scripts/run_open_science_lab_workflow.py --skip-sync --skip-email --include-run-archives
 ```
 
 To send the summary through Gmail from Open Science Lab, configure secrets in
@@ -134,6 +137,8 @@ python scripts/email_warehouse_summary.py --to your_email@gmail.com --send
 
 Without `--send`, the script writes Gmail-ready Markdown, HTML, and `.eml`
 files into `warehouse/summaries/email/`.
+With the full workflow wrapper, use `--send-email` after those same secrets are
+set.
 
 ## Run Locally
 
