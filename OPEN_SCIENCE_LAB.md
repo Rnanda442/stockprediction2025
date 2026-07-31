@@ -53,6 +53,19 @@ export GMAIL_APP_PASSWORD="your_gmail_app_password"
 python scripts/email_warehouse_summary.py --to your_email@gmail.com --send
 ```
 
+Upload compact summaries and manifests to Google Drive from Open Science Lab:
+
+```bash
+mamba install -c conda-forge rclone -y
+rclone config
+python scripts/upload_warehouse_to_drive.py
+```
+
+The uploader expects a Google Drive rclone remote named `gdrive` and writes to
+`gdrive:stockprediction2025/warehouse` by default. It uploads compact summaries,
+manifests, and paper-outcome analysis. Add `--include-run-archives` only when
+you want larger archived run folders in Drive too.
+
 The script creates this local-only structure:
 
 ```text
@@ -95,11 +108,12 @@ Once `gh` is authenticated, replace steps 3-5 with:
 ```bash
 python scripts/sync_github_artifacts_to_warehouse.py --limit 10
 python scripts/email_warehouse_summary.py --to your_email@gmail.com
+python scripts/upload_warehouse_to_drive.py
 ```
 
 Use `--send` only after Gmail SMTP secrets are configured in Open Science Lab.
-Do not commit Gmail tokens, app passwords, downloaded artifacts, or warehouse
-contents.
+Do not commit Gmail tokens, Google Drive tokens, app passwords, downloaded
+artifacts, or warehouse contents.
 
 ## Commands
 

@@ -103,10 +103,25 @@ cd /home/jovyan/stockprediction2025
 git pull origin main
 python scripts/sync_github_artifacts_to_warehouse.py --limit 10
 python scripts/email_warehouse_summary.py --to your_email@gmail.com
+python scripts/upload_warehouse_to_drive.py
 ```
 
 The sync command reports and skips older runs whose artifacts are expired or
 missing, then rebuilds the compact warehouse summaries from whatever is present.
+
+The Drive upload command uses `rclone` and uploads compact warehouse outputs to
+`gdrive:stockprediction2025/warehouse` by default. One-time setup in OSL:
+
+```bash
+mamba install -c conda-forge rclone -y
+rclone config
+```
+
+Create a Google Drive remote named `gdrive`. To also push larger run archives:
+
+```bash
+python scripts/upload_warehouse_to_drive.py --include-run-archives
+```
 
 To send the summary through Gmail from Open Science Lab, configure secrets in
 the OSL shell only:
