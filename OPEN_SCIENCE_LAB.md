@@ -36,7 +36,18 @@ python scripts/run_open_science_lab_workflow.py --limit 10 --to your_email@gmail
 
 Runs whose artifacts are expired or missing are reported and skipped; successful
 downloads still get summarized, converted into Gmail-ready reports, and uploaded
-to Google Drive when `rclone` is configured.
+to a tiny Google Drive analysis pack when `rclone` is configured.
+
+The workflow also writes a Drive-ready digest from the compact CSVs:
+
+```bash
+python scripts/build_osl_analysis_digest.py
+```
+
+That creates `warehouse/drive_pack/` with `analysis_digest.md`,
+`analysis_digest.json`, `csv/recommended_charts.csv`, and the small CSV inputs
+needed for leakage, calibration, model-gate, probability-shape, paper-outcome,
+and artifact-health charts.
 
 Build a Gmail-ready summary report from the warehouse:
 
@@ -63,9 +74,11 @@ python scripts/upload_warehouse_to_drive.py
 ```
 
 The uploader expects a Google Drive rclone remote named `gdrive` and writes to
-`gdrive:stockprediction2025/warehouse` by default. It uploads compact summaries,
-manifests, and paper-outcome analysis. Add `--include-run-archives` only when
-you want larger archived run folders in Drive too.
+`gdrive:stockprediction2025/warehouse` by default. Its default `digest` profile
+uploads only `warehouse/drive_pack/` plus the local warehouse README. Add
+`--profile compact` to upload all compact summary folders, manifests, and
+paper-outcome analysis. Add `--include-run-archives` only when you want larger
+archived run folders in Drive too.
 
 The script creates this local-only structure:
 
@@ -88,6 +101,7 @@ warehouse/
     weekly/
     analysis/
     email/
+  drive_pack/
   manifests/
   logs/
   scratch/
@@ -112,6 +126,8 @@ Once `gh` is authenticated, replace steps 3-5 with:
 python scripts/run_open_science_lab_workflow.py --limit 10 --to your_email@gmail.com
 ```
 
+By default this uploads the tiny Drive pack, not the large run archives. Use
+`--drive-profile compact` when you want every compact summary folder in Drive.
 Use `--send-email` only after Gmail SMTP secrets are configured in Open Science Lab.
 Do not commit Gmail tokens, Google Drive tokens, app passwords, downloaded
 artifacts, or warehouse contents.

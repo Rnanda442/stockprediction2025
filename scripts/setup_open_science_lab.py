@@ -27,6 +27,7 @@ WAREHOUSE_DIRS = (
     "summaries/weekly",
     "summaries/email",
     "summaries/analysis",
+    "drive_pack",
     "manifests",
     "logs",
     "scratch",
@@ -172,6 +173,7 @@ def create_local_readme(warehouse):
                 "```bash",
                 "python scripts/setup_open_science_lab.py export-run --source PATH",
                 "python scripts/setup_open_science_lab.py summarize",
+                "python scripts/build_osl_analysis_digest.py",
                 "python scripts/run_open_science_lab_workflow.py --limit 10",
                 "python scripts/setup_open_science_lab.py status",
                 "```",
@@ -1027,14 +1029,27 @@ def summarize_analysis_priorities(warehouse):
                 }
             )
     if not signal_shape.empty:
-        signal_shape = numeric(signal_shape, ["extreme_share", "high_confidence_share"])
-        if signal_shape["extreme_share"].fillna(0).max() > 0.05:
+        signal_shape = numeric(signal_shape, ["rows", "extreme_share", "high_confidence_share"])
+        stable_shape = signal_shape[signal_shape["rows"].fillna(0).ge(100)].copy()
+        if stable_shape.empty:
+            stable_shape = signal_shape[signal_shape["rows"].fillna(0).ge(10)].copy()
+        if stable_shape["extreme_share"].fillna(0).max() > 0.05:
             rows.append(
                 {
                     "priority": "P2",
                     "area": "probability_shape",
-                    "evidence": "Some model outputs produce more than 5% extreme >=90% probabilities.",
+                    "evidence": "A meaningful prediction slice has more than 5% extreme >=90% probabilities.",
                     "next_step": "Compare probability buckets against observed outcomes and consider calibration.",
+                    "source_file": "summaries/analysis/prediction_signal_shape.csv",
+                }
+            )
+        elif stable_shape["high_confidence_share"].fillna(0).max() > 0.10:
+            rows.append(
+                {
+                    "priority": "P2",
+                    "area": "probability_shape",
+                    "evidence": "A meaningful prediction slice has more than 10% high-confidence >=70% probabilities.",
+                    "next_step": "Use calibration curves before trusting high-confidence ranks.",
                     "source_file": "summaries/analysis/prediction_signal_shape.csv",
                 }
             )

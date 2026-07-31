@@ -32,8 +32,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--send-email", action="store_true")
     parser.add_argument("--attach-summaries", action="store_true")
     parser.add_argument("--skip-sync", action="store_true")
+    parser.add_argument("--skip-digest", action="store_true")
     parser.add_argument("--skip-email", action="store_true")
     parser.add_argument("--skip-drive", action="store_true")
+    parser.add_argument(
+        "--drive-profile",
+        choices=("digest", "compact"),
+        default="digest",
+        help="Drive upload profile. digest uploads the tiny analysis pack only.",
+    )
     parser.add_argument("--include-run-archives", action="store_true")
     parser.add_argument("--drive-dry-run", action="store_true")
     parser.add_argument("--drive-verbose", action="store_true")
@@ -41,8 +48,8 @@ def parse_args() -> argparse.Namespace:
 
 
 def run_step(label: str, command: list[str]) -> None:
-    print(f"\n=== {label} ===")
-    print(" ".join(command))
+    print(f"\n=== {label} ===", flush=True)
+    print(" ".join(command), flush=True)
     subprocess.run(command, cwd=ROOT, check=True)
 
 
@@ -81,6 +88,17 @@ def main() -> int:
             ],
         )
 
+    if not args.skip_digest:
+        run_step(
+            "Build tiny Drive analysis pack",
+            [
+                python,
+                "scripts/build_osl_analysis_digest.py",
+                "--warehouse",
+                warehouse,
+            ],
+        )
+
     if not args.skip_email:
         email_command = [
             python,
@@ -102,6 +120,8 @@ def main() -> int:
             "scripts/upload_warehouse_to_drive.py",
             "--warehouse",
             warehouse,
+            "--profile",
+            args.drive_profile,
         ]
         if args.include_run_archives:
             drive_command.append("--include-run-archives")

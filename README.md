@@ -106,11 +106,24 @@ python scripts/run_open_science_lab_workflow.py --limit 10 --to your_email@gmail
 
 The workflow command reports and skips older runs whose artifacts are expired or
 missing, rebuilds compact warehouse summaries, writes Gmail-ready report files,
-and uploads compact outputs to Google Drive.
+builds a tiny analysis digest, and uploads the digest pack to Google Drive.
 
 Compact analysis outputs include model quality gates, leakage checks,
 probability-bucket shape, paper-decision calibration proxies, artifact health,
 and prioritized next actions.
+
+The Drive pack is intentionally small:
+
+```text
+warehouse/drive_pack/
+  analysis_digest.md
+  analysis_digest.json
+  csv/recommended_charts.csv
+  csv/*.csv
+```
+
+It contains the automated read on what is working, what is failing, and which
+charts to make next. The larger run archives stay in Open Science Lab.
 
 The Drive upload command uses `rclone` and uploads compact warehouse outputs to
 `gdrive:stockprediction2025/warehouse` by default. One-time setup in OSL:
@@ -124,6 +137,12 @@ Create a Google Drive remote named `gdrive`. To also push larger run archives:
 
 ```bash
 python scripts/run_open_science_lab_workflow.py --skip-sync --skip-email --include-run-archives
+```
+
+To upload all compact summary folders instead of only the digest pack:
+
+```bash
+python scripts/run_open_science_lab_workflow.py --skip-sync --skip-email --drive-profile compact
 ```
 
 To send the summary through Gmail from Open Science Lab, configure secrets in

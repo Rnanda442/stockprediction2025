@@ -17,7 +17,12 @@ DEFAULT_WAREHOUSE = ROOT / "warehouse"
 DEFAULT_REMOTE = os.getenv("GDRIVE_RCLONE_REMOTE", "gdrive")
 DEFAULT_DRIVE_PATH = os.getenv("GDRIVE_WAREHOUSE_PATH", "stockprediction2025/warehouse")
 
+DIGEST_ITEMS = (
+    "drive_pack",
+)
+
 COMPACT_ITEMS = (
+    "drive_pack",
     "summaries",
     "manifests",
     "paper_outcomes",
@@ -47,6 +52,15 @@ def parse_args() -> argparse.Namespace:
         "--drive-path",
         default=DEFAULT_DRIVE_PATH,
         help="Destination folder path inside the Google Drive remote.",
+    )
+    parser.add_argument(
+        "--profile",
+        choices=("digest", "compact"),
+        default=os.getenv("GDRIVE_UPLOAD_PROFILE", "digest"),
+        help=(
+            "digest uploads the tiny Drive pack only; compact also uploads all "
+            "summary folders, manifests, and paper outcomes."
+        ),
     )
     parser.add_argument(
         "--include-run-archives",
@@ -148,10 +162,28 @@ def upload_readme(warehouse: Path, remote: str, drive_path: str, *, dry_run: boo
 def selected_items(args: argparse.Namespace) -> list[str]:
     if args.only:
         return [item.strip().strip("/\\") for item in args.only if item.strip()]
-    items = list(COMPACT_ITEMS)
+    items = list(DIGEST_ITEMS if args.profile == "digest" else COMPACT_ITEMS)
     if args.include_run_archives:
         items.extend(LARGE_ITEMS)
     return items
+
+
+def ensure_digest_pack(warehouse: Path, profile: str) -> None:
+    if profile != "digest":
+        return
+    pack_dir = warehouse / "drive_pack"
+    if pack_dir.exists() and any(pack_dir.iterdir()):
+        return
+    print("Drive pack missing; building compact analysis digest first.")
+    import build_osl_analysis_digest
+
+    build_osl_analysis_digest.write_pack(
+        argparse.Namespace(
+            warehouse=str(warehouse),
+            output_dir=str(pack_dir),
+            min_shape_rows=100,
+        )
+    )
 
 
 def main() -> int:
@@ -159,6 +191,7 @@ def main() -> int:
     warehouse = resolve_path(args.warehouse)
     if not warehouse.exists():
         raise RuntimeError(f"Warehouse does not exist: {warehouse}")
+    ensure_digest_pack(warehouse, args.profile)
     require_rclone(args.remote)
 
     uploaded = 0
@@ -180,7 +213,13 @@ def main() -> int:
         f"destination={args.remote.rstrip(':')}:{args.drive_path.strip('/')}"
     )
     if not args.include_run_archives and not args.only:
-        print("Compact mode only. Add --include-run-archives to upload larger run folders.")
+        if args.profile == "digest":
+            print(
+                "Digest profile only. Add --profile compact for all compact summaries, "
+                "or --include-run-archives for larger run folders."
+            )
+        else:
+            print("Compact profile only. Add --include-run-archives to upload larger run folders.")
     return 0
 
 
