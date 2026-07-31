@@ -1343,6 +1343,148 @@ def render_project_compass(context):
         )
 
 
+def _model_trust_call():
+    evaluation = data.model_evaluation()
+    if evaluation.empty:
+        return "Waiting", "No champion rows exported yet.", "#d88912"
+    frame = evaluation.copy()
+    for column in ("roc_auc", "brier_skill", "accuracy", "champion_score"):
+        if column in frame.columns:
+            frame[column] = pd.to_numeric(frame[column], errors="coerce")
+    mean_auc = frame["roc_auc"].mean() if "roc_auc" in frame.columns else np.nan
+    min_brier = frame["brier_skill"].min() if "brier_skill" in frame.columns else np.nan
+    if (not pd.isna(mean_auc) and mean_auc < 0.55) or (
+        not pd.isna(min_brier) and min_brier < 0
+    ):
+        return (
+            "Research only",
+            "Latest champions passed validation, but edge/calibration are still modest.",
+            "#c4587a",
+        )
+    return (
+        "Cautious review",
+        "Champion metrics are improving; still require paper outcomes before tuning weights.",
+        "#d88912",
+    )
+
+
+def render_personal_run_review(context):
+    health = context["health"]
+    trust_label, trust_detail, trust_color = _model_trust_call()
+    validation = str(health.get("validation_status", "not checked") or "not checked")
+    market_day = short_date(health.get("latest_market_date"))
+    coverage = health_float(health, "latest_market_coverage")
+    coverage_text = "--" if coverage is None else f"{coverage:.1%}"
+    run_id = str(health.get("github_run_id", "") or "").strip()
+    cards = [
+        (
+            "Last run",
+            "Passed validation" if validation.lower() == "passed" else validation.title(),
+            f"Run {run_id or '--'} / market {market_day}",
+            "#1f8f5f" if validation.lower() == "passed" else "#d88912",
+        ),
+        (
+            "Model trust",
+            trust_label,
+            trust_detail,
+            trust_color,
+        ),
+        (
+            "Data shape",
+            coverage_text,
+            "Latest-date market coverage for ranked outputs.",
+            "#2e6fbb",
+        ),
+        (
+            "Next build",
+            "Explain the why",
+            "Make each top ticker show confidence, risk, driver, and do-not-trust flags.",
+            "#6f7782",
+        ),
+    ]
+    card_html = "".join(
+        f"""
+        <div class="personal-card" style="border-top-color:{color};">
+          <small>{html.escape(label)}</small>
+          <strong>{html.escape(value)}</strong>
+          <span>{html.escape(detail)}</span>
+        </div>
+        """
+        for label, value, detail, color in cards
+    )
+    st.subheader("Gargi's run review")
+    st.markdown(
+        f"""
+        <div class="personal-grid">{card_html}</div>
+        <style>
+        .personal-grid {{
+          display:grid;
+          grid-template-columns:repeat(4,1fr);
+          gap:.65rem;
+          margin:.25rem 0 1rem;
+        }}
+        .personal-card {{
+          border:1px solid rgba(128,128,128,.22);
+          border-top:4px solid;
+          border-radius:8px;
+          padding:.75rem .85rem;
+          background:rgba(128,128,128,.032);
+          min-height:6rem;
+        }}
+        .personal-card small {{
+          display:block;
+          color:rgba(80,86,96,.92);
+          font-size:.7rem;
+          text-transform:uppercase;
+          letter-spacing:.06em;
+        }}
+        .personal-card strong {{
+          display:block;
+          margin-top:.18rem;
+          font-size:1.08rem;
+          line-height:1.18;
+        }}
+        .personal-card span {{
+          display:block;
+          margin-top:.3rem;
+          color:rgba(70,76,86,.9);
+          font-size:.84rem;
+          line-height:1.28;
+        }}
+        @media (max-width: 900px) {{
+          .personal-grid {{ grid-template-columns:1fr 1fr; }}
+        }}
+        @media (max-width: 560px) {{
+          .personal-grid {{ grid-template-columns:1fr; }}
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    left, right = st.columns((1, 1))
+    with left:
+        st.markdown("#### What we said we'd do after the action")
+        _render_step_rows(
+            [
+                ("Map the system", "Trace data, filters, vector features, similarity, models, simulations, and decisions."),
+                ("Grade trust", "Trust only after out-of-sample edge, stable walk-forward behavior, calibration, and acceptable downside."),
+                ("Triage the run", "Check validation, timings, champions, ANN vs baseline, Monte Carlo risk, and top picks."),
+                ("Improve the homepage", "Show best opportunities, highest risk, confidence, changes, and why each ticker surfaced."),
+            ]
+        )
+    with right:
+        st.markdown("#### This run's honest read")
+        _render_step_rows(
+            [
+                ("Pipeline works", "The latest action completed, exported artifacts, and passed validation."),
+                ("Notebook is still slow", "The full notebook stage finished, but it remains the main runtime target."),
+                ("Model edge is modest", "Treat current predictions as research signals until repeated paper outcomes confirm them."),
+                ("Next fix", "Repair detailed notebook stage manifest upload, then add do-not-trust states to ticker panels."),
+            ]
+        )
+
+
 def render_pipeline_funnel(context):
     health = context["health"]
     board = context["board"]
@@ -1964,10 +2106,11 @@ def render_overview():
     context = _daily_decision_context()
     health = context["health"]
 
-    st.title("Stock Prediction Command Center")
-    st.caption("Freshness, trust gates, model edge, risk, and paper actions in one place.")
+    st.title("Gargi's Stock Research Command Center")
+    st.caption("Private paper-trading research workspace for freshness, trust gates, model edge, risk, and next moves.")
     render_run_snapshot(context)
     render_overview_readiness(context)
+    render_personal_run_review(context)
     render_project_compass(context)
     if context["ranked_decisions"].empty:
         st.info("No ranked decisions are available yet. Run the pipeline to initialize the dashboard.")

@@ -147,3 +147,42 @@ Block or downgrade a model/horizon if:
 The best move is not the highest probability row. The best move is the ticker
 where model confidence, watchlist quality, liquidity, portfolio fit, and recent
 paper outcome evidence all agree.
+
+## How To Judge A Completed Run
+
+Use this after each GitHub Actions run finishes. The goal is to decide what the
+run proves, what it does not prove, and what the next best move is.
+
+Capability map:
+
+- Confirm the chain completed: Robinhood data, ticker filters, historical
+  database, vector features, similarity families, shortlist, model tournament,
+  Monte Carlo, paper decisions, dashboard export, and validation.
+- Check which output files and dashboard tables changed.
+- If the notebook was slow, inspect stage timings before changing model code.
+
+Model trust rubric:
+
+- Trust a signal only when it beats a simple baseline out of sample.
+- Prefer models that are stable across walk-forward splits, not just one holdout.
+- Treat weak ROC AUC or negative Brier skill as a do-not-trust warning even when
+  accuracy looks acceptable.
+- Require enough rows, clear train/test dates, acceptable downside risk, and
+  paper outcome confirmation before raising decision weights.
+
+Post-run triage:
+
+- First check validation status, data freshness, and latest market coverage.
+- Then compare champions by horizon and ask whether ANN beat the simpler models.
+- Review Monte Carlo downside and target probabilities for the top candidates.
+- Separate "pipeline passed" from "model is trustworthy"; those are different
+  claims.
+
+Next UI decisions:
+
+- Make the first page answer: best opportunities, highest risk, model
+  confidence, what changed, and why each ticker surfaced.
+- Show a clear do-not-trust state when calibration, walk-forward stability, or
+  downside risk is weak.
+- Keep the app personal: it should tell Gargi what to inspect next, not just
+  display tables.
