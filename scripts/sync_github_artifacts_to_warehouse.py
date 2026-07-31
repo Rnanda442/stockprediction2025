@@ -63,6 +63,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Do not rebuild warehouse summary CSVs after syncing.",
     )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Exit non-zero if any individual run fails to download or export.",
+    )
     parser.add_argument("--dry-run", action="store_true", help="Print actions only.")
     return parser.parse_args()
 
@@ -161,6 +166,20 @@ def export_download(args: argparse.Namespace, warehouse: Path, run_id: str, sour
     warehouse_tools.export_run(export_args, warehouse)
 
 
+def print_run_failure(run_id: str, exc: BaseException) -> None:
+    print(f"Skipping run {run_id}: download/export failed.")
+    if isinstance(exc, subprocess.CalledProcessError):
+        print(f"  command: {' '.join(str(part) for part in exc.cmd)}")
+        print(f"  exit code: {exc.returncode}")
+        detail = (exc.stderr or exc.stdout or "").strip()
+        if detail:
+            print(f"  detail: {detail[:1200]}")
+        return
+    detail = str(exc).strip()
+    if detail:
+        print(f"  detail: {detail[:1200]}")
+
+
 def main() -> int:
     args = parse_args()
     warehouse = warehouse_tools.resolve_path(args.warehouse)
@@ -170,6 +189,8 @@ def main() -> int:
 
     imported = 0
     skipped = 0
+    failed = 0
+    failed_ids: list[str] = []
     known_ids = existing_run_ids(warehouse)
     runs = successful_runs(args)
     if not runs:
@@ -189,17 +210,27 @@ def main() -> int:
             print(f"Would download/export run {run_id}: {run.get('url', '')}")
             imported += 1
             continue
-        download_artifact(args, run_id, source)
-        export_download(args, warehouse, run_id, source)
+        try:
+            download_artifact(args, run_id, source)
+            export_download(args, warehouse, run_id, source)
+        except (OSError, RuntimeError, ValueError, subprocess.CalledProcessError) as exc:
+            failed += 1
+            failed_ids.append(run_id)
+            print_run_failure(run_id, exc)
+            if not args.keep_downloads:
+                shutil.rmtree(source, ignore_errors=True)
+            continue
         known_ids.add(run_id)
         imported += 1
         if not args.keep_downloads:
             shutil.rmtree(source, ignore_errors=True)
 
-    if imported and not args.skip_summarize and not args.dry_run:
+    if not args.skip_summarize and not args.dry_run:
         warehouse_tools.summarize(warehouse)
-    print(f"Sync complete: imported={imported} skipped={skipped} warehouse={warehouse}")
-    return 0
+    print(f"Sync complete: imported={imported} skipped={skipped} failed={failed} warehouse={warehouse}")
+    if failed_ids:
+        print("Failed runs: " + ", ".join(failed_ids))
+    return 1 if failed and args.strict else 0
 
 
 if __name__ == "__main__":

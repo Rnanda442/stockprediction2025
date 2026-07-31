@@ -34,6 +34,9 @@ new successful run artifacts with one command:
 python scripts/sync_github_artifacts_to_warehouse.py --limit 10
 ```
 
+Runs whose artifacts are expired or missing are reported and skipped; successful
+downloads still get summarized.
+
 Build a Gmail-ready summary report from the warehouse:
 
 ```bash

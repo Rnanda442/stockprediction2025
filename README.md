@@ -105,6 +105,9 @@ python scripts/sync_github_artifacts_to_warehouse.py --limit 10
 python scripts/email_warehouse_summary.py --to your_email@gmail.com
 ```
 
+The sync command reports and skips older runs whose artifacts are expired or
+missing, then rebuilds the compact warehouse summaries from whatever is present.
+
 To send the summary through Gmail from Open Science Lab, configure secrets in
 the OSL shell only:
 
