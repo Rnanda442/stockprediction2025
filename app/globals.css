@@ -1,0 +1,400 @@
+:root {
+  --bg: #f6f4ee;
+  --ink: #14161a;
+  --muted: #626a73;
+  --line: #d9d7ce;
+  --panel: #ffffff;
+  --green: #1f8f5f;
+  --blue: #2e6fbb;
+  --red: #c4587a;
+  --amber: #d88912;
+  --soft-green: #eaf5ef;
+  --soft-blue: #eaf1fb;
+  --soft-red: #faedf2;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg);
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Arial, Helvetica, sans-serif;
+  letter-spacing: 0;
+}
+
+main {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 28px 0 44px;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  max-width: 850px;
+  font-size: clamp(2.1rem, 4vw, 4.15rem);
+  line-height: 0.98;
+  letter-spacing: 0;
+}
+
+h2 {
+  font-size: 1.35rem;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.topbar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 24px;
+  align-items: end;
+  padding: 12px 0 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.eyebrow {
+  margin-bottom: 10px;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.lede {
+  max-width: 720px;
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.48;
+}
+
+.status-lockup {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.status {
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-ok {
+  background: var(--soft-green);
+  color: #0e6f47;
+  border-color: #b9dcc8;
+}
+
+.status-warn {
+  background: var(--soft-red);
+  color: #9a3453;
+  border-color: #e7bfd0;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.metric,
+.champion,
+.simulation {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.metric {
+  min-height: 118px;
+  padding: 16px;
+}
+
+.metric span,
+dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.metric strong {
+  display: block;
+  margin: 8px 0 7px;
+  font-size: 1.55rem;
+}
+
+.metric small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.band,
+.next {
+  margin-top: 18px;
+  padding: 22px 0;
+  border-top: 1px solid var(--line);
+}
+
+.trust-band {
+  display: grid;
+  grid-template-columns: 0.75fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.trust-band p {
+  color: var(--muted);
+  line-height: 1.48;
+}
+
+.trust-facts {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.trust-facts span {
+  border-radius: 999px;
+  background: var(--soft-blue);
+  color: #234f86;
+  padding: 8px 11px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1.05fr;
+  gap: 28px;
+  margin-top: 8px;
+  padding: 20px 0;
+  border-top: 1px solid var(--line);
+}
+
+.section-heading {
+  margin-bottom: 12px;
+}
+
+.champion-list,
+.simulation-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.champion {
+  padding: 14px;
+}
+
+.champion > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.champion > div:first-child span {
+  color: var(--muted);
+  text-align: right;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+dt {
+  margin-bottom: 4px;
+}
+
+dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.watch-table {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.watch-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 0.85fr 0.9fr;
+  gap: 10px;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--line);
+  font-size: 0.9rem;
+}
+
+.watch-row:first-child {
+  border-top: 0;
+}
+
+.watch-head {
+  min-height: 36px;
+  background: #eeece5;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.positive {
+  color: var(--green);
+}
+
+.negative {
+  color: var(--red);
+}
+
+.simulation-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.simulation {
+  padding: 16px;
+}
+
+.simulation-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 18px;
+}
+
+.simulation-title strong {
+  font-size: 1.5rem;
+}
+
+.simulation-title span {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.range {
+  position: relative;
+  height: 56px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--soft-red), var(--soft-green));
+}
+
+.range span,
+.range b {
+  position: absolute;
+  top: 18px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 4px 6px;
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.range b {
+  color: var(--green);
+}
+
+.simulation dl {
+  grid-template-columns: 1fr 1fr;
+}
+
+.next ol {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  counter-reset: next;
+}
+
+.next li {
+  min-height: 132px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 14px;
+  color: var(--muted);
+  line-height: 1.42;
+  counter-increment: next;
+}
+
+.next li::before {
+  content: counter(next);
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-bottom: 12px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .topbar,
+  .trust-band,
+  .split {
+    grid-template-columns: 1fr;
+  }
+
+  .status-lockup {
+    justify-content: flex-start;
+  }
+
+  .metric-grid,
+  .simulation-grid,
+  .next ol {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  main {
+    width: min(100% - 22px, 1180px);
+    padding-top: 18px;
+  }
+
+  h1 {
+    font-size: 2.15rem;
+  }
+
+  .metric-grid,
+  .simulation-grid,
+  .next ol,
+  dl {
+    grid-template-columns: 1fr;
+  }
+
+  .watch-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .watch-head {
+    display: none;
+  }
+}

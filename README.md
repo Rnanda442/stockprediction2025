@@ -9,6 +9,7 @@ large local artifacts.
 ## Current System
 
 - Frontend: Streamlit in `dashboard/app.py`
+- Sites view: lightweight deployable dashboard in `app/`
 - Backend helpers: `backend/services.py`
 - Pipeline: `.github/workflows/stock-run.yml`
 - Core model builder: `scripts/build_model_baseline.py`
@@ -16,26 +17,29 @@ large local artifacts.
 - Weekly ML plan: `WEEKLY_ML_RUN_PLAN.md`
 - Live trading: disabled; this is research and paper-decision review only
 
-Latest successful full run used by the last committed dashboard snapshot before
-the repo was trimmed:
+Latest successful full run used by the current dashboard snapshots:
 
-- Run: https://github.com/Rnanda442/stockprediction2025/actions/runs/30394124656
-- Exported: `2026-07-28T21:01:39Z`
-- Market date: `2026-07-27`
+- Run: https://github.com/Rnanda442/stockprediction2025/actions/runs/30587429387
+- Exported: `2026-07-31T01:42:09Z`
+- Market date: `2026-07-29`
 - Coverage: `98.9%`
-- Model tournament rows: `9`
-- Candidate prediction rows: `22,833`
-- Champions: `5d sgd_logistic`, `20d hist_gradient_boosting`,
+- Model prediction rows: `7,644`
+- Monte Carlo rows: `180`
+- Validation: `passed`
+- Champions: `5d sgd_logistic`, `20d sgd_logistic`,
   `60d hist_gradient_boosting`
 
 ## Source Layout
 
 ```text
 .github/workflows/stock-run.yml       Cloud pipeline
+app/                                  Sites dashboard page
 backend/                              Read-only service helpers
 dashboard/                            Streamlit frontend and domain helpers
+build/                                Sites packaging helper
 notebook/2025summerstock-Copy6.ipynb  Main data-refresh notebook
 scripts/                              Pipeline, model, export, and validation scripts
+worker/                               Sites Cloudflare Worker entry
 WEEKLY_ML_RUN_PLAN.md                 Daily model run and review plan
 ```
 
@@ -103,6 +107,19 @@ To start Streamlit after `dashboard_data.db` exists:
 ```powershell
 $env:DASHBOARD_PASSWORD = "choose-a-local-password"
 python -m streamlit run dashboard/app.py --server.headless=true --server.address=127.0.0.1 --server.port=8501
+```
+
+To preview the deployable Sites dashboard:
+
+```powershell
+pnpm install --ignore-scripts
+pnpm run dev -- --host 127.0.0.1 --port 8601
+```
+
+To build the Sites dashboard for deployment:
+
+```powershell
+pnpm run build
 ```
 
 ## Validation

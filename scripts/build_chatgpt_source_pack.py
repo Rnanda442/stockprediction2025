@@ -18,9 +18,21 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = ROOT.parent / f"{ROOT.name}_chatgpt_source_pack.md"
 SKIP_PATHS = {
+    ".gitignore",
     "CHATGPT_SOURCE_PACK.md",
+    "package.json",
+    "pnpm-lock.yaml",
     "stockprediction2025_chatgpt_source_pack.md",
+    "tsconfig.json",
+    "vite.config.ts",
 }
+SKIP_PREFIXES = (
+    ".openai/",
+    "app/",
+    "build/",
+    "public/",
+    "worker/",
+)
 LANG_BY_SUFFIX = {
     ".md": "markdown",
     ".py": "python",
@@ -46,7 +58,7 @@ def tracked_paths() -> list[Path]:
     files = []
     for raw_path in git_stdout("ls-files").splitlines():
         rel = raw_path.replace("\\", "/")
-        if rel in SKIP_PATHS:
+        if rel in SKIP_PATHS or rel.startswith(SKIP_PREFIXES):
             continue
         files.append(ROOT / rel)
     return files
