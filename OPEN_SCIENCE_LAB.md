@@ -27,6 +27,29 @@ python scripts/setup_open_science_lab.py export-run --source /path/to/stock-anal
 python scripts/setup_open_science_lab.py summarize
 ```
 
+After GitHub CLI is installed and authenticated in Open Science Lab, sync all
+new successful run artifacts with one command:
+
+```bash
+python scripts/sync_github_artifacts_to_warehouse.py --limit 10
+```
+
+Build a Gmail-ready summary report from the warehouse:
+
+```bash
+python scripts/email_warehouse_summary.py --to your_email@gmail.com
+```
+
+That writes Markdown, HTML, and `.eml` files under
+`warehouse/summaries/email/`. To send directly through Gmail SMTP, set secrets
+only in Open Science Lab:
+
+```bash
+export GMAIL_SMTP_USER="your_email@gmail.com"
+export GMAIL_APP_PASSWORD="your_gmail_app_password"
+python scripts/email_warehouse_summary.py --to your_email@gmail.com --send
+```
+
 The script creates this local-only structure:
 
 ```text
@@ -64,6 +87,17 @@ It also adds local Git exclude rules so `warehouse/` does not show up as untrack
 7. Push only code changes or compact summary logic back to GitHub.
 8. Let Streamlit read compact dashboard summaries instead of full raw datasets.
 
+Once `gh` is authenticated, replace steps 3-5 with:
+
+```bash
+python scripts/sync_github_artifacts_to_warehouse.py --limit 10
+python scripts/email_warehouse_summary.py --to your_email@gmail.com
+```
+
+Use `--send` only after Gmail SMTP secrets are configured in Open Science Lab.
+Do not commit Gmail tokens, app passwords, downloaded artifacts, or warehouse
+contents.
+
 ## Commands
 
 Check the warehouse:
@@ -100,5 +134,6 @@ The dashboard can show clean summaries such as:
 - Whether Monte Carlo bands are too optimistic or too conservative.
 - Which feature groups stay useful across runs.
 - Which paper decisions actually matured into profitable outcomes.
+- Which latest successful runs are already archived and which were skipped.
 
 The large warehouse keeps the evidence. GitHub stays easy to upload into ChatGPT projects.

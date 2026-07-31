@@ -25,6 +25,7 @@ WAREHOUSE_DIRS = (
     "paper_outcomes",
     "summaries/daily",
     "summaries/weekly",
+    "summaries/email",
     "manifests",
     "logs",
     "scratch",

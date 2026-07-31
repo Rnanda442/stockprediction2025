@@ -91,6 +91,32 @@ Default model candidates:
 sgd_logistic,mlp_ann,hist_gradient_boosting
 ```
 
+## Open Science Lab Analysis Loop
+
+Open Science Lab should hold downloaded GitHub Actions artifacts and generated
+analysis summaries. The laptop should only pull/push source code.
+
+After `gh` is installed and authenticated in Open Science Lab:
+
+```bash
+cd /home/jovyan/stockprediction2025
+git pull origin main
+python scripts/sync_github_artifacts_to_warehouse.py --limit 10
+python scripts/email_warehouse_summary.py --to your_email@gmail.com
+```
+
+To send the summary through Gmail from Open Science Lab, configure secrets in
+the OSL shell only:
+
+```bash
+export GMAIL_SMTP_USER="your_email@gmail.com"
+export GMAIL_APP_PASSWORD="your_gmail_app_password"
+python scripts/email_warehouse_summary.py --to your_email@gmail.com --send
+```
+
+Without `--send`, the script writes Gmail-ready Markdown, HTML, and `.eml`
+files into `warehouse/summaries/email/`.
+
 ## Run Locally
 
 The lean repo does not commit `dashboard_data.db`. Sync or build it first.
