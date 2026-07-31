@@ -337,6 +337,12 @@ def export_run(args, warehouse):
         "bytes_copied": int(sum(item["bytes"] for item in copied)),
         "files": copied,
     }
+    if not copied:
+        message = "No known output files found. Pass --source to a downloaded artifact folder."
+        if args.dry_run:
+            manifest["warning"] = message
+        else:
+            raise RuntimeError(message)
     if args.dry_run:
         print(json.dumps(manifest, indent=2))
     else:
@@ -348,8 +354,6 @@ def export_run(args, warehouse):
         print(f"Files copied: {manifest['files_copied']}")
         print(f"Bytes copied: {manifest['bytes_copied']:,}")
         print(f"Run manifest: {run_manifest}")
-        if not copied:
-            print("No known output files found. Pass --source to a downloaded artifact folder.")
     return manifest
 
 
