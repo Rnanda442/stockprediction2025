@@ -184,5 +184,5 @@ Next UI decisions:
   confidence, what changed, and why each ticker surfaced.
 - Show a clear do-not-trust state when calibration, walk-forward stability, or
   downside risk is weak.
-- Keep the app personal: it should tell Gargi what to inspect next, not just
+- Keep the app personal: it should tell the person using it what to inspect next, not just
   display tables.

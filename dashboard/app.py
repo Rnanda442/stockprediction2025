@@ -1412,7 +1412,7 @@ def render_personal_run_review(context):
         """
         for label, value, detail, color in cards
     )
-    st.subheader("Gargi's run review")
+    st.subheader("Your run review")
     st.markdown(
         f"""
         <div class="personal-grid">{card_html}</div>
@@ -2106,7 +2106,7 @@ def render_overview():
     context = _daily_decision_context()
     health = context["health"]
 
-    st.title("Gargi's Stock Research Command Center")
+    st.title("Personal Stock Research Command Center")
     st.caption("Private paper-trading research workspace for freshness, trust gates, model edge, risk, and next moves.")
     render_run_snapshot(context)
     render_overview_readiness(context)
