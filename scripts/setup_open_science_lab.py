@@ -174,6 +174,8 @@ def create_local_readme(warehouse):
                 "python scripts/setup_open_science_lab.py export-run --source PATH",
                 "python scripts/setup_open_science_lab.py summarize",
                 "python scripts/build_osl_analysis_digest.py",
+                "python scripts/render_osl_analysis_charts.py",
+                "python scripts/publish_osl_site_snapshot.py --dry-run",
                 "python scripts/run_open_science_lab_workflow.py --limit 10",
                 "python scripts/setup_open_science_lab.py status",
                 "```",

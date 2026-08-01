@@ -106,11 +106,12 @@ python scripts/run_open_science_lab_workflow.py --limit 10 --to your_email@gmail
 
 The workflow command reports and skips older runs whose artifacts are expired or
 missing, rebuilds compact warehouse summaries, writes Gmail-ready report files,
-builds a tiny analysis digest, and uploads the digest pack to Google Drive.
+builds a tiny analysis digest, renders the supported charts, uploads the digest
+pack to Google Drive, and publishes a tiny live snapshot for the Sites dashboard.
 
 Compact analysis outputs include model quality gates, leakage checks,
 probability-bucket shape, paper-decision calibration proxies, artifact health,
-and prioritized next actions.
+feature-group stability, and a prioritized model action plan with acceptance tests.
 
 The Drive pack is intentionally small:
 
@@ -118,12 +119,25 @@ The Drive pack is intentionally small:
 warehouse/drive_pack/
   analysis_digest.md
   analysis_digest.json
+  site_snapshot.json
+  charts/*.png
+  charts/chart_status.json
+  csv/model_action_plan.csv
   csv/recommended_charts.csv
   csv/*.csv
 ```
 
-It contains the automated read on what is working, what is failing, and which
-charts to make next. The larger run archives stay in Open Science Lab.
+It contains the automated read on what is working, what is failing, rendered
+charts when the evidence is sufficient, and the changes to review next. The
+larger run archives stay in Open Science Lab. The site reads the mirrored
+`public/data/latest-analysis.json` snapshot, so a new OSL run can refresh the
+dashboard without rebuilding or redeploying the site.
+
+To run locally without publishing the Sites snapshot:
+
+```bash
+python scripts/run_open_science_lab_workflow.py --skip-site-publish
+```
 
 The Drive upload command uses `rclone` and uploads compact warehouse outputs to
 `gdrive:stockprediction2025/warehouse` by default. One-time setup in OSL:

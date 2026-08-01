@@ -1,94 +1,146 @@
-export const run = {
-  runId: "30587429387",
-  commit: "2bc873e",
-  marketDate: "2026-07-29",
-  checkedAt: "2026-07-31 01:42 UTC",
-  duration: "3h 11m",
-  validation: "passed",
-  coverage: 0.988619,
-  predictionRows: 7644,
-  monteCarloRows: 180,
-  modelTrust: "Research only",
-  trustReason:
-    "The pipeline passed validation, but champion ROC AUC is near 0.50 and Brier skill is negative, so predictions stay paper-only.",
+import type { SiteSnapshot } from "./site-types";
+
+export const REMOTE_SNAPSHOT_URL =
+  "https://raw.githubusercontent.com/Rnanda442/stockprediction2025/main/public/data/latest-analysis.json";
+
+export const fallbackSnapshot: SiteSnapshot = {
+  schema_version: 1,
+  generated_at: "2026-07-31T01:42:00+00:00",
+  snapshot_fingerprint: "bundled-30587429387",
+  source: {
+    kind: "bundled_fallback",
+    latest_run_id: "30587429387",
+    latest_market_date: "2026-07-29",
+    run_archives: 7,
+    latest_archive_megabytes: 131.8,
+  },
+  trust: {
+    status: "Research only",
+    paper_ready_champions: 0,
+    leakage_issue_rows: 0,
+    paper_buy_evaluated: 1,
+    reason:
+      "The pipeline passed its compact checks, but champion discrimination is near random and probability skill is negative.",
+  },
+  key_metrics: {
+    latest_run_id: "30587429387",
+    latest_market_date: "2026-07-29",
+    run_archives: 7,
+    latest_archive_megabytes: 131.8,
+    paper_ready_champions: 0,
+    leakage_issue_rows: 0,
+    paper_buy_evaluated: 1,
+  },
+  findings: [
+    {
+      priority: "P0",
+      area: "model_trust",
+      finding: "No champion clears every quality gate.",
+      evidence:
+        "Champion ROC AUC is close to 0.50 and Brier skill is negative across the current horizons.",
+      next_step:
+        "Improve calibration and walk-forward stability before using high-confidence ranks.",
+    },
+    {
+      priority: "P1",
+      area: "leakage_audit",
+      finding: "Compact leakage checks pass.",
+      evidence:
+        "Train/test order, embargo, walk-forward, and metric-spike checks are currently clear.",
+      next_step:
+        "Add feature-availability timestamps so every input is proven prediction-time safe.",
+    },
+  ],
+  model_actions: [
+    {
+      priority: "P0",
+      component: "ranking_discrimination",
+      recommended_change:
+        "Run temporal feature ablations and compare every candidate with the simple logistic baseline.",
+      evidence: "Current champion ROC AUC ranges from 0.500 to 0.511.",
+      acceptance_test:
+        "Walk-forward ROC AUC reaches at least 0.52 without test-set tuning.",
+      execution: "review_required",
+    },
+    {
+      priority: "P0",
+      component: "probability_calibration",
+      recommended_change:
+        "Fit calibration inside training folds and cap confidence until it validates.",
+      evidence: "Champion Brier skill is negative for all three horizons.",
+      acceptance_test:
+        "Out-of-sample Brier skill is non-negative and reliability buckets track outcomes.",
+      execution: "review_required",
+    },
+    {
+      priority: "P1",
+      component: "paper_validation",
+      recommended_change:
+        "Keep decisions paper-only while buy, watch, and avoid outcomes mature.",
+      evidence: "The current paper buy sample is too small for a stable conclusion.",
+      acceptance_test:
+        "At least 50 matching-horizon buy outcomes exist with baseline comparisons.",
+      execution: "automated_by_osl",
+    },
+  ],
+  charts: {
+    model_gate_matrix: [
+      {
+        horizon_days: 5,
+        model_name: "SGD logistic baseline",
+        trust_tier: "watch",
+        auc_gate: false,
+        brier_gate: false,
+        return_edge_gate: true,
+        walk_forward_gate: false,
+        sample_gate: true,
+        roc_auc: 0.51072,
+        brier_skill: -0.00871,
+        selected_return_edge: 0.00511,
+      },
+      {
+        horizon_days: 20,
+        model_name: "SGD logistic baseline",
+        trust_tier: "research_only",
+        auc_gate: false,
+        brier_gate: false,
+        return_edge_gate: true,
+        walk_forward_gate: false,
+        sample_gate: true,
+        roc_auc: 0.49992,
+        brier_skill: -0.01441,
+        selected_return_edge: 0.02038,
+      },
+      {
+        horizon_days: 60,
+        model_name: "Histogram gradient boosting",
+        trust_tier: "watch",
+        auc_gate: false,
+        brier_gate: false,
+        return_edge_gate: true,
+        walk_forward_gate: false,
+        sample_gate: true,
+        roc_auc: 0.50834,
+        brier_skill: -0.01163,
+        selected_return_edge: 0.04893,
+      },
+    ],
+    calibration_proxy: [],
+    probability_signal_shape: [],
+    paper_outcomes: [],
+    leakage_audit: [],
+    artifact_health: [
+      {
+        run_id: "30587429387",
+        latest_market_date: "2026-07-29",
+        megabytes_copied: 131.8,
+        analysis_ready: true,
+        compact_only: false,
+      },
+    ],
+    feature_group_stability: [],
+    model_score_weekly: [],
+  },
+  disclaimer:
+    "Research and paper-decision review only. No live trading recommendation.",
 };
-
-export const champions = [
-  {
-    horizon: "5d",
-    model: "SGD logistic baseline",
-    accuracy: 0.51038,
-    rocAuc: 0.51072,
-    brierSkill: -0.00871,
-    selectedReturn: 0.00511,
-    championScore: 0.02676,
-  },
-  {
-    horizon: "20d",
-    model: "SGD logistic baseline",
-    accuracy: 0.51095,
-    rocAuc: 0.49992,
-    brierSkill: -0.01441,
-    selectedReturn: 0.02038,
-    championScore: 0.00981,
-  },
-  {
-    horizon: "60d",
-    model: "Histogram gradient boosting",
-    accuracy: 0.53753,
-    rocAuc: 0.50834,
-    brierSkill: -0.01163,
-    selectedReturn: 0.04893,
-    championScore: -0.01051,
-  },
-];
-
-export const watchlist = [
-  { rank: 1, ticker: "ILMN", confidence: 100.0, price: 194.82, totalReturn: -0.59399 },
-  { rank: 2, ticker: "ABBV", confidence: 100.0, price: 263.3, totalReturn: 1.221 },
-  { rank: 3, ticker: "HUM", confidence: 99.67, price: 365.41, totalReturn: -0.17105 },
-  { rank: 4, ticker: "CHE", confidence: 99.67, price: 539.36, totalReturn: 0.18019 },
-  { rank: 5, ticker: "RY", confidence: 99.66, price: 206.45, totalReturn: 1.04325 },
-  { rank: 6, ticker: "AIZ", confidence: 99.55, price: 281.0, totalReturn: 0.79415 },
-  { rank: 7, ticker: "TRV", confidence: 99.19, price: 389.01, totalReturn: 1.64957 },
-  { rank: 8, ticker: "PANW", confidence: 99.1, price: 314.15, totalReturn: 3.71862 },
-  { rank: 9, ticker: "PRU", confidence: 98.86, price: 122.63, totalReturn: 0.21923 },
-  { rank: 10, ticker: "GWW", confidence: 98.57, price: 1358.92, totalReturn: 1.99269 },
-];
-
-export const simulations = [
-  {
-    horizon: "5d",
-    ticker: "TMDX",
-    probabilityUp: 0.83284,
-    medianReturn: 0.04752,
-    p10Return: -0.03143,
-    p90Return: 0.12772,
-    drawdownProbability: 0.082,
-  },
-  {
-    horizon: "20d",
-    ticker: "PLTR",
-    probabilityUp: 0.97647,
-    medianReturn: 0.13329,
-    p10Return: 0.0245,
-    p90Return: 0.36614,
-    drawdownProbability: 0.014,
-  },
-  {
-    horizon: "60d",
-    ticker: "MU",
-    probabilityUp: 0.99783,
-    medianReturn: 0.30936,
-    p10Return: 0.0662,
-    p90Return: 0.93988,
-    drawdownProbability: 0.002,
-  },
-];
-
-export const nextMoves = [
-  "Repair notebook stage-manifest upload so the next long run explains where time went.",
-  "Add do-not-trust states directly to each ticker panel when calibration or downside risk is weak.",
-  "Compare ANN and Monte Carlo picks against simple baselines before raising decision weights.",
-  "Keep decisions paper-only until repeated outcomes confirm the model edge.",
-];

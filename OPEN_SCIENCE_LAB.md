@@ -36,7 +36,9 @@ python scripts/run_open_science_lab_workflow.py --limit 10 --to your_email@gmail
 
 Runs whose artifacts are expired or missing are reported and skipped; successful
 downloads still get summarized, converted into Gmail-ready reports, and uploaded
-to a tiny Google Drive analysis pack when `rclone` is configured.
+to a tiny Google Drive analysis pack when `rclone` is configured. The default
+workflow also publishes the compact website snapshot through the authenticated
+GitHub CLI; raw archives are never part of that publication.
 
 The workflow also writes a Drive-ready digest from the compact CSVs:
 
@@ -45,9 +47,32 @@ python scripts/build_osl_analysis_digest.py
 ```
 
 That creates `warehouse/drive_pack/` with `analysis_digest.md`,
-`analysis_digest.json`, `csv/recommended_charts.csv`, and the small CSV inputs
-needed for leakage, calibration, model-gate, probability-shape, paper-outcome,
+`analysis_digest.json`, `site_snapshot.json`, `csv/model_action_plan.csv`,
+`csv/recommended_charts.csv`, and the small CSV inputs needed for leakage,
+calibration, model-gate, probability-shape, paper-outcome, feature-stability,
 and artifact-health charts.
+
+Render every chart supported by the available evidence:
+
+```bash
+python scripts/render_osl_analysis_charts.py
+```
+
+Charts are written under `warehouse/drive_pack/charts/`. A chart is skipped
+with an explicit reason in `chart_status.json` when the evidence is too sparse.
+The whole rendered chart set is designed to stay small; raw run archives remain
+in OSL.
+
+Publish the exact same compact snapshot for the Sites dashboard:
+
+```bash
+python scripts/publish_osl_site_snapshot.py
+```
+
+This updates only `public/data/latest-analysis.json` in GitHub. The live Sites
+dashboard fetches that file when it opens, so routine OSL runs do not require a
+new site build. Use `--skip-site-publish` on the full workflow for a local-only
+analysis pass.
 
 Build a Gmail-ready summary report from the warehouse:
 
@@ -170,5 +195,7 @@ The dashboard can show clean summaries such as:
 - Which paper decisions actually matured into profitable outcomes.
 - Which latest successful runs are already archived and which were skipped.
 - Which model quality, leakage, probability, and paper-calibration checks need attention next.
+- Which model or analysis change should be reviewed next and the acceptance test it must pass.
+- Which charts were rendered and which were honestly skipped for insufficient evidence.
 
 The large warehouse keeps the evidence. GitHub stays easy to upload into ChatGPT projects.

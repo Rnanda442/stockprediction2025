@@ -2,13 +2,14 @@
 
 The warehouse can keep large run archives locally in Open Science Lab. This
 script turns the compact summary CSVs into a smaller bundle that is useful in
-Google Drive: one markdown digest, one JSON digest, a chart manifest, and a few
-small CSV inputs for charts.
+Google Drive and on the Sites dashboard: one markdown digest, one JSON digest,
+a model action plan, a website snapshot, and small CSV inputs for charts.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
@@ -33,11 +34,15 @@ SUMMARY_FILES = {
     "artifact_health": "summaries/analysis/artifact_health.csv",
     "leakage_audit_summary": "summaries/analysis/leakage_audit_summary.csv",
     "analysis_priorities": "summaries/analysis/analysis_priorities.csv",
+    "feature_group_stability": "summaries/daily/feature_group_stability.csv",
+    "monte_carlo_stock_type_summary": "summaries/daily/monte_carlo_stock_type_summary.csv",
+    "model_score_weekly": "summaries/weekly/model_score_weekly.csv",
 }
 
 CHART_MANIFEST = [
     {
         "chart_name": "Model gate matrix",
+        "output_png": "charts/model_gate_matrix.png",
         "source_csv": "csv/model_quality_gates.csv",
         "x": "horizon_days",
         "y": "model_name",
@@ -47,6 +52,7 @@ CHART_MANIFEST = [
     },
     {
         "chart_name": "Calibration proxy",
+        "output_png": "charts/calibration_proxy.png",
         "source_csv": "csv/paper_decision_calibration_proxy.csv",
         "x": "probability_bucket",
         "y": "observed_win_rate,avg_probability_up",
@@ -56,6 +62,7 @@ CHART_MANIFEST = [
     },
     {
         "chart_name": "Probability signal shape",
+        "output_png": "charts/probability_signal_shape.png",
         "source_csv": "csv/latest_probability_signal_shape.csv",
         "x": "model_name",
         "y": "high_confidence_share,extreme_share",
@@ -65,6 +72,7 @@ CHART_MANIFEST = [
     },
     {
         "chart_name": "Paper outcomes",
+        "output_png": "charts/paper_outcomes.png",
         "source_csv": "csv/paper_outcome_summary.csv",
         "x": "evaluation_horizon_days",
         "y": "avg_return,win_rate,evaluated",
@@ -74,6 +82,7 @@ CHART_MANIFEST = [
     },
     {
         "chart_name": "Leakage timeline",
+        "output_png": "charts/leakage_audit.png",
         "source_csv": "csv/leakage_audit_summary.csv",
         "x": "horizon_days",
         "y": "training_end,test_start,test_end",
@@ -83,12 +92,33 @@ CHART_MANIFEST = [
     },
     {
         "chart_name": "Artifact health",
+        "output_png": "charts/artifact_health.png",
         "source_csv": "csv/artifact_health.csv",
         "x": "latest_market_date",
         "y": "megabytes_copied",
         "series": "analysis_ready,compact_only",
         "purpose": "Show which runs have enough outputs for analysis and which are partial.",
         "caution": "Old expired GitHub artifacts may be skipped and absent from the warehouse.",
+    },
+    {
+        "chart_name": "Feature-group stability",
+        "output_png": "charts/feature_group_stability.png",
+        "source_csv": "csv/feature_group_stability.csv",
+        "x": "avg_importance_delta",
+        "y": "feature_group",
+        "series": "horizon_days,stock_type",
+        "purpose": "Identify feature groups that help consistently rather than in one run.",
+        "caution": "Permutation importance is descriptive and can be unstable for correlated features.",
+    },
+    {
+        "chart_name": "Weekly model score",
+        "output_png": "charts/model_score_weekly.png",
+        "source_csv": "csv/model_score_weekly.csv",
+        "x": "run_week",
+        "y": "avg_score",
+        "series": "horizon_days,model_name",
+        "purpose": "Check whether model quality is improving across repeated runs.",
+        "caution": "Render only when at least eight weekly points exist; otherwise use the gate matrix.",
     },
 ]
 
@@ -156,6 +186,29 @@ def first_valid_datetime(frame: pd.DataFrame, columns: list[str]) -> pd.Series:
     return values
 
 
+def latest_context_frame(frame: pd.DataFrame) -> pd.DataFrame:
+    if frame.empty:
+        return frame.copy()
+    output = frame.copy()
+    for column in (
+        "model_as_of_date",
+        "as_of_date",
+        "latest_market_date",
+        "warehouse_exported_at",
+    ):
+        if column not in output.columns:
+            continue
+        parsed = pd.to_datetime(output[column], errors="coerce", utc=True)
+        if parsed.notna().any():
+            output = output[parsed.eq(parsed.max())].copy()
+            break
+    if "run_id" in output.columns and output["run_id"].nunique(dropna=True) > 1:
+        run_ids = pd.to_numeric(output["run_id"], errors="coerce")
+        if run_ids.notna().any():
+            output = output[run_ids.eq(run_ids.max())].copy()
+    return output
+
+
 def latest_inventory_row(inventory: pd.DataFrame) -> dict[str, object]:
     if inventory.empty:
         return {}
@@ -204,7 +257,7 @@ def compact_champion_gates(quality_gates: pd.DataFrame) -> pd.DataFrame:
     if quality_gates.empty:
         return pd.DataFrame()
     frame = numeric(
-        quality_gates,
+        latest_context_frame(quality_gates),
         [
             "horizon_days",
             "roc_auc",
@@ -428,6 +481,253 @@ def build_findings(
     return findings
 
 
+def model_action(
+    priority: str,
+    component: str,
+    recommended_change: str,
+    evidence: str,
+    acceptance_test: str,
+    execution: str = "review_required",
+) -> dict[str, str]:
+    return {
+        "priority": priority,
+        "component": component,
+        "recommended_change": recommended_change,
+        "evidence": evidence,
+        "acceptance_test": acceptance_test,
+        "execution": execution,
+    }
+
+
+def build_model_action_plan(
+    summaries: dict[str, pd.DataFrame],
+    latest_shape: pd.DataFrame,
+) -> list[dict[str, str]]:
+    """Translate compact diagnostics into reviewable model and analysis work."""
+    actions: list[dict[str, str]] = []
+    champions = compact_champion_gates(summaries["model_quality_gates"])
+    if champions.empty:
+        actions.append(
+            model_action(
+                "P0",
+                "analysis_inputs",
+                "Export model tournament evaluation rows before changing model code.",
+                "No champion quality-gate rows are available.",
+                "The next OSL snapshot contains champion rows for every configured horizon.",
+                "automated_by_osl",
+            )
+        )
+    else:
+        gate_specs = {
+            "auc_gate": (
+                "ranking_discrimination",
+                "Run temporal feature ablations and compare every candidate with the simple logistic baseline.",
+                "Walk-forward ROC AUC is at least 0.52 on each promoted horizon without a test-set tuning loop.",
+            ),
+            "brier_gate": (
+                "probability_calibration",
+                "Fit probability calibration inside training folds only and cap decision confidence until it validates.",
+                "Out-of-sample Brier skill is non-negative and reliability buckets track observed outcomes.",
+            ),
+            "return_edge_gate": (
+                "economic_edge",
+                "Measure selected-return edge against equal-weight and simple momentum baselines after costs.",
+                "Return edge remains positive across a majority of walk-forward splits after cost assumptions.",
+            ),
+            "walk_forward_gate": (
+                "temporal_stability",
+                "Reduce unstable complexity and tune only inside nested time splits.",
+                "Average walk-forward score is positive and at least half of splits are positive.",
+            ),
+            "sample_gate": (
+                "sample_coverage",
+                "Accumulate more independent test rows before promoting the horizon.",
+                "The held-out test sample reaches at least 1,000 rows with unchanged split rules.",
+            ),
+        }
+        for gate, (component, change, acceptance) in gate_specs.items():
+            failed = ~bool_series(champions, gate)
+            if failed.any():
+                affected = champions.loc[failed]
+                horizons = sorted(
+                    {
+                        str(int(value))
+                        for value in pd.to_numeric(
+                            affected.get("horizon_days"), errors="coerce"
+                        ).dropna()
+                    }
+                )
+                actions.append(
+                    model_action(
+                        "P0" if gate in {"auc_gate", "brier_gate"} else "P1",
+                        component,
+                        change,
+                        f"{int(failed.sum())} champion rows fail {gate}; affected horizons: {', '.join(f'{value}d' for value in horizons) or 'unknown'}.",
+                        acceptance,
+                    )
+                )
+
+    leakage = summaries["leakage_audit_summary"]
+    if not leakage.empty and "leakage_audit_status" in leakage.columns:
+        leakage_issues = leakage[leakage["leakage_audit_status"].ne("ok")]
+        if not leakage_issues.empty:
+            actions.insert(
+                0,
+                model_action(
+                    "P0",
+                    "leakage_controls",
+                    "Block model promotion and inspect every failing temporal split before another comparison.",
+                    f"{len(leakage_issues)} compact leakage-audit rows require review.",
+                    "All compact leakage rows are ok and feature-availability timestamps are checked.",
+                ),
+            )
+        else:
+            actions.append(
+                model_action(
+                    "P2",
+                    "feature_timestamp_audit",
+                    "Add feature-availability timestamps to the next leakage audit.",
+                    "Compact train/test and embargo checks pass, but they cannot prove every feature was available at prediction time.",
+                    "Every model feature has an availability timestamp no later than its prediction timestamp.",
+                )
+            )
+
+    outcomes = numeric(summaries["paper_outcome_summary"], ["evaluated"])
+    buy_count = 0
+    if not outcomes.empty and "action" in outcomes.columns:
+        buy_count = int(
+            outcomes.loc[
+                outcomes["action"].astype(str).eq("paper buy candidate"), "evaluated"
+            ].sum()
+        )
+    if buy_count < 50:
+        actions.append(
+            model_action(
+                "P1",
+                "paper_validation",
+                "Keep automatic decisions in paper mode and retain watch and avoid groups as baselines.",
+                f"Only {buy_count} matured paper buy outcomes are available.",
+                "At least 50 matching-horizon buy outcomes exist with baseline comparisons and confidence intervals.",
+                "automated_by_osl",
+            )
+        )
+
+    if not latest_shape.empty:
+        shaped = numeric(latest_shape, ["rows", "high_confidence_share", "extreme_share"])
+        extreme_share = finite_number(shaped.get("extreme_share", pd.Series(dtype=float)).max())
+        if extreme_share > 0.05:
+            actions.append(
+                model_action(
+                    "P1",
+                    "confidence_policy",
+                    "Apply a temporary confidence ceiling until calibration improves.",
+                    f"A meaningful latest slice assigns extreme probabilities to {extreme_share:.1%} of rows.",
+                    "Extreme-probability share is below 5% and calibrated buckets support the remaining confidence range.",
+                )
+            )
+
+    artifacts = summaries["artifact_health"]
+    if not artifacts.empty and "analysis_ready" in artifacts.columns:
+        missing = (~bool_series(artifacts, "analysis_ready")).sum()
+        if missing:
+            actions.append(
+                model_action(
+                    "P2",
+                    "pipeline_artifacts",
+                    "Keep failed or expired artifact runs visible in the health summary instead of silently dropping them.",
+                    f"{int(missing)} archived run rows are not analysis-ready.",
+                    "Every new successful run exports model scores and predictions, or records an explicit failure reason.",
+                    "automated_by_osl",
+                )
+            )
+
+    priority_order = {"P0": 0, "P1": 1, "P2": 2}
+    deduped: dict[tuple[str, str], dict[str, str]] = {}
+    for action in actions:
+        deduped[(action["component"], action["recommended_change"])] = action
+    return sorted(
+        deduped.values(),
+        key=lambda item: (priority_order.get(item["priority"], 9), item["component"]),
+    )
+
+
+def json_records(frame: pd.DataFrame, limit: int = 250) -> list[dict[str, object]]:
+    if frame.empty:
+        return []
+    return json.loads(frame.head(limit).to_json(orient="records", date_format="iso"))
+
+
+def build_site_snapshot(
+    key_metrics: pd.DataFrame,
+    findings: list[dict[str, str]],
+    actions: list[dict[str, str]],
+    champion_gates: pd.DataFrame,
+    latest_shape: pd.DataFrame,
+    summaries: dict[str, pd.DataFrame],
+) -> dict[str, object]:
+    metrics = json_records(key_metrics, limit=1)
+    latest = metrics[0] if metrics else {}
+    leakage = summaries["leakage_audit_summary"]
+    leakage_issues = 0
+    if not leakage.empty and "leakage_audit_status" in leakage.columns:
+        leakage_issues = int(leakage["leakage_audit_status"].ne("ok").sum())
+    paper_ready = 0
+    if not champion_gates.empty and "trust_tier" in champion_gates.columns:
+        paper_ready = int(champion_gates["trust_tier"].eq("paper_review").sum())
+    trust_status = (
+        "Blocked: leakage review"
+        if leakage_issues
+        else "Paper review"
+        if paper_ready
+        else "Research only"
+    )
+    latest_quality_gates = latest_context_frame(summaries["model_quality_gates"])
+    generated_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    snapshot: dict[str, object] = {
+        "schema_version": 1,
+        "generated_at": generated_at,
+        "source": {
+            "kind": "open_science_lab",
+            "latest_run_id": latest.get("latest_run_id", ""),
+            "latest_market_date": latest.get("latest_market_date", ""),
+            "run_archives": latest.get("run_archives", 0),
+            "latest_archive_megabytes": latest.get("latest_archive_megabytes"),
+        },
+        "trust": {
+            "status": trust_status,
+            "paper_ready_champions": paper_ready,
+            "leakage_issue_rows": leakage_issues,
+            "paper_buy_evaluated": latest.get("paper_buy_evaluated", 0),
+            "reason": (
+                "A model remains research-only until discrimination, calibration, economic edge, temporal stability, and leakage gates pass."
+            ),
+        },
+        "key_metrics": latest,
+        "findings": findings,
+        "model_actions": actions,
+        "charts": {
+            "model_gate_matrix": json_records(latest_quality_gates),
+            "calibration_proxy": json_records(
+                summaries["paper_decision_calibration_proxy"]
+            ),
+            "probability_signal_shape": json_records(latest_shape),
+            "paper_outcomes": json_records(summaries["paper_outcome_summary"]),
+            "leakage_audit": json_records(leakage),
+            "artifact_health": json_records(summaries["artifact_health"], limit=50),
+            "feature_group_stability": json_records(
+                summaries["feature_group_stability"], limit=150
+            ),
+            "model_score_weekly": json_records(summaries["model_score_weekly"], limit=150),
+        },
+        "disclaimer": "Research and paper-decision review only. No live trading recommendation.",
+    }
+    fingerprint_input = dict(snapshot)
+    fingerprint_input.pop("generated_at", None)
+    canonical = json.dumps(fingerprint_input, sort_keys=True, separators=(",", ":"))
+    snapshot["snapshot_fingerprint"] = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    return snapshot
+
+
 def markdown_table(frame: pd.DataFrame, columns: list[str], limit: int = 10) -> str:
     if frame.empty:
         return "_No rows available._"
@@ -457,6 +757,7 @@ def markdown_table(frame: pd.DataFrame, columns: list[str], limit: int = 10) -> 
 def build_markdown(
     key_metrics: pd.DataFrame,
     findings: list[dict[str, str]],
+    actions: list[dict[str, str]],
     champion_gates: pd.DataFrame,
     latest_shape: pd.DataFrame,
     priorities: pd.DataFrame,
@@ -464,6 +765,7 @@ def build_markdown(
     latest = key_metrics.iloc[0].to_dict() if not key_metrics.empty else {}
     latest_archive_mb = finite_number(latest.get("latest_archive_megabytes", 0))
     finding_frame = pd.DataFrame(findings)
+    action_frame = pd.DataFrame(actions)
     lines = [
         "# Stockprediction2025 OSL Analysis Digest",
         "",
@@ -479,6 +781,21 @@ def build_markdown(
         "## Automated Findings",
         "",
         markdown_table(finding_frame, ["priority", "area", "finding", "evidence", "next_step"], limit=12),
+        "",
+        "## Model And Analysis Action Plan",
+        "",
+        markdown_table(
+            action_frame,
+            [
+                "priority",
+                "component",
+                "recommended_change",
+                "evidence",
+                "acceptance_test",
+                "execution",
+            ],
+            limit=16,
+        ),
         "",
         "## Champion Gates",
         "",
@@ -549,6 +866,7 @@ def write_pack(args: argparse.Namespace) -> Path:
     champion_gates = compact_champion_gates(summaries["model_quality_gates"])
     key_metrics = build_key_metrics(summaries, latest_shape, args.min_shape_rows)
     findings = build_findings(summaries, latest_shape)
+    actions = build_model_action_plan(summaries, latest_shape)
     priorities = summaries["analysis_priorities"]
 
     key_metrics.to_csv(csv_dir / "key_metrics.csv", index=False)
@@ -556,21 +874,42 @@ def write_pack(args: argparse.Namespace) -> Path:
     champion_gates.to_csv(csv_dir / "champion_model_gates.csv", index=False)
     pd.DataFrame(CHART_MANIFEST).to_csv(csv_dir / "recommended_charts.csv", index=False)
     pd.DataFrame(findings).to_csv(csv_dir / "automated_findings.csv", index=False)
+    pd.DataFrame(actions).to_csv(csv_dir / "model_action_plan.csv", index=False)
 
     for name, relative in SUMMARY_FILES.items():
         copy_if_exists(warehouse / relative, csv_dir / f"{name}.csv")
 
-    markdown = build_markdown(key_metrics, findings, champion_gates, latest_shape, priorities)
+    markdown = build_markdown(
+        key_metrics,
+        findings,
+        actions,
+        champion_gates,
+        latest_shape,
+        priorities,
+    )
     (output_dir / "analysis_digest.md").write_text(markdown, encoding="utf-8")
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "key_metrics": key_metrics.to_dict("records"),
+        "key_metrics": json_records(key_metrics, limit=1),
         "findings": findings,
+        "model_actions": actions,
         "chart_manifest": CHART_MANIFEST,
         "source_files": SUMMARY_FILES,
     }
     (output_dir / "analysis_digest.json").write_text(
-        json.dumps(payload, indent=2, default=str) + "\n",
+        json.dumps(payload, indent=2, default=str, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
+    site_snapshot = build_site_snapshot(
+        key_metrics,
+        findings,
+        actions,
+        champion_gates,
+        latest_shape,
+        summaries,
+    )
+    (output_dir / "site_snapshot.json").write_text(
+        json.dumps(site_snapshot, indent=2, allow_nan=False) + "\n",
         encoding="utf-8",
     )
     (output_dir / "README.md").write_text(
@@ -582,8 +921,9 @@ def write_pack(args: argparse.Namespace) -> Path:
                 "Large run archives stay in Open Science Lab unless the workflow is run with",
                 "`--include-run-archives`.",
                 "",
-                "Start with `analysis_digest.md`, then use `csv/recommended_charts.csv`",
-                "to build the small monitoring charts.",
+                "Start with `analysis_digest.md`, inspect `csv/model_action_plan.csv`,",
+                "and open the rendered files in `charts/`. `site_snapshot.json` is",
+                "the tiny data contract mirrored to GitHub for the Sites dashboard.",
                 "",
             ]
         ),

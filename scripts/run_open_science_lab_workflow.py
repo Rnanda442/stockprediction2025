@@ -1,8 +1,8 @@
 """Run the full Open Science Lab compact-analysis workflow.
 
 This keeps large GitHub Actions artifacts in Open Science Lab, rebuilds compact
-analysis outputs, creates Gmail-ready reports, and uploads compact outputs to
-Google Drive.
+analysis outputs, renders charts, creates Gmail-ready reports, uploads compact
+outputs to Google Drive, and publishes a tiny snapshot for the Sites dashboard.
 """
 
 from __future__ import annotations
@@ -33,8 +33,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--attach-summaries", action="store_true")
     parser.add_argument("--skip-sync", action="store_true")
     parser.add_argument("--skip-digest", action="store_true")
+    parser.add_argument("--skip-charts", action="store_true")
     parser.add_argument("--skip-email", action="store_true")
     parser.add_argument("--skip-drive", action="store_true")
+    parser.add_argument("--skip-site-publish", action="store_true")
+    parser.add_argument("--site-branch", default="main")
+    parser.add_argument("--site-path", default="public/data/latest-analysis.json")
+    parser.add_argument("--site-dry-run", action="store_true")
     parser.add_argument(
         "--drive-profile",
         choices=("digest", "compact"),
@@ -99,6 +104,17 @@ def main() -> int:
             ],
         )
 
+    if not args.skip_charts:
+        run_step(
+            "Render compact analysis charts",
+            [
+                python,
+                "scripts/render_osl_analysis_charts.py",
+                "--warehouse",
+                warehouse,
+            ],
+        )
+
     if not args.skip_email:
         email_command = [
             python,
@@ -130,6 +146,23 @@ def main() -> int:
         if args.drive_verbose:
             drive_command.append("--verbose")
         run_step("Upload compact warehouse outputs to Google Drive", drive_command)
+
+    if not args.skip_site_publish:
+        site_command = [
+            python,
+            "scripts/publish_osl_site_snapshot.py",
+            "--source",
+            str(Path(warehouse) / "drive_pack" / "site_snapshot.json"),
+            "--repo",
+            args.repo,
+            "--branch",
+            args.site_branch,
+            "--path",
+            args.site_path,
+        ]
+        if args.site_dry_run or args.drive_dry_run:
+            site_command.append("--dry-run")
+        run_step("Publish latest analysis snapshot for Sites", site_command)
 
     print("\nWorkflow complete.")
     return 0
