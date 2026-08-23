@@ -1,0 +1,252 @@
+name: Run Stock Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      watchlist_limit:
+        description: Ranked watchlist size
+        required: false
+        default: "50"
+      persistence_bonus:
+        description: Score bonus for ideas that remain ranked
+        required: false
+        default: "0.04"
+      shortlist_limit:
+        description: Focused shortlist size
+        required: false
+        default: "5"
+      min_avg_dollar_vol:
+        description: Minimum shortlist dollar-volume liquidity
+        required: false
+        default: "2000000"
+      max_vol_60d:
+        description: Maximum shortlist 60d volatility
+        required: false
+        default: "0.08"
+      sim_min:
+        description: Minimum behavioral similarity
+        required: false
+        default: "0.60"
+      sim_cap:
+        description: Maximum behavioral similarity
+        required: false
+        default: "0.88"
+      top_n_per_ticker:
+        description: Similar neighbors retained per ticker
+        required: false
+        default: "3"
+      model_candidates:
+        description: Model tournament candidates
+        required: false
+        default: "sgd_logistic,mlp_ann,hist_gradient_boosting,similarity_ann_monte_carlo"
+      commit_generated_updates:
+        description: Commit refreshed tracked dashboard snapshot files
+        required: false
+        default: "false"
+  schedule:
+    - cron: "0 22 * * 1-5" # after U.S. market close weekdays
+
+permissions:
+  contents: write
+
+concurrency:
+  group: stock-pipeline-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      ROBINHOOD_USERNAME: ${{ secrets.ROBINHOOD_USERNAME }}
+      ROBINHOOD_PASSWORD: ${{ secrets.ROBINHOOD_PASSWORD }}
+      ROBINHOOD_SESSION_KEY: ${{ secrets.ROBINHOOD_SESSION_KEY }}
+      PIPELINE_WATCHLIST_LIMIT: ${{ inputs.watchlist_limit || '50' }}
+      PIPELINE_PERSISTENCE_BONUS: ${{ inputs.persistence_bonus || '0.04' }}
+      PIPELINE_SHORTLIST_LIMIT: ${{ inputs.shortlist_limit || '5' }}
+      PIPELINE_MIN_AVG_DOLLAR_VOL: ${{ inputs.min_avg_dollar_vol || '2000000' }}
+      PIPELINE_MAX_VOL_60D: ${{ inputs.max_vol_60d || '0.08' }}
+      PIPELINE_SIM_MIN: ${{ inputs.sim_min || '0.60' }}
+      PIPELINE_SIM_CAP: ${{ inputs.sim_cap || '0.88' }}
+      PIPELINE_TOP_N_PER_TICKER: ${{ inputs.top_n_per_ticker || '3' }}
+      MODEL_CANDIDATES: ${{ inputs.model_candidates || 'sgd_logistic,mlp_ann,hist_gradient_boosting,similarity_ann_monte_carlo' }}
+      PYTHONUNBUFFERED: "1"
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            robin-stocks \
+            pandas \
+            numpy \
+            requests \
+            matplotlib \
+            openpyxl \
+            python-dotenv \
+            tqdm \
+            jupyter \
+            nbconvert \
+            nbclient \
+            ipykernel \
+            scikit-learn
+          python -m ipykernel install --user --name python3
+
+      - name: Restore generated databases
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            *.db
+            data/*.db
+            notebook/stockprediction2025/data/*.db
+            analytics/automatic_paper_decisions.csv
+            analytics/automatic_paper_decision_outcomes.csv
+          key: stock-dbs-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            stock-dbs-${{ github.ref_name }}-
+
+      - name: Restore encrypted Robinhood session
+        uses: actions/cache/restore@v4
+        with:
+          path: .auth-cache
+          key: robinhood-session-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            robinhood-session-${{ github.ref_name }}-
+
+      - name: Decrypt Robinhood session
+        run: |
+          python scripts/sync_robinhood_session.py restore
+
+      - name: Normalize restored databases
+        run: |
+          python scripts/promote_pipeline_databases.py
+
+      - name: Check pipeline safety invariants
+        run: |
+          python scripts/check_pipeline_safety.py
+
+      - name: Check Robinhood auth preflight
+        run: |
+          python scripts/check_robinhood_auth_preflight.py
+
+      - name: Run notebook
+        run: |
+          python scripts/run_notebook_with_progress.py notebook/2025summerstock-Copy6.ipynb --kernel-name python3 --executed-output logs/executed-notebook.ipynb
+
+      - name: Track shortlist performance
+        run: |
+          python scripts/track_watchlist_history.py
+          python scripts/track_shortlist_history.py
+          {
+            echo "## Latest watchlist"
+            echo '```csv'
+            cat analytics/latest_watchlist.csv
+            echo '```'
+            echo "## Latest shortlist"
+            echo '```csv'
+            cat analytics/winners_shortlist.csv
+            echo '```'
+            echo "## Forward-return evaluation"
+            echo '```csv'
+            cat analytics/shortlist_performance_summary.csv
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Build leakage-controlled model tournament
+        run: |
+          python scripts/build_model_baseline.py
+
+      - name: Export dashboard database
+        run: |
+          python scripts/export_dashboard_data.py
+
+      - name: Generate automatic paper decisions
+        run: |
+          python scripts/generate_daily_paper_decisions.py
+
+      - name: Update automatic paper outcomes
+        run: |
+          python scripts/update_automatic_paper_outcomes.py
+          python scripts/sync_paper_learning_to_dashboard.py
+
+      - name: Check model export smoke
+        run: |
+          python scripts/check_model_export_smoke.py
+
+      - name: Validate generated outputs
+        run: |
+          python scripts/validate_pipeline_outputs.py
+
+      - name: Encrypt Robinhood session
+        if: always()
+        run: |
+          python scripts/sync_robinhood_session.py save
+
+      - name: Save encrypted Robinhood session
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .auth-cache
+          key: robinhood-session-${{ github.ref_name }}-${{ github.run_id }}
+
+      - name: Save generated databases
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            *.db
+            data/*.db
+            notebook/stockprediction2025/data/*.db
+            analytics/automatic_paper_decisions.csv
+            analytics/automatic_paper_decision_outcomes.csv
+          key: stock-dbs-${{ github.ref_name }}-${{ github.run_id }}
+
+      - name: Upload analysis outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stock-analysis-outputs
+          if-no-files-found: warn
+          retention-days: 90
+          path: |
+            analytics/*.csv
+            analytics/*.html
+            analytics/automatic_paper_decisions.csv
+            analytics/automatic_paper_decision_outcomes.csv
+            vector_analysis_results.csv
+            checkpoint_filtered.csv
+            checkpoint_rejected.csv
+            dashboard_data.db
+            logs/executed-notebook.ipynb
+            logs/notebook_stage_manifest.json
+            logs/notebook_checkpoints/*.json
+
+      - name: Commit generated updates
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.commit_generated_updates == 'true' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Generated databases, analytics, logs, and auth caches are artifacts or
+          # caches. Stage updates to already tracked files only so a credential or
+          # encrypted session can never become a new committed file.
+          git add -u -- .
+          # Generated dashboard snapshots are uploaded as artifacts. Keep routine
+          # runs from adding database or paper-ledger revisions to Git history.
+          git reset -q -- dashboard_data.db dashboard/paper_learning_snapshot.json || true
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Automated stock pipeline output update"
+          git push

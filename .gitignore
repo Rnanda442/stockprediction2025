@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+.venv/
+node_modules/
+dist/
+.next/
+.wrangler/
+logs/
+pnpm-workspace.yaml

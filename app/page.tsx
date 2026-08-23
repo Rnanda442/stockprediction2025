@@ -287,35 +287,78 @@ export default function Home() {
   }, [snapshot]);
 
   const archiveMb = finite(snapshot.source.latest_archive_megabytes);
+  const primaryAction = snapshot.model_actions[0];
 
   return (
-    <main>
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">Personal stock research lab</p>
-          <h1>What is working, what is not, and what changes next</h1>
-          <p className="lede">Open Science Lab does the heavy analysis. This dashboard reads only the compact reviewed snapshot and keeps the model paper-only until its evidence improves.</p>
+    <main className="site-shell">
+      <nav className="desk-nav" aria-label="Dashboard sections">
+        <a className="brand-mark" href="#top" aria-label="Stock Research Desk home">
+          <span>SP</span>
+          <div><strong>Stock Research Desk</strong><small>OSL evidence system</small></div>
+        </a>
+        <div className="nav-links">
+          <a href="#trust">Trust</a>
+          <a href="#models">Models</a>
+          <a href="#data-flow">Data flow</a>
+          <a href="#next-actions">Next actions</a>
         </div>
-        <div className="status-lockup">
-          <span className={`status ${isLive ? "status-live" : "status-fallback"}`}>{isLive ? "Live OSL snapshot" : "Bundled fallback"}</span>
-          <span className={`status ${snapshot.trust.status === "Paper review" ? "status-live" : "status-research"}`}>{snapshot.trust.status}</span>
-        </div>
-      </header>
+      </nav>
 
-      <section className="metric-grid" aria-label="Latest snapshot metrics">
-        <article className="metric"><span>Latest run</span><strong>{String(snapshot.source.latest_run_id || "Unknown")}</strong><small>Published {shortDate(snapshot.generated_at)}</small></article>
-        <article className="metric"><span>Market date</span><strong>{shortDate(snapshot.source.latest_market_date)}</strong><small>{snapshot.source.run_archives} archived runs in OSL</small></article>
-        <article className="metric"><span>Champion gates</span><strong>{gateSummary.passed}/{gateSummary.total || 0}</strong><small>{snapshot.trust.paper_ready_champions} champions ready for paper review</small></article>
-        <article className="metric"><span>Drive payload</span><strong>Compact</strong><small>{archiveMb ? `${archiveMb.toFixed(1)} MB raw archive remains in OSL` : "Raw archives remain in OSL"}</small></article>
+      <section className="hero" id="top">
+        <div className="hero-copy">
+          <p className="eyebrow">OSL-powered stock research</p>
+          <h1>Keep the heavy data in OSL. Publish only the evidence.</h1>
+          <p className="lede">This desk separates storage, analysis, and presentation. Open Science Lab retains the warehouse, GitHub carries a compact reviewed snapshot, and the website explains what is trustworthy before any signal is considered.</p>
+          <div className="hero-actions">
+            <a className="primary-link" href="#next-actions">See the next action</a>
+            <a className="secondary-link" href="#data-flow">Follow the data</a>
+          </div>
+          <p className="hero-note">No raw run archive is downloaded by or served to this website.</p>
+        </div>
+        <aside className="verdict-card" aria-label="Current research verdict">
+          <div className="verdict-card-head"><span>Evidence gate</span><span>{shortDate(snapshot.source.latest_market_date)}</span></div>
+          <strong>{snapshot.trust.status}</strong>
+          <p>{snapshot.trust.reason}</p>
+          <div className="verdict-stats">
+            <div><b>{snapshot.trust.paper_ready_champions}</b><span>paper-ready champions</span></div>
+            <div><b>{snapshot.trust.paper_buy_evaluated}</b><span>matured paper buys</span></div>
+            <div><b>{snapshot.trust.leakage_issue_rows}</b><span>leakage review rows</span></div>
+          </div>
+        </aside>
       </section>
 
-      <section className="trust-band">
+      <section className="snapshot-bar" aria-label="Snapshot connection status">
+        <div className="connection-line">
+          <span className={`connection-dot ${isLive ? "dot-connected" : "dot-fallback"}`} aria-hidden="true" />
+          <div><strong>{isLive ? "GitHub snapshot connected" : "Bundled snapshot in use"}</strong><span>Published {shortDate(snapshot.generated_at)}</span></div>
+        </div>
+        <p>Market evidence currently ends on <strong>{shortDate(snapshot.source.latest_market_date)}</strong>. Website polish and OSL transfer work can continue without a Robinhood refresh.</p>
+      </section>
+
+      <section className="metric-grid" aria-label="Latest snapshot metrics">
+        <article className="metric"><span>Published run</span><strong>{String(snapshot.source.latest_run_id || "Unknown")}</strong><small>Compact evidence packet</small></article>
+        <article className="metric"><span>OSL history</span><strong>{snapshot.source.run_archives} runs</strong><small>Archived outside the local computer</small></article>
+        <article className="metric"><span>Quality gates</span><strong>{gateSummary.passed}/{gateSummary.total || 0}</strong><small>{snapshot.trust.paper_ready_champions} champions ready for paper review</small></article>
+        <article className="metric"><span>Storage boundary</span><strong>Compact only</strong><small>{archiveMb ? `${archiveMb.toFixed(1)} MB latest raw archive stays in OSL` : "Raw archives remain in OSL"}</small></article>
+      </section>
+
+      <section className="data-flow-section" id="data-flow">
+        <div className="section-heading"><div><p className="eyebrow">Storage architecture</p><h2>Large evidence in, small answers out</h2></div><p>The transfer path is intentionally one-way at publication time. Raw model artifacts remain in OSL; only reviewable summaries cross into GitHub and the website.</p></div>
+        <div className="flow-grid">
+          <article className="flow-card flow-osl"><span className="flow-index">01</span><span className="flow-label">Open Science Lab</span><strong>Warehouse</strong><p>Run archives, databases, Parquet files, model outputs, and long-term evidence.</p><small>{snapshot.source.run_archives} archived runs / {archiveMb ? `${archiveMb.toFixed(1)} MB latest archive` : "raw storage retained"}</small></article>
+          <article className="flow-card flow-review"><span className="flow-index">02</span><span className="flow-label">Analysis pack</span><strong>Review layer</strong><p>Digest, quality gates, calibration summaries, small CSVs, charts, and the site snapshot.</p><small>Generated inside OSL</small></article>
+          <article className="flow-card flow-site"><span className="flow-index">03</span><span className="flow-label">GitHub + Sites</span><strong>Research desk</strong><p>Website code and one compact JSON snapshot, designed for fast review on any device.</p><small>No raw warehouse dependency</small></article>
+        </div>
+        <div className="flow-rule"><strong>Boundary rule</strong><span>Code and compact evidence may leave OSL. Raw archives and credentials do not.</span></div>
+      </section>
+
+      <section className="trust-band" id="trust">
         <div><p className="eyebrow">Current verdict</p><h2>{snapshot.trust.status}</h2></div>
         <p>{snapshot.trust.reason}</p>
         <div className="trust-facts"><span>{snapshot.trust.leakage_issue_rows} leakage review rows</span><span>{snapshot.trust.paper_buy_evaluated} matured paper buys</span><span>{snapshot.model_actions.filter((action) => action.priority === "P0").length} P0 actions</span></div>
       </section>
 
-      <section className="analysis-section">
+      <section className="analysis-section" id="models">
         <div className="section-heading"><div><p className="eyebrow">Model quality</p><h2>Gate heatmap</h2></div><p>Every cell is an explicit promotion requirement. A strong return alone cannot override weak calibration or temporal validation.</p></div>
         <ModelGateMatrix rows={snapshot.charts.model_gate_matrix} />
       </section>
@@ -342,8 +385,15 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="analysis-section">
+      <section className="analysis-section" id="next-actions">
         <div className="section-heading"><div><p className="eyebrow">Recommended work</p><h2>Model and analysis action plan</h2></div><p>OSL generates these recommendations after each run. Model-code changes remain review-required; reporting and evidence collection can stay automatic.</p></div>
+        {primaryAction ? (
+          <div className="priority-callout">
+            <div><span>Immediate research priority</span><strong>{primaryAction.component.replaceAll("_", " ")}</strong></div>
+            <p>{primaryAction.recommended_change}</p>
+            <small>Acceptance test: {primaryAction.acceptance_test}</small>
+          </div>
+        ) : null}
         <ol className="action-list">
           {snapshot.model_actions.map((action, index) => (
             <li key={`${action.component}-${index}`}>
@@ -370,7 +420,7 @@ export default function Home() {
         </div>
       </section>
 
-      <footer><span>{snapshot.disclaimer}</span><span>Snapshot {snapshot.snapshot_fingerprint.slice(0, 10)}</span></footer>
+      <footer><span>{snapshot.disclaimer}</span><span>Bulk warehouse retained in Open Science Lab / Snapshot {snapshot.snapshot_fingerprint.slice(0, 10)}</span></footer>
     </main>
   );
 }
