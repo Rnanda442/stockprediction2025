@@ -3,19 +3,19 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://stockprediction2025-research-desk.rnanda442.chatgpt.site"),
-  title: "Stockprediction2025 Research Command Center",
+  title: "OSL Stock Research Desk",
   description:
-    "An OSL-powered dashboard for model trust, leakage checks, calibration evidence, and next actions.",
+    "An evidence-first stock research desk that keeps large archives in Open Science Lab and publishes only compact, reviewable analysis.",
   openGraph: {
-    title: "Stockprediction2025 Research Command Center",
+    title: "OSL Stock Research Desk",
     description:
-      "Model gates, calibration, leakage checks, and a reviewable action plan from Open Science Lab.",
+      "Large evidence stays in Open Science Lab. Model gates, calibration checks, and next actions reach the research desk.",
     images: [{ url: "/og.png", width: 1672, height: 940 }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Stockprediction2025 Research Command Center",
-    description: "Evidence-first model monitoring from Open Science Lab.",
+    title: "OSL Stock Research Desk",
+    description: "Evidence-first model monitoring with an OSL-backed warehouse.",
     images: ["/og.png"],
   },
 };
