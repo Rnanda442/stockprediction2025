@@ -302,6 +302,7 @@ def export_run(args, warehouse):
     source = resolve_path(args.source)
     if not source.exists():
         raise RuntimeError(f"Source does not exist: {source}")
+    source_is_scratch = inside_path(source, warehouse / "scratch")
     metadata = source_metadata(source)
     run_id = choose_run_id(args, metadata)
     run_dir = warehouse / "model_runs" / "runs" / run_id
@@ -314,7 +315,7 @@ def export_run(args, warehouse):
 
     for pattern in EXPORT_PATTERNS:
         for path in source.glob(pattern):
-            if not path.is_file() or inside_path(path, warehouse):
+            if not path.is_file() or (inside_path(path, warehouse) and not source_is_scratch):
                 continue
             destination = archive_destination(run_dir, source, path)
             key = str(destination.resolve())
