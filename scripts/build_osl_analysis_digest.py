@@ -35,6 +35,8 @@ SUMMARY_FILES = {
     "leakage_audit_summary": "summaries/analysis/leakage_audit_summary.csv",
     "analysis_priorities": "summaries/analysis/analysis_priorities.csv",
     "feature_group_stability": "summaries/daily/feature_group_stability.csv",
+    "ridge_target_feature_stability": "summaries/daily/ridge_target_feature_stability.csv",
+    "similarity_pair_stability": "summaries/daily/similarity_pair_stability.csv",
     "monte_carlo_stock_type_summary": "summaries/daily/monte_carlo_stock_type_summary.csv",
     "model_score_weekly": "summaries/weekly/model_score_weekly.csv",
 }
@@ -119,6 +121,26 @@ CHART_MANIFEST = [
         "series": "horizon_days,model_name",
         "purpose": "Check whether model quality is improving across repeated runs.",
         "caution": "Render only when at least eight weekly points exist; otherwise use the gate matrix.",
+    },
+    {
+        "chart_name": "Ridge target drivers",
+        "output_png": "charts/ridge_target_drivers.png",
+        "source_csv": "csv/ridge_target_feature_stability.csv",
+        "x": "horizon_days,target_name",
+        "y": "feature",
+        "series": "avg_coefficient",
+        "purpose": "Compare variables associated with total return, upside capture, and downside risk.",
+        "caution": "Ridge coefficients are conditional associations, not causal effects or trading instructions.",
+    },
+    {
+        "chart_name": "Similarity network",
+        "output_png": "charts/similarity_network.png",
+        "source_csv": "csv/similarity_pair_stability.csv",
+        "x": "A",
+        "y": "B",
+        "series": "avg_similarity,runs",
+        "purpose": "Show repeated behavioral neighbors and clusters without moving raw price history.",
+        "caution": "Similarity can change by regime and does not imply identical future returns.",
     },
 ]
 
@@ -716,6 +738,12 @@ def build_site_snapshot(
             "artifact_health": json_records(summaries["artifact_health"], limit=50),
             "feature_group_stability": json_records(
                 summaries["feature_group_stability"], limit=150
+            ),
+            "ridge_target_feature_stability": json_records(
+                summaries["ridge_target_feature_stability"], limit=250
+            ),
+            "similarity_pair_stability": json_records(
+                summaries["similarity_pair_stability"], limit=250
             ),
             "model_score_weekly": json_records(summaries["model_score_weekly"], limit=150),
         },

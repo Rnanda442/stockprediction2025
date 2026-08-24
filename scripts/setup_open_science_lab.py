@@ -302,6 +302,7 @@ def export_run(args, warehouse):
     source = resolve_path(args.source)
     if not source.exists():
         raise RuntimeError(f"Source does not exist: {source}")
+    source_is_scratch = inside_path(source, warehouse / "scratch")
     metadata = source_metadata(source)
     run_id = choose_run_id(args, metadata)
     run_dir = warehouse / "model_runs" / "runs" / run_id
@@ -314,7 +315,7 @@ def export_run(args, warehouse):
 
     for pattern in EXPORT_PATTERNS:
         for path in source.glob(pattern):
-            if not path.is_file() or inside_path(path, warehouse):
+            if not path.is_file() or (inside_path(path, warehouse) and not source_is_scratch):
                 continue
             destination = archive_destination(run_dir, source, path)
             key = str(destination.resolve())
@@ -807,6 +808,94 @@ def summarize_ann_importance(warehouse, manifests):
     write_csv(grouped, warehouse / "summaries" / "daily" / "feature_group_stability.csv")
 
 
+def summarize_ridge_importance(warehouse, manifests):
+    frames = [
+        read_run_csv(manifest, "analytics/ridge_target_feature_importance.csv")
+        for manifest in manifests
+    ]
+    frames = [frame for frame in frames if not frame.empty]
+    if not frames:
+        return
+    importance = pd.concat(frames, ignore_index=True)
+    importance = numeric(
+        importance,
+        [
+            "horizon_days",
+            "coefficient",
+            "absolute_coefficient",
+            "train_rows",
+            "test_rows",
+            "test_r2",
+            "test_mae",
+        ],
+    )
+    grouped = (
+        importance.groupby(["horizon_days", "target_name", "feature"], dropna=False)
+        .agg(
+            runs=("run_id", "nunique"),
+            avg_coefficient=("coefficient", "mean"),
+            std_coefficient=("coefficient", "std"),
+            avg_absolute_coefficient=("absolute_coefficient", "mean"),
+            avg_test_r2=("test_r2", "mean"),
+            avg_test_mae=("test_mae", "mean"),
+            avg_train_rows=("train_rows", "mean"),
+            avg_test_rows=("test_rows", "mean"),
+        )
+        .reset_index()
+        .sort_values(
+            ["horizon_days", "target_name", "avg_absolute_coefficient"],
+            ascending=[True, True, False],
+        )
+    )
+    grouped["importance_rank"] = grouped.groupby(
+        ["horizon_days", "target_name"]
+    )["avg_absolute_coefficient"].rank(method="first", ascending=False).astype(int)
+    write_csv(
+        grouped,
+        warehouse / "summaries" / "daily" / "ridge_target_feature_stability.csv",
+    )
+
+
+def summarize_similarity_pairs(warehouse, manifests):
+    frames = [
+        read_run_csv(manifest, "analytics/similarity_pairs_export.csv")
+        for manifest in manifests
+    ]
+    frames = [frame for frame in frames if not frame.empty]
+    if not frames:
+        return
+    pairs = pd.concat(frames, ignore_index=True)
+    if not {"A", "B", "similarity"}.issubset(pairs.columns):
+        return
+    if "run_id" not in pairs.columns:
+        pairs["run_id"] = "unknown"
+    pairs["A"] = pairs["A"].astype(str).str.strip().str.upper()
+    pairs["B"] = pairs["B"].astype(str).str.strip().str.upper()
+    pairs = numeric(pairs, ["similarity"])
+    pairs = pairs.dropna(subset=["similarity"])
+    pairs = pairs[(pairs["A"] != "") & (pairs["B"] != "") & (pairs["A"] != pairs["B"])]
+    swap = pairs["A"] > pairs["B"]
+    pairs.loc[swap, ["A", "B"]] = pairs.loc[swap, ["B", "A"]].to_numpy()
+    grouped = (
+        pairs.groupby(["A", "B"], dropna=False)
+        .agg(
+            runs=("run_id", "nunique"),
+            observations=("similarity", "count"),
+            avg_similarity=("similarity", "mean"),
+            std_similarity=("similarity", "std"),
+            min_similarity=("similarity", "min"),
+            max_similarity=("similarity", "max"),
+        )
+        .reset_index()
+        .sort_values(["runs", "avg_similarity"], ascending=[False, False])
+        .head(1000)
+    )
+    write_csv(
+        grouped,
+        warehouse / "summaries" / "daily" / "similarity_pair_stability.csv",
+    )
+
+
 def summarize_paper_outcomes(warehouse, manifests):
     frames = [read_run_csv(manifest, "analytics/automatic_paper_decision_outcomes.csv") for manifest in manifests]
     frames = [frame for frame in frames if not frame.empty]
@@ -1105,6 +1194,8 @@ def summarize(warehouse):
     summarize_predictions(warehouse, manifests)
     summarize_monte_carlo(warehouse, manifests)
     summarize_ann_importance(warehouse, manifests)
+    summarize_ridge_importance(warehouse, manifests)
+    summarize_similarity_pairs(warehouse, manifests)
     summarize_paper_outcomes(warehouse, manifests)
     summarize_artifact_health(warehouse, manifests)
     summarize_leakage_audit(warehouse, manifests)

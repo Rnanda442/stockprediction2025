@@ -43,6 +43,10 @@ on:
         description: Commit refreshed tracked dashboard snapshot files
         required: false
         default: "false"
+      analysis_only:
+        description: Rebuild models and analytics from cached databases without Robinhood
+        required: false
+        default: "false"
   schedule:
     - cron: "0 22 * * 1-5" # after U.S. market close weekdays
 
@@ -117,6 +121,7 @@ jobs:
             stock-dbs-${{ github.ref_name }}-
 
       - name: Restore encrypted Robinhood session
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.analysis_only != 'true' }}
         uses: actions/cache/restore@v4
         with:
           path: .auth-cache
@@ -125,6 +130,7 @@ jobs:
             robinhood-session-${{ github.ref_name }}-
 
       - name: Decrypt Robinhood session
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.analysis_only != 'true' }}
         run: |
           python scripts/sync_robinhood_session.py restore
 
@@ -137,14 +143,17 @@ jobs:
           python scripts/check_pipeline_safety.py
 
       - name: Check Robinhood auth preflight
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.analysis_only != 'true' }}
         run: |
           python scripts/check_robinhood_auth_preflight.py
 
       - name: Run notebook
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.analysis_only != 'true' }}
         run: |
           python scripts/run_notebook_with_progress.py notebook/2025summerstock-Copy6.ipynb --kernel-name python3 --executed-output logs/executed-notebook.ipynb
 
       - name: Track shortlist performance
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.analysis_only != 'true' }}
         run: |
           python scripts/track_watchlist_history.py
           python scripts/track_shortlist_history.py
@@ -172,10 +181,12 @@ jobs:
           python scripts/export_dashboard_data.py
 
       - name: Generate automatic paper decisions
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.analysis_only != 'true' }}
         run: |
           python scripts/generate_daily_paper_decisions.py
 
       - name: Update automatic paper outcomes
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.analysis_only != 'true' }}
         run: |
           python scripts/update_automatic_paper_outcomes.py
           python scripts/sync_paper_learning_to_dashboard.py
@@ -185,16 +196,17 @@ jobs:
           python scripts/check_model_export_smoke.py
 
       - name: Validate generated outputs
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.analysis_only != 'true' }}
         run: |
           python scripts/validate_pipeline_outputs.py
 
       - name: Encrypt Robinhood session
-        if: always()
+        if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.analysis_only != 'true') }}
         run: |
           python scripts/sync_robinhood_session.py save
 
       - name: Save encrypted Robinhood session
-        if: always()
+        if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.analysis_only != 'true') }}
         uses: actions/cache/save@v4
         with:
           path: .auth-cache
