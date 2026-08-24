@@ -9,6 +9,8 @@ import type {
   LeakageRow,
   PaperOutcomeRow,
   ProbabilityRow,
+  RidgeDriverRow,
+  SimilarityPairRow,
   SiteSnapshot,
 } from "./site-types";
 
@@ -42,6 +44,11 @@ function shortDate(value: string) {
     minute: value.includes("T") ? "2-digit" : undefined,
     timeZoneName: value.includes("T") ? "short" : undefined,
   }).format(date);
+}
+
+function readableLabel(value: string | undefined) {
+  if (!value) return "Unknown";
+  return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function validSnapshot(value: unknown): value is SiteSnapshot {
@@ -251,6 +258,92 @@ function ArtifactHealth({ rows }: { rows: ArtifactRow[] }) {
   );
 }
 
+function RidgeDriverLens({ rows }: { rows: RidgeDriverRow[] }) {
+  const strongest = new Map<string, RidgeDriverRow>();
+  rows.forEach((row) => {
+    const coefficient = Number(row.avg_coefficient);
+    if (!row.target_name || !row.feature || !Number.isFinite(coefficient)) return;
+    const key = `${row.target_name}-${finite(row.horizon_days)}`;
+    const current = strongest.get(key);
+    if (!current || Math.abs(coefficient) > Math.abs(finite(current.avg_coefficient))) {
+      strongest.set(key, row);
+    }
+  });
+  const targetOrder: Record<string, number> = { total_return: 0, upside_capture: 1, downside_risk: 2 };
+  const visible = [...strongest.values()].sort((a, b) => {
+    const horizonDifference = finite(b.horizon_days) - finite(a.horizon_days);
+    if (horizonDifference) return horizonDifference;
+    return (targetOrder[a.target_name || ""] ?? 9) - (targetOrder[b.target_name || ""] ?? 9);
+  });
+  if (!visible.length) {
+    return <EmptyState>Ridge target drivers will appear after the next archived analysis-only run.</EmptyState>;
+  }
+  const coefficientMax = Math.max(...visible.map((row) => Math.abs(finite(row.avg_coefficient))), 0.0001);
+  const bestR2 = Math.max(...rows.map((row) => finite(row.avg_test_r2, Number.NEGATIVE_INFINITY)));
+  return (
+    <div className="driver-lens">
+      <div className={`evidence-note ${bestR2 < 0.05 ? "evidence-warning" : ""}`}>
+        <strong>Best out-of-sample R2 {Number.isFinite(bestR2) ? bestR2.toFixed(3) : "unknown"}</strong>
+        <span>{bestR2 < 0.05 ? "Use these coefficients to explain exposure, not as a standalone trade signal." : "Driver strength has cleared the exploratory evidence threshold."}</span>
+      </div>
+      <div className="driver-list" aria-label="Strongest standardized Ridge driver by target and horizon">
+        {visible.map((row) => {
+          const coefficient = finite(row.avg_coefficient);
+          const width = Math.max(2, Math.abs(coefficient) / coefficientMax * 46);
+          return (
+            <article className="driver-row" key={`${row.target_name}-${row.horizon_days}`}>
+              <div className="driver-name">
+                <strong>{readableLabel(row.feature)}</strong>
+                <span>{readableLabel(row.target_name)} / {finite(row.horizon_days)}d</span>
+              </div>
+              <div className="driver-axis" aria-label={`Coefficient ${coefficient.toFixed(4)}`}>
+                <span className="driver-zero" />
+                <span
+                  className={`driver-fill ${coefficient >= 0 ? "driver-positive" : "driver-negative"}`}
+                  style={{ left: coefficient >= 0 ? "50%" : `${50 - width}%`, width: `${width}%` }}
+                />
+              </div>
+              <div className="driver-value">
+                <strong>{coefficient >= 0 ? "+" : ""}{coefficient.toFixed(4)}</strong>
+                <span>R2 {finite(row.avg_test_r2).toFixed(3)}</span>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SimilarityExposure({ rows }: { rows: SimilarityPairRow[] }) {
+  const visible = [...rows]
+    .filter((row) => row.A && row.B && Number.isFinite(Number(row.avg_similarity)))
+    .sort((a, b) => finite(b.runs) - finite(a.runs) || finite(b.avg_similarity) - finite(a.avg_similarity))
+    .slice(0, 10);
+  if (!visible.length) {
+    return <EmptyState>Similarity exposure pairs will appear after the graph export is archived.</EmptyState>;
+  }
+  const repeated = rows.filter((row) => finite(row.runs) >= 3).length;
+  return (
+    <div className="similarity-exposure">
+      <div className={`evidence-note ${repeated ? "" : "evidence-warning"}`}>
+        <strong>{repeated} pairs repeated across 3+ runs</strong>
+        <span>{repeated ? "Repeated links are stronger candidates for portfolio overlap review." : "Current links are exposure hypotheses until they recur in future runs."}</span>
+      </div>
+      <div className="similarity-list" aria-label="Most similar stock pairs">
+        {visible.map((row, index) => (
+          <article className="similarity-row" key={`${row.A}-${row.B}-${index}`}>
+            <div className="pair-name"><strong>{row.A} / {row.B}</strong><span>{finite(row.runs)} {finite(row.runs) === 1 ? "run" : "runs"}</span></div>
+            <div className="similarity-track"><span style={{ width: `${Math.min(100, finite(row.avg_similarity) * 100)}%` }} /></div>
+            <strong className="similarity-value">{percent(row.avg_similarity)}</strong>
+          </article>
+        ))}
+      </div>
+      <p className="portfolio-rule"><strong>Portfolio rule:</strong> review high-similarity pairs before holding both at full size.</p>
+    </div>
+  );
+}
+
 export default function Home() {
   const [snapshot, setSnapshot] = useState<SiteSnapshot>(fallbackSnapshot);
   const [isLive, setIsLive] = useState(false);
@@ -299,6 +392,7 @@ export default function Home() {
         <div className="nav-links">
           <a href="#trust">Trust</a>
           <a href="#models">Models</a>
+          <a href="#drivers">Drivers</a>
           <a href="#data-flow">Data flow</a>
           <a href="#next-actions">Next actions</a>
         </div>
@@ -371,6 +465,20 @@ export default function Home() {
         <div className="chart-panel">
           <div className="panel-heading"><p className="eyebrow">Confidence shape</p><h2>High and extreme probabilities</h2></div>
           <ProbabilityShape rows={snapshot.charts.probability_signal_shape} />
+        </div>
+      </section>
+
+      <section className="analysis-section" id="drivers">
+        <div className="section-heading"><div><p className="eyebrow">Decision context</p><h2>What moves each target, and what may overlap</h2></div><p>Ridge coefficients provide a signed linear explanation across return, upside, and downside targets. Similarity links flag holdings that may be expressing the same underlying exposure.</p></div>
+        <div className="two-column driver-grid">
+          <div className="chart-panel driver-panel">
+            <div className="panel-heading"><p className="eyebrow">Ridge explanation</p><h2>Strongest driver by horizon</h2></div>
+            <RidgeDriverLens rows={snapshot.charts.ridge_target_feature_stability || []} />
+          </div>
+          <div className="chart-panel driver-panel">
+            <div className="panel-heading"><p className="eyebrow">Similarity graph</p><h2>Potential duplicate exposures</h2></div>
+            <SimilarityExposure rows={snapshot.charts.similarity_pair_stability || []} />
+          </div>
         </div>
       </section>
 
