@@ -9,8 +9,8 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.impute import SimpleImputer
-from sklearn.linear_model import SGDClassifier
-from sklearn.metrics import accuracy_score, brier_score_loss, roc_auc_score
+from sklearn.linear_model import Ridge, SGDClassifier
+from sklearn.metrics import accuracy_score, brier_score_loss, mean_absolute_error, r2_score, roc_auc_score
 from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
@@ -97,6 +97,13 @@ WALK_FORWARD_MIN_TRAIN_DATES = int(os.getenv("MODEL_WALK_FORWARD_MIN_TRAIN_DATES
 HISTORY_PREDICTION_LIMIT = int(os.getenv("MODEL_HISTORY_PREDICTION_LIMIT", "100"))
 MODEL_MEMORY_RETENTION_DAYS = int(os.getenv("MODEL_MEMORY_RETENTION_DAYS", "180"))
 ANN_IMPORTANCE_SAMPLE_ROWS = int(os.getenv("MODEL_ANN_IMPORTANCE_SAMPLE_ROWS", "12000"))
+RIDGE_IMPORTANCE_MAX_TRAIN_ROWS = int(
+    os.getenv("MODEL_RIDGE_IMPORTANCE_MAX_TRAIN_ROWS", "150000")
+)
+RIDGE_IMPORTANCE_MAX_TEST_ROWS = int(
+    os.getenv("MODEL_RIDGE_IMPORTANCE_MAX_TEST_ROWS", "50000")
+)
+RIDGE_ALPHA = float(os.getenv("MODEL_RIDGE_ALPHA", "10.0"))
 MONTE_CARLO_LIMIT_PER_HORIZON = int(os.getenv("MODEL_MONTE_CARLO_LIMIT_PER_HORIZON", "60"))
 MONTE_CARLO_SIMULATIONS = int(os.getenv("MODEL_MONTE_CARLO_SIMULATIONS", "1000"))
 MONTE_CARLO_PATH_LIMIT_PER_HORIZON = int(os.getenv("MODEL_MONTE_CARLO_PATH_LIMIT_PER_HORIZON", "12"))
@@ -602,6 +609,72 @@ def ann_feature_group_importance(model, model_name, horizon, test, features):
     )
 
 
+def ridge_target_feature_importance(horizon, train_pool, test_pool, features):
+    """Explain continuous return, upside, and downside targets with a time-safe Ridge model."""
+    if train_pool.empty or test_pool.empty or not features:
+        return pd.DataFrame()
+    train = sample_rows(train_pool, RIDGE_IMPORTANCE_MAX_TRAIN_ROWS).copy()
+    test = sample_rows(test_pool, RIDGE_IMPORTANCE_MAX_TEST_ROWS).copy()
+    train_return = pd.to_numeric(train["forward_return"], errors="coerce")
+    test_return = pd.to_numeric(test["forward_return"], errors="coerce")
+    targets = {
+        "total_return": (train_return, test_return),
+        "upside_capture": (train_return.clip(lower=0), test_return.clip(lower=0)),
+        "downside_risk": (-train_return.clip(upper=0), -test_return.clip(upper=0)),
+    }
+    rows = []
+    for target_name, (train_target, test_target) in targets.items():
+        train_mask = train_target.notna()
+        test_mask = test_target.notna()
+        if train_mask.sum() < 100 or test_mask.sum() < 50:
+            continue
+        lower = float(train_target[train_mask].quantile(0.01))
+        upper = float(train_target[train_mask].quantile(0.99))
+        if not np.isfinite(lower) or not np.isfinite(upper) or lower >= upper:
+            continue
+        y_train = train_target.loc[train_mask].clip(lower=lower, upper=upper)
+        y_test = test_target.loc[test_mask].clip(lower=lower, upper=upper)
+        model = make_pipeline(
+            SimpleImputer(strategy="median"),
+            StandardScaler(),
+            Ridge(alpha=RIDGE_ALPHA),
+        )
+        try:
+            model.fit(train.loc[train_mask, list(features)], y_train)
+            predictions = model.predict(test.loc[test_mask, list(features)])
+            ridge = _pipeline_step_with_attr(model, "coef_")
+            if ridge is None:
+                continue
+            test_r2 = float(r2_score(y_test, predictions))
+            test_mae = float(mean_absolute_error(y_test, predictions))
+            for feature, coefficient in zip(features, ridge.coef_):
+                rows.append(
+                    {
+                        "horizon_days": horizon,
+                        "target_name": target_name,
+                        "feature": feature,
+                        "coefficient": float(coefficient),
+                        "absolute_coefficient": abs(float(coefficient)),
+                        "ridge_alpha": RIDGE_ALPHA,
+                        "train_rows": int(train_mask.sum()),
+                        "test_rows": int(test_mask.sum()),
+                        "target_clip_lower": lower,
+                        "target_clip_upper": upper,
+                        "test_r2": test_r2,
+                        "test_mae": test_mae,
+                    }
+                )
+        except Exception as exc:  # noqa: BLE001 - explanatory output must not stop the tournament.
+            print(f"{horizon}d Ridge importance for {target_name} failed: {exc}")
+    output = pd.DataFrame(rows)
+    if output.empty:
+        return output
+    output["importance_rank"] = output.groupby(
+        ["horizon_days", "target_name"]
+    )["absolute_coefficient"].rank(method="first", ascending=False).astype(int)
+    return output.sort_values(["horizon_days", "target_name", "importance_rank"])
+
+
 def champion_score(evaluation):
     if evaluation.get("fit_status") != "ok":
         return -1_000_000_000.0
@@ -961,7 +1034,13 @@ def build_horizon(frame, horizon):
     evaluations = []
     importances = []
     ann_importances = []
+    ridge_importances = []
     predictions = []
+    ridge_importance = ridge_target_feature_importance(
+        horizon, train_pool, test_pool, usable_features
+    )
+    if not ridge_importance.empty:
+        ridge_importances.append(ridge_importance)
     for model_name in MODEL_CANDIDATES:
         model_features = features_for_model(model_name, usable_features)
         expected_features = ANN_FEATURES if model_name == SIMILARITY_ANN_MODEL else FEATURES
@@ -1006,7 +1085,14 @@ def build_horizon(frame, horizon):
         evaluations.append(evaluation)
     walk_forward_rows = walk_forward_horizon(labeled, horizon, usable_features)
     evaluations = attach_walk_forward_summary(evaluations, walk_forward_rows)
-    return evaluations, importances, ann_importances, predictions, walk_forward_rows
+    return (
+        evaluations,
+        importances,
+        ann_importances,
+        ridge_importances,
+        predictions,
+        walk_forward_rows,
+    )
 
 
 def mark_champions(tournament):
@@ -1375,6 +1461,7 @@ def save_outputs(
     evaluations,
     importances,
     ann_importances,
+    ridge_importances,
     predictions,
     walk_forward_rows,
     run_metadata,
@@ -1426,6 +1513,26 @@ def save_outputs(
                 "importance_delta",
             ]
         )
+    if ridge_importances:
+        all_ridge_importance = pd.concat(ridge_importances, ignore_index=True)
+    else:
+        all_ridge_importance = pd.DataFrame(
+            columns=[
+                "horizon_days",
+                "target_name",
+                "feature",
+                "coefficient",
+                "absolute_coefficient",
+                "importance_rank",
+                "ridge_alpha",
+                "train_rows",
+                "test_rows",
+                "target_clip_lower",
+                "target_clip_upper",
+                "test_r2",
+                "test_mae",
+            ]
+        )
     monte_carlo_summary, monte_carlo_paths = monte_carlo_outputs(
         frame, all_predictions, champions
     )
@@ -1437,6 +1544,9 @@ def save_outputs(
     all_importance.to_sql("ModelTournamentFeatureImportance", conn, if_exists="replace", index=False)
     all_ann_importance.to_sql(
         "ANNFeatureGroupImportance", conn, if_exists="replace", index=False
+    )
+    all_ridge_importance.to_sql(
+        "RidgeTargetFeatureImportance", conn, if_exists="replace", index=False
     )
     latest.to_sql("LatestModelPredictions", conn, if_exists="replace", index=False)
     all_predictions.to_sql("LatestModelCandidatePredictions", conn, if_exists="replace", index=False)
@@ -1465,6 +1575,7 @@ def save_outputs(
                 "tournament_rows": len(tournament),
                 "walk_forward_rows": len(walk_forward),
                 "ann_feature_group_rows": len(all_ann_importance),
+                "ridge_target_feature_rows": len(all_ridge_importance),
                 "monte_carlo_rows": len(monte_carlo_summary),
                 **similarity_counts,
                 "candidate_prediction_rows": len(all_predictions),
@@ -1489,11 +1600,18 @@ def save_outputs(
     prediction_history = prediction_history_rows(all_predictions, champions, run_metadata)
     append_run_frame(conn, "ModelPredictionHistory", prediction_history, run_metadata["run_id"])
     ann_importance_history = with_run_columns(all_ann_importance, run_metadata)
+    ridge_importance_history = with_run_columns(all_ridge_importance, run_metadata)
     monte_carlo_history = with_run_columns(monte_carlo_summary, run_metadata)
     append_run_frame(
         conn,
         "ANNFeatureGroupImportanceHistory",
         ann_importance_history,
+        run_metadata["run_id"],
+    )
+    append_run_frame(
+        conn,
+        "RidgeTargetFeatureImportanceHistory",
+        ridge_importance_history,
         run_metadata["run_id"],
     )
     append_run_frame(
@@ -1514,6 +1632,10 @@ def save_outputs(
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_ann_feature_group_importance "
         "ON ANNFeatureGroupImportance(horizon_days, stock_type, feature_group)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_ridge_target_feature_importance "
+        "ON RidgeTargetFeatureImportance(horizon_days, target_name, importance_rank)"
     )
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_latest_monte_carlo_simulations "
@@ -1537,6 +1659,7 @@ def save_outputs(
         "ModelWalkForwardEvaluationHistory",
         "ModelPredictionHistory",
         "ANNFeatureGroupImportanceHistory",
+        "RidgeTargetFeatureImportanceHistory",
         "MonteCarloSimulationHistory",
     ):
         if table_exists(conn, table):
@@ -1554,6 +1677,9 @@ def save_outputs(
     importance.to_csv(ANALYTICS_DIR / "model_feature_importance.csv", index=False)
     all_importance.to_csv(ANALYTICS_DIR / "model_tournament_feature_importance.csv", index=False)
     all_ann_importance.to_csv(ANALYTICS_DIR / "ann_feature_group_importance.csv", index=False)
+    all_ridge_importance.to_csv(
+        ANALYTICS_DIR / "ridge_target_feature_importance.csv", index=False
+    )
     latest.to_csv(ANALYTICS_DIR / "latest_model_predictions.csv", index=False)
     all_predictions.to_csv(ANALYTICS_DIR / "latest_model_candidate_predictions.csv", index=False)
     monte_carlo_summary.to_csv(
@@ -1562,6 +1688,9 @@ def save_outputs(
     monte_carlo_paths.to_csv(ANALYTICS_DIR / "latest_monte_carlo_paths.csv", index=False)
     ann_importance_history.to_csv(
         ANALYTICS_DIR / "ann_feature_group_importance_history_latest.csv", index=False
+    )
+    ridge_importance_history.to_csv(
+        ANALYTICS_DIR / "ridge_target_feature_importance_history_latest.csv", index=False
     )
     monte_carlo_history.to_csv(
         ANALYTICS_DIR / "monte_carlo_simulation_history_latest.csv", index=False
@@ -1585,6 +1714,7 @@ def main():
         evaluations = []
         importances = []
         ann_importances = []
+        ridge_importances = []
         predictions = []
         walk_forward_rows = []
         for horizon in HORIZONS:
@@ -1593,12 +1723,14 @@ def main():
                     horizon_evaluations,
                     horizon_importances,
                     horizon_ann_importances,
+                    horizon_ridge_importances,
                     horizon_predictions,
                     horizon_walk_forward,
                 ) = build_horizon(frame, horizon)
             evaluations.extend(horizon_evaluations)
             importances.extend(horizon_importances)
             ann_importances.extend(horizon_ann_importances)
+            ridge_importances.extend(horizon_ridge_importances)
             predictions.extend(horizon_predictions)
             walk_forward_rows.extend(horizon_walk_forward)
         with timed_stage("save model outputs and compact history"):
@@ -1608,6 +1740,7 @@ def main():
                 evaluations,
                 importances,
                 ann_importances,
+                ridge_importances,
                 predictions,
                 walk_forward_rows,
                 run_metadata,

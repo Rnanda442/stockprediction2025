@@ -370,6 +370,149 @@ def render_weekly_score(csv_dir: Path, output: Path) -> str | None:
     return None
 
 
+def render_ridge_target_drivers(csv_dir: Path, output: Path) -> str | None:
+    frame = read_csv(csv_dir / "ridge_target_feature_stability.csv")
+    required = {
+        "horizon_days",
+        "target_name",
+        "feature",
+        "avg_coefficient",
+        "avg_absolute_coefficient",
+    }
+    if frame.empty or not required.issubset(frame.columns):
+        return "Ridge target-driver rows are unavailable until the next model run."
+    for column in ("horizon_days", "avg_coefficient", "avg_absolute_coefficient"):
+        frame[column] = pd.to_numeric(frame[column], errors="coerce")
+    frame = frame.dropna(subset=["horizon_days", "avg_coefficient", "avg_absolute_coefficient"])
+    if frame.empty:
+        return "No numeric Ridge target-driver rows are available."
+    feature_order = (
+        frame.groupby("feature")["avg_absolute_coefficient"]
+        .mean()
+        .sort_values(ascending=False)
+        .head(15)
+        .index.tolist()
+    )
+    frame = frame[frame["feature"].isin(feature_order)].copy()
+    target_order = ["total_return", "upside_capture", "downside_risk"]
+    column_order = [
+        (horizon, target)
+        for horizon in sorted(frame["horizon_days"].dropna().unique())
+        for target in target_order
+        if ((frame["horizon_days"] == horizon) & (frame["target_name"] == target)).any()
+    ]
+    if len(feature_order) < 4 or not column_order:
+        return "Fewer than four Ridge features or no target columns are available."
+    pivot = frame.pivot_table(
+        index="feature",
+        columns=["horizon_days", "target_name"],
+        values="avg_coefficient",
+        aggfunc="mean",
+    ).reindex(index=feature_order, columns=pd.MultiIndex.from_tuples(column_order))
+    values = pivot.fillna(0).to_numpy(dtype=float)
+    limit = max(float(np.nanmax(np.abs(values))), 0.001)
+    fig, ax = plt.subplots(figsize=(13, max(6.0, len(feature_order) * 0.45)))
+    image = ax.imshow(values, cmap="RdBu_r", vmin=-limit, vmax=limit, aspect="auto")
+    labels = [f"{int(horizon)}d\n{target.replace('_', ' ')}" for horizon, target in column_order]
+    ax.set_xticks(np.arange(len(labels)), labels=labels)
+    ax.set_yticks(np.arange(len(feature_order)), labels=feature_order)
+    ax.tick_params(axis="x", top=True, bottom=False, labeltop=True, labelbottom=False, pad=8)
+    for row in range(values.shape[0]):
+        for column in range(values.shape[1]):
+            value = values[row, column]
+            ax.text(
+                column,
+                row,
+                f"{value:+.2%}",
+                ha="center",
+                va="center",
+                color="white" if abs(value) > limit * 0.55 else INK,
+                fontsize=7,
+            )
+    fig.colorbar(image, ax=ax, fraction=0.025, pad=0.02, label="Return target change per 1 SD feature")
+    ax.set_title(
+        "Ridge target drivers\nSigned, standardized coefficients across return, upside, and downside targets",
+        loc="left",
+        color=INK,
+        fontsize=14,
+        fontweight="bold",
+    )
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    save_figure(fig, output)
+    return None
+
+
+def render_similarity_network(csv_dir: Path, output: Path) -> str | None:
+    frame = read_csv(csv_dir / "similarity_pair_stability.csv")
+    required = {"A", "B", "avg_similarity", "runs"}
+    if frame.empty or not required.issubset(frame.columns):
+        return "Similarity-pair stability rows are unavailable."
+    frame["avg_similarity"] = pd.to_numeric(frame["avg_similarity"], errors="coerce")
+    frame["runs"] = pd.to_numeric(frame["runs"], errors="coerce").fillna(1)
+    frame = frame.dropna(subset=["avg_similarity"])
+    frame = frame[frame["avg_similarity"] >= 0.60].sort_values(
+        ["runs", "avg_similarity"], ascending=[False, False]
+    ).head(80)
+    if len(frame) < 3:
+        return "Fewer than three stable similarity edges are available."
+    degree: dict[str, float] = {}
+    for row in frame.itertuples(index=False):
+        weight = float(row.avg_similarity) * max(float(row.runs), 1.0)
+        degree[str(row.A)] = degree.get(str(row.A), 0.0) + weight
+        degree[str(row.B)] = degree.get(str(row.B), 0.0) + weight
+    nodes = [name for name, _ in sorted(degree.items(), key=lambda item: item[1], reverse=True)[:24]]
+    node_set = set(nodes)
+    edges = frame[frame["A"].isin(node_set) & frame["B"].isin(node_set)].head(45)
+    if edges.empty:
+        return "No connected high-similarity network remains after node selection."
+    angles = np.linspace(0, 2 * np.pi, len(nodes), endpoint=False)
+    positions = {node: (np.cos(angle), np.sin(angle)) for node, angle in zip(nodes, angles)}
+    similarities = edges["avg_similarity"].to_numpy(dtype=float)
+    low, high = float(similarities.min()), float(similarities.max())
+    spread = max(high - low, 1e-6)
+    fig, ax = plt.subplots(figsize=(10.5, 10.5))
+    for row in edges.itertuples(index=False):
+        x1, y1 = positions[str(row.A)]
+        x2, y2 = positions[str(row.B)]
+        strength = (float(row.avg_similarity) - low) / spread
+        ax.plot(
+            [x1, x2],
+            [y1, y2],
+            color=BLUE,
+            alpha=0.16 + 0.54 * strength,
+            linewidth=0.7 + 2.6 * strength,
+            zorder=1,
+        )
+    max_degree = max(degree[node] for node in nodes)
+    sizes = [180 + 900 * degree[node] / max_degree for node in nodes]
+    ax.scatter(
+        [positions[node][0] for node in nodes],
+        [positions[node][1] for node in nodes],
+        s=sizes,
+        color=GOLD_LIGHT,
+        edgecolor=GOLD,
+        linewidth=1.4,
+        zorder=2,
+    )
+    for node in nodes:
+        x, y = positions[node]
+        ax.text(x, y, node, ha="center", va="center", color=INK, fontsize=8, fontweight="bold")
+    ax.set_title(
+        "Stable similarity network\nNode size reflects repeated similarity strength; stronger links are darker",
+        loc="left",
+        color=INK,
+        fontsize=15,
+        fontweight="bold",
+    )
+    ax.set_xlim(-1.18, 1.18)
+    ax.set_ylim(-1.18, 1.18)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    save_figure(fig, output)
+    return None
+
+
 def main() -> int:
     args = parse_args()
     warehouse = resolve_path(args.warehouse)
@@ -385,6 +528,8 @@ def main() -> int:
         ("artifact_health", render_artifact_health),
         ("feature_group_stability", render_feature_stability),
         ("model_score_weekly", render_weekly_score),
+        ("ridge_target_drivers", render_ridge_target_drivers),
+        ("similarity_network", render_similarity_network),
     ]
     statuses = []
     for name, renderer in renderers:
