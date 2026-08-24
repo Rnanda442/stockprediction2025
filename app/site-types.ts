@@ -81,6 +81,30 @@ export type ArtifactRow = {
   compact_only?: boolean | string;
 };
 
+export type RidgeDriverRow = {
+  horizon_days?: number;
+  target_name?: string;
+  feature?: string;
+  runs?: number;
+  avg_coefficient?: number;
+  std_coefficient?: number;
+  avg_absolute_coefficient?: number;
+  avg_test_r2?: number;
+  avg_test_mae?: number;
+  importance_rank?: number;
+};
+
+export type SimilarityPairRow = {
+  A?: string;
+  B?: string;
+  runs?: number;
+  observations?: number;
+  avg_similarity?: number;
+  std_similarity?: number;
+  min_similarity?: number;
+  max_similarity?: number;
+};
+
 export type SiteSnapshot = {
   schema_version: number;
   generated_at: string;
@@ -111,6 +135,8 @@ export type SiteSnapshot = {
     artifact_health: ArtifactRow[];
     feature_group_stability: Record<string, unknown>[];
     model_score_weekly: Record<string, unknown>[];
+    ridge_target_feature_stability?: RidgeDriverRow[];
+    similarity_pair_stability?: SimilarityPairRow[];
   };
   disclaimer: string;
 };
