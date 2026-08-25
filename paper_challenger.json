@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "status": "paper_only",
+  "experiment_id": "feature_loss_32683358084",
+  "architecture": "direction_relu_graph",
+  "feature_input": "base_plus_similarity_graph",
+  "prediction_semantics": "ranking_score_only",
+  "probability_enabled": false,
+  "live_trading_enabled": false,
+  "selection_rule": {
+    "required_horizons": [
+      5,
+      20
+    ],
+    "minimum_splits_per_horizon": 3,
+    "minimum_mean_excess_return": 0.005,
+    "maximum_excess_return_split_std": 0.005,
+    "require_positive_excess_in_every_split": true,
+    "require_positive_brier_skill_for_probability": true
+  },
+  "evidence": {
+    "5": {
+      "auc": 0.5022,
+      "accuracy": 0.5027,
+      "brier_skill": -0.0321,
+      "calibration_error": 0.0746,
+      "mean_net_return": 0.0146,
+      "win_rate": 0.5556,
+      "mean_excess_vs_universe": 0.0085,
+      "average_sleeve_compound_return": 0.0853,
+      "worst_sleeve_max_drawdown": -0.0566,
+      "auc_split_std": 0.0155,
+      "excess_return_split_std": 0.0028,
+      "split_excess_returns": [
+        0.008147,
+        0.005991,
+        0.011472
+      ]
+    },
+    "20": {
+      "auc": 0.5258,
+      "accuracy": 0.55,
+      "brier_skill": -0.0377,
+      "calibration_error": 0.0894,
+      "mean_net_return": 0.0396,
+      "win_rate": 0.8333,
+      "mean_excess_vs_universe": 0.0078,
+      "average_sleeve_compound_return": 0.0597,
+      "worst_sleeve_max_drawdown": -0.0106,
+      "auc_split_std": 0.0094,
+      "excess_return_split_std": 0.0022,
+      "split_excess_returns": [
+        0.005732,
+        0.010154,
+        0.007415
+      ]
+    }
+  },
+  "guardrails": [
+    "Use scores only to rank paper-trading candidates.",
+    "Do not display the score as a probability or confidence percentage.",
+    "Do not route outputs to Robinhood or another brokerage.",
+    "Keep the existing production model unchanged.",
+    "Re-evaluate after additional chronological windows before promotion."
+  ],
+  "source_files": [
+    "warehouse/experiments/feature_loss_32683358084/architecture_loss_summary.csv",
+    "warehouse/experiments/feature_loss_32683358084/architecture_loss_by_split.csv",
+    "warehouse/experiments/feature_loss_32683358084/leakage_audit.csv"
+  ]
+}
