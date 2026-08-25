@@ -122,32 +122,145 @@ def sigmoid(values: np.ndarray) -> np.ndarray:
     return 1.0 / (1.0 + np.exp(-clipped))
 
 
+def price_feature_frame(
+    prices: pd.DataFrame,
+    horizons: tuple[int, ...],
+) -> pd.DataFrame:
+    """Rebuild a compact feature panel from the archived RecentPrices table."""
+    prices["begins_at"] = pd.to_datetime(prices["begins_at"], errors="coerce")
+    prices = prices.dropna(subset=["begins_at", "ticker", "close_price"])
+    prices = prices.sort_values(["ticker", "begins_at"]).reset_index(drop=True)
+    prices["ticker"] = prices["ticker"].astype(str)
+    prices["close_price"] = pd.to_numeric(prices["close_price"], errors="coerce")
+    prices["volume"] = pd.to_numeric(prices["volume"], errors="coerce").fillna(0.0)
+
+    grouped_close = prices.groupby("ticker", sort=False)["close_price"]
+    prices["pct_1d"] = grouped_close.pct_change(1, fill_method=None)
+    prices["pct_2d"] = grouped_close.pct_change(2, fill_method=None)
+    prices["pct_3d"] = grouped_close.pct_change(3, fill_method=None)
+    prices["pct_5d"] = grouped_close.pct_change(5, fill_method=None)
+    prices["ret_10d"] = grouped_close.pct_change(10, fill_method=None)
+    prices["ret_20d"] = grouped_close.pct_change(20, fill_method=None)
+    prices["ret_60d"] = grouped_close.pct_change(60, fill_method=None)
+
+    return_group = prices.groupby("ticker", sort=False)["pct_1d"]
+    prices["volatility_5d"] = return_group.transform(
+        lambda values: values.rolling(5, min_periods=4).std()
+    )
+    prices["volatility_10d"] = return_group.transform(
+        lambda values: values.rolling(10, min_periods=6).std()
+    )
+    prices["vol_20d"] = return_group.transform(
+        lambda values: values.rolling(20, min_periods=12).std()
+    )
+    prices["vol_60d"] = return_group.transform(
+        lambda values: values.rolling(60, min_periods=30).std()
+    )
+    prices["ac1_5d"] = return_group.transform(
+        lambda values: values.rolling(5, min_periods=4).corr(values.shift(1))
+    )
+
+    shift_4 = grouped_close.shift(4)
+    shift_59 = grouped_close.shift(59)
+    prices["momentum_slope_5d"] = (prices["close_price"] / shift_4 - 1.0) / 4.0
+    prices["trend_slope_60d"] = (prices["close_price"] / shift_59 - 1.0) / 59.0
+
+    moving_5 = grouped_close.transform(lambda values: values.rolling(5, min_periods=4).mean())
+    moving_20 = grouped_close.transform(lambda values: values.rolling(20, min_periods=12).mean())
+    moving_60 = grouped_close.transform(lambda values: values.rolling(60, min_periods=30).mean())
+    price_std_20 = grouped_close.transform(lambda values: values.rolling(20, min_periods=12).std())
+    rolling_high_60 = grouped_close.transform(lambda values: values.rolling(60, min_periods=30).max())
+    path_distance_60 = prices.groupby("ticker", sort=False)["close_price"].transform(
+        lambda values: values.diff().abs().rolling(60, min_periods=30).sum()
+    )
+    direct_distance_60 = (prices["close_price"] - shift_59).abs()
+
+    prices["ma_crossover"] = moving_5 / moving_20 - 1.0
+    prices["z_ma20"] = (prices["close_price"] - moving_20) / price_std_20.replace(0.0, np.nan)
+    prices["bb_width_20d"] = 4.0 * price_std_20 / moving_20.replace(0.0, np.nan)
+    prices["max_dd_60d"] = prices["close_price"] / rolling_high_60 - 1.0
+    prices["trend_r2_60d"] = (
+        direct_distance_60 / path_distance_60.replace(0.0, np.nan)
+    ).clip(0.0, 1.0)
+    prices["riskadj_mom_60d"] = prices["ret_60d"] / (
+        prices["vol_60d"].replace(0.0, np.nan) * math.sqrt(60.0)
+    )
+    prices["dollar_volume"] = prices["close_price"] * prices["volume"]
+    prices["dollar_vol_20d"] = prices.groupby("ticker", sort=False)["dollar_volume"].transform(
+        lambda values: values.rolling(20, min_periods=12).mean()
+    )
+    prices["time_since_max_60d"] = prices.groupby("ticker", sort=False)["close_price"].transform(
+        lambda values: values.rolling(60, min_periods=30).apply(
+            lambda window: float(len(window) - 1 - np.argmax(window)), raw=True
+        )
+    )
+
+    for horizon in horizons:
+        future_price = grouped_close.shift(-horizon)
+        future_date = prices.groupby("ticker", sort=False)["begins_at"].shift(-horizon)
+        prices[f"future_price_{horizon}d"] = future_price
+        prices[f"future_date_{horizon}d"] = future_date
+        prices[f"future_return_{horizon}d"] = future_price / prices["close_price"] - 1.0
+    return prices.drop(columns=["dollar_volume"])
+
+
 def load_frame(db_path: Path, horizons: tuple[int, ...], lookback_dates: int) -> pd.DataFrame:
     if not db_path.exists():
         raise FileNotFoundError(f"Vectorized database not found: {db_path}")
 
-    columns = ["begins_at", "ticker", "close_price", *BASE_FEATURES]
     with sqlite3.connect(db_path) as conn:
-        date_rows = conn.execute(
+        tables = {
+            row[0]
+            for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
+        }
+        if "VectorizedFeatures" in tables:
+            columns = ["begins_at", "ticker", "close_price", *BASE_FEATURES]
+            date_rows = conn.execute(
+                """
+                SELECT DISTINCT begins_at
+                FROM VectorizedFeatures
+                WHERE span = '5year'
+                ORDER BY begins_at DESC
+                LIMIT ?
+                """,
+                (lookback_dates,),
+            ).fetchall()
+            if not date_rows:
+                raise RuntimeError("VectorizedFeatures has no 5year rows.")
+            cutoff = min(row[0] for row in date_rows)
+            query = f"""
+                SELECT {', '.join(columns)}
+                FROM VectorizedFeatures
+                WHERE span = '5year' AND begins_at >= ?
+                ORDER BY ticker, begins_at
             """
-            SELECT DISTINCT begins_at
-            FROM VectorizedFeatures
-            WHERE span = '5year'
-            ORDER BY begins_at DESC
-            LIMIT ?
-            """,
-            (lookback_dates,),
-        ).fetchall()
-        if not date_rows:
-            raise RuntimeError("VectorizedFeatures has no 5year rows.")
-        cutoff = min(row[0] for row in date_rows)
-        query = f"""
-            SELECT {', '.join(columns)}
-            FROM VectorizedFeatures
-            WHERE span = '5year' AND begins_at >= ?
-            ORDER BY ticker, begins_at
-        """
-        frame = pd.read_sql_query(query, conn, params=(cutoff,))
+            frame = pd.read_sql_query(query, conn, params=(cutoff,))
+        elif "RecentPrices" in tables:
+            date_rows = conn.execute(
+                """
+                SELECT DISTINCT begins_at
+                FROM RecentPrices
+                ORDER BY begins_at DESC
+                LIMIT ?
+                """,
+                (lookback_dates,),
+            ).fetchall()
+            if not date_rows:
+                raise RuntimeError("RecentPrices has no rows.")
+            cutoff = min(row[0] for row in date_rows)
+            frame = pd.read_sql_query(
+                """
+                SELECT ticker, begins_at, close_price, volume
+                FROM RecentPrices
+                WHERE begins_at >= ?
+                ORDER BY ticker, begins_at
+                """,
+                conn,
+                params=(cutoff,),
+            )
+            return price_feature_frame(frame, horizons)
+        else:
+            raise RuntimeError("Database has neither VectorizedFeatures nor RecentPrices.")
 
     frame["begins_at"] = pd.to_datetime(frame["begins_at"], errors="coerce")
     frame = frame.dropna(subset=["begins_at", "ticker", "close_price"])
