@@ -453,6 +453,7 @@ def evaluate_probabilities(
     return {
         "auc": float(roc_auc_score(labels, probabilities)),
         "accuracy": float(accuracy_score(labels, probabilities >= 0.5)),
+        "probability_std": float(np.std(probabilities)),
         "brier": brier,
         "brier_skill": 1.0 - brier / reference_brier,
         "log_loss": model_log_loss,
@@ -607,7 +608,10 @@ def run_split(
 def summarize(by_split: pd.DataFrame) -> pd.DataFrame:
     summary = by_split.groupby(["horizon", "method"], as_index=False).agg(
         auc=("auc", "mean"),
+        minimum_split_auc=("auc", "min"),
         accuracy=("accuracy", "mean"),
+        probability_std=("probability_std", "mean"),
+        minimum_split_probability_std=("probability_std", "min"),
         brier=("brier", "mean"),
         brier_skill=("brier_skill", "mean"),
         minimum_split_brier_skill=("brier_skill", "min"),
@@ -621,7 +625,10 @@ def summarize(by_split: pd.DataFrame) -> pd.DataFrame:
         mean_net_return=("mean_net_return", "mean"),
         win_rate=("win_rate", "mean"),
         mean_excess_vs_universe=("mean_excess_vs_universe", "mean"),
+        minimum_split_excess_vs_universe=("mean_excess_vs_universe", "min"),
         excess_return_split_std=("mean_excess_vs_universe", "std"),
+        minimum_split_calibration_slope=("calibration_slope", "min"),
+        maximum_split_calibration_slope=("calibration_slope", "max"),
     )
     raw_ece = (
         summary[summary["method"] == "uncalibrated"]
@@ -636,6 +643,14 @@ def summarize(by_split: pd.DataFrame) -> pd.DataFrame:
         (summary["minimum_split_brier_skill"] > 0)
         & (summary["log_loss_skill"] > 0)
         & summary["improves_calibration_error"]
+        & (summary["auc"] >= 0.51)
+        & (summary["minimum_split_auc"] >= 0.50)
+        & (summary["calibration_error"] <= 0.05)
+        & (summary["minimum_split_calibration_slope"] >= 0.50)
+        & (summary["maximum_split_calibration_slope"] <= 1.50)
+        & (summary["minimum_split_probability_std"] >= 0.02)
+        & (summary["mean_excess_vs_universe"] > 0)
+        & (summary["minimum_split_excess_vs_universe"] >= 0)
     )
     return summary.sort_values(
         ["horizon", "probability_ready", "brier_skill"],
@@ -648,12 +663,15 @@ def write_readout(output_path: Path, summary: pd.DataFrame) -> None:
         "horizon",
         "method",
         "auc",
+        "minimum_split_auc",
+        "probability_std",
         "brier_skill",
         "minimum_split_brier_skill",
         "log_loss_skill",
         "calibration_error",
         "calibration_slope",
         "mean_excess_vs_universe",
+        "minimum_split_excess_vs_universe",
         "probability_ready",
     ]
     ready = summary[summary["probability_ready"]]
@@ -736,8 +754,10 @@ def main() -> None:
             "cost_bps": args.cost_bps,
         },
         "promotion_rule": (
-            "Positive Brier skill in every split, positive log-loss skill, and lower "
-            "calibration error than the uncalibrated model."
+            "Positive Brier skill in every split, positive log-loss skill, lower "
+            "calibration error than the raw model, mean AUC at least 0.51 with no "
+            "split below 0.50, calibration slopes between 0.50 and 1.50, meaningful "
+            "probability spread, and positive excess return in every split."
         ),
     }
     (args.output_dir / "experiment_manifest.json").write_text(
