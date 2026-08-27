@@ -141,6 +141,13 @@
       "design_signature": "compact-consensus-cost-v1:h5:novel-pruned-groups:ridge+relu:3splits:holdout60",
       "question": "Can a compact feature set and consensus gate improve pre-holdout performance after turnover and transaction costs?",
       "status": "approved_next"
+    },
+    {
+      "experiment_id": "robustness_battery_5d_v1",
+      "design_signature": "robustness-battery-v1:h5:challengers+lofo+placebo+segments+costs+bootstrap:holdout60",
+      "question": "Does the compact winner survive broad model, feature, regime, portfolio, cost, calibration, and placebo stress tests?",
+      "depends_on": "compact_consensus_cost_5d_v1",
+      "status": "approved_after_dependency"
     }
   ],
   "known_biases_and_limits": [

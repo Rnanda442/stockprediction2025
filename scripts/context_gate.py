@@ -40,7 +40,7 @@ def assert_experiment_allowed(
     approved = {
         item.get("experiment_id"): item
         for item in gate.get("next_experiments", [])
-        if item.get("status") == "approved_next"
+        if item.get("status") in {"approved_next", "approved_after_dependency"}
     }
     if experiment_id not in approved:
         raise RuntimeError(f"Experiment is not approved in context gate: {experiment_id}")
