@@ -147,7 +147,53 @@
       "design_signature": "robustness-battery-v1:h5:challengers+lofo+placebo+segments+costs+bootstrap:holdout60",
       "question": "Does the compact winner survive broad model, feature, regime, portfolio, cost, calibration, and placebo stress tests?",
       "depends_on": "compact_consensus_cost_5d_v1",
-      "status": "approved_after_dependency"
+      "status": "completed_reviewed_provisional",
+      "reviewed_result": {
+        "reviewed_at": "2026-08-27",
+        "holdout_status": "sealed",
+        "winning_challenger": "elastic_c1_l25",
+        "winner_auc_mean": 0.51013,
+        "winner_brier_mean": 0.25163,
+        "winner_log_loss_mean": 0.69644,
+        "winner_ece_10_mean": 0.04026,
+        "winner_excess_return_mean": 0.00549,
+        "placebo_auc_mean": 0.49772,
+        "similarity_weighted_delta": 0.01467,
+        "similarity_weighted_ci_95": [0.00115, 0.02878],
+        "similarity_weighted_positive_probability": 0.982,
+        "consensus_gate_delta": -0.00219,
+        "consensus_gate_ci_95": [-0.00639, 0.00245],
+        "feature_findings": {
+          "graph_degree_auc_drop": 0.00506,
+          "ret_20d_auc_drop": 0.00324,
+          "ret_20d_excess_return_drop": 0.00779,
+          "vol_60d_auc_drop": 0.00281,
+          "dollar_vol_20d_log_assessment": "noisy_or_mildly_harmful",
+          "drawdown_60d_assessment": "mixed_classification_and_return_value"
+        },
+        "model_findings": {
+          "linear_regularized_models": "best_provisional_family",
+          "ann_auc_range": [0.49216, 0.49396],
+          "ann_assessment": "underperformed_and_was_less_well_calibrated"
+        },
+        "scenario_findings": {
+          "exploratory_best": "liquidity_low_similarity_weighted_portfolio_5_rebalance_1",
+          "exploratory_best_mean_excess_return": 0.02882,
+          "exploratory_best_mean_excess_return_at_50bps": 0.02707,
+          "exploratory_best_worst_net_return": -0.15044,
+          "preferred_research_configuration": "all_similarity_weighted_portfolio_10_rebalance_5",
+          "preferred_mean_excess_return": 0.02344,
+          "preferred_win_rate": 0.74444
+        },
+        "interpretation": "Direction prediction remains only slightly above chance. Similarity weighting is the strongest robust result. Consensus gating should not be promoted. Scenario results remain paper-only and carry multiple-testing risk."
+      }
+    },
+    {
+      "id": "temporal_3d_mc_loss_activation_v1",
+      "design_signature": "temporal-3d-mc-loss-activation-v1:h5:slider+trails+derived-motion+regime-block-mc+loss-activation-ablation:holdout60",
+      "depends_on": "robustness_battery_5d_v1",
+      "spec_path": "research_context/temporal_3d_mc_loss_activation_v1.json",
+      "status": "approved_next"
     }
   ],
   "known_biases_and_limits": [
