@@ -234,7 +234,7 @@ def fit_similarity_graph(
     returns = returns.reindex(columns=universe)
     minimum_periods = max(20, min(60, len(recent_dates) // 2))
     correlation_frame = returns.corr(min_periods=minimum_periods).reindex(index=universe, columns=universe)
-    correlation = correlation_frame.fillna(0.0).clip(-1.0, 1.0).to_numpy(dtype=float)
+    correlation = correlation_frame.fillna(0.0).clip(-1.0, 1.0).to_numpy(dtype=float, copy=True)
     np.fill_diagonal(correlation, 0.0)
 
     neighbor_count = max(1, min(neighbors, len(universe) - 1))
