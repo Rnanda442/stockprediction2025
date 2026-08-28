@@ -382,11 +382,46 @@
     {
       "experiment_id": "purged_walk_forward_residual_baselines_v1",
       "design_signature": "purged-walk-forward-residual-baselines-v1:h5:4x63d:purge5:top50:cost10:ridge-logit-mlprelu-mlptanh",
-      "status": "approved_next",
+      "status": "completed_promising_not_promoted",
       "depends_on": [
         "point_in_time_residual_panel_5y_v1"
       ],
       "purpose": "Test whether residual targets support repeatable after-cost advantage using purged linear, ANN, and placebo comparisons.",
+      "sealed_holdout_start": "2026-05-29",
+      "promotion": false,
+      "result_summary": {
+        "tanh_auc": 0.695971,
+        "tanh_rank_ic": 0.045713,
+        "tanh_after_10bps_residual_return": 0.007674,
+        "relu_auc": 0.696352,
+        "relu_after_10bps_residual_return": 0.006623,
+        "best_linear": "logistic_top_decile",
+        "tanh_paired_net_delta_ci": [
+          0.002567,
+          0.010367
+        ],
+        "tanh_paired_auc_delta_ci": [
+          0.019783,
+          0.038643
+        ],
+        "sealed_holdout_opened": false,
+        "promotion": false,
+        "limitations": [
+          "Five-day labels overlap across daily cohorts.",
+          "Five-sleeve capital accounting was not yet tested.",
+          "Fold two and three returns were weaker than folds one and four.",
+          "Historical universe ownership remains unverified."
+        ]
+      }
+    },
+    {
+      "experiment_id": "residual_sleeve_family_confirmation_v1",
+      "design_signature": "residual-sleeve-family-confirmation-v1:h5:4x63d:5sleeves:top50:tanh:families:regimes:cost10",
+      "status": "approved_next",
+      "depends_on": [
+        "purged_walk_forward_residual_baselines_v1"
+      ],
+      "purpose": "Confirm the ANN in a five-sleeve capital replay and run the original roadmap's complete feature-family addition, removal, and shuffled-control matrix.",
       "sealed_holdout_start": "2026-05-29",
       "promotion": false
     }
@@ -420,6 +455,11 @@
       "id": "residual_panel_5y_built_2026_08_28",
       "insight": "The expanded pre-holdout residual panel contains 1,131,000 rows across 1,131 decision dates and 1,676 tickers; its latest evaluation date is 2026-05-28, the sealed 2026-05-29 holdout remains unopened, and sector neutralization correctly remained disabled without dated sector ownership.",
       "implication": "Use purged walk-forward residual baselines before adding graph, similarity, or larger ANN complexity."
+    },
+    {
+      "id": "purged_residual_ann_promising_2026_08_28",
+      "insight": "Purged residual baselines found a promising nonlinear signal: tanh ANN AUC 0.695971 and 0.7674% mean five-day residual cohort return after 10 bps, with positive paired net and AUC intervals versus logistic. This is not promoted because overlapping cohorts, capital sleeves, regime stability, and coherent family controls still require confirmation.",
+      "implication": "Run five-sleeve and family confirmation before website publication or promotion."
     }
   ]
 }

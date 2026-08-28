@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "experiment_id": "residual_sleeve_family_confirmation_v1",
+  "design_signature": "residual-sleeve-family-confirmation-v1:h5:4x63d:5sleeves:top50:tanh:families:regimes:cost10",
+  "purpose": "Confirm whether the residual ANN survives capital-constrained five-sleeve replay and identify which coherent feature families add repeatable value.",
+  "input": {
+    "panel_experiment": "point_in_time_residual_panel_5y_v1",
+    "baseline_experiment": "purged_walk_forward_residual_baselines_v1",
+    "target_return": "primary_residual_return",
+    "target_class": "primary_residual_top_decile"
+  },
+  "evaluation": {
+    "horizon_trading_days": 5,
+    "walk_forward_splits": 4,
+    "test_dates_per_split": 63,
+    "minimum_training_dates": 504,
+    "maximum_training_rows": 300000,
+    "top_k": 50,
+    "active_sleeves": 5,
+    "primary_one_way_cost_bps": 10,
+    "cost_sensitivity_bps": [
+      0,
+      10,
+      20,
+      40
+    ],
+    "bootstrap_samples": 2000,
+    "sealed_holdout_start": "2026-05-29",
+    "sealed_holdout_status": "unopened"
+  },
+  "feature_families": {
+    "momentum": [
+      "ret_5d",
+      "ret_20d",
+      "ret_60d"
+    ],
+    "volatility": [
+      "vol_20d",
+      "vol_60d",
+      "drawdown_60d"
+    ],
+    "liquidity": [
+      "dollar_vol_20d_log"
+    ],
+    "regime": [
+      "market_ret20_median",
+      "market_vol60_median",
+      "breadth_ret20_positive",
+      "market_ret20_dispersion"
+    ]
+  },
+  "ablation_matrix": [
+    "baseline_momentum",
+    "baseline_plus_volatility",
+    "baseline_plus_liquidity",
+    "baseline_plus_regime",
+    "all_families",
+    "all_minus_momentum",
+    "all_minus_volatility",
+    "all_minus_liquidity",
+    "all_minus_regime",
+    "all_shuffled_momentum",
+    "all_shuffled_volatility",
+    "all_shuffled_liquidity",
+    "all_shuffled_regime"
+  ],
+  "models": {
+    "primary": {
+      "name": "tanh_32_16",
+      "loss": "log_loss",
+      "seeds": [
+        17,
+        29
+      ]
+    },
+    "linear_control": {
+      "name": "logistic_top_decile",
+      "loss": "log_loss",
+      "seed": 17
+    },
+    "placebos": [
+      "random_top_50",
+      "equal_weight_universe"
+    ]
+  },
+  "family_confirmation_gate": {
+    "added_family_net_delta_ci_lower_gt": 0.0,
+    "removal_net_delta_ci_lower_gt": 0.0,
+    "shuffled_net_delta_ci_lower_gt": 0.0,
+    "paired_auc_delta_ci_lower_gte": 0.0,
+    "minimum_regime_days": 10,
+    "promotion_allowed": false,
+    "reason": "A confirmed family may enter a separately frozen promotion candidate; this experiment cannot open the holdout or enable trading."
+  },
+  "outputs": [
+    "cohort_metrics.csv.gz",
+    "five_sleeve_daily.csv.gz",
+    "five_sleeve_summary.csv",
+    "nonoverlap_phase_summary.csv",
+    "family_ablation_summary.csv",
+    "family_paired_intervals.csv",
+    "family_confirmation_registry.csv",
+    "regime_diagnostics.csv",
+    "cost_sensitivity.csv",
+    "leakage_audit.csv",
+    "experiment_manifest.json",
+    "site_context_candidate.json",
+    "confirmation_readout.md"
+  ]
+}
