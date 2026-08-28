@@ -425,20 +425,20 @@ def permutation_importance(
     maximum_rows: int,
 ) -> list[dict[str, object]]:
     if len(evaluation) > maximum_rows:
-        sampled = (
-            evaluation.groupby("date", group_keys=False)
-            .apply(
-                lambda group: group.sample(
-                    n=max(1, int(maximum_rows / evaluation["date"].nunique())),
-                    random_state=seed,
-                )
-                if len(group)
-                > max(1, int(maximum_rows / evaluation["date"].nunique()))
-                else group,
-                include_groups=False,
-            )
-            .reset_index(drop=True)
+        per_date_limit = max(
+            1, int(maximum_rows / evaluation["date"].nunique())
         )
+        sampled_parts = []
+        for group_number, (_, group) in enumerate(
+            evaluation.groupby("date", sort=True)
+        ):
+            if len(group) > per_date_limit:
+                group = group.sample(
+                    n=per_date_limit,
+                    random_state=seed + group_number,
+                )
+            sampled_parts.append(group)
+        sampled = pd.concat(sampled_parts, ignore_index=True)
         sampled["date"] = pd.to_datetime(sampled["date"])
     else:
         sampled = evaluation.copy()
