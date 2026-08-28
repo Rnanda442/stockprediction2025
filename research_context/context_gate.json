@@ -108,6 +108,27 @@
         "z_ma20, latent_radius, latent_y, risk_adjusted_momentum, and several raw neighbor variables were noisy or harmful.",
         "Leakage audit passed and the sealed holdout remained unopened."
       ]
+    },
+    {
+      "experiment_id": "temporal_motion_predictive_ablation_v1",
+      "design_signature": "temporal-3d-mc-loss-activation-v1:h5:slider+trails+derived-motion+regime-block-mc+loss-activation-ablation:holdout60",
+      "status": "completed_reviewed_provisional",
+      "source": "artifacts/temporal_3d_mc_loss_activation_v1/ablation",
+      "reviewed_metrics": {
+        "winner_activation": "tanh",
+        "winner_loss": "focal_gamma_1",
+        "winner_auc_mean": 0.513004,
+        "winner_brier_mean": 0.254763,
+        "winner_excess_return_mean": 0.007899,
+        "placebo_auc_mean": 0.511923
+      },
+      "reviewed_findings": [
+        "The selected tanh focal-loss ANN was only 0.001081 AUC above the shuffled-label placebo mean and did not establish reliable direction skill.",
+        "Adding all motion variables modestly improved AUC versus the base set but reduced after-cost excess return.",
+        "crowding_change_5d and graph_regime_residence_days were the most promising motion variables.",
+        "Raw latent kinematics were mixed or harmful and should not be used as an unrestricted ANN block.",
+        "All preprocessing and evaluation remained chronological and the final 60-date holdout remained sealed."
+      ]
     }
   ],
   "promising_hypotheses": [
@@ -125,12 +146,19 @@
       "hypothesis": "Only latent_z may add predictive information from the 3D transform.",
       "status": "test_next",
       "evidence": "latent_z had positive mean AUC importance while latent_x, latent_y, and latent_radius did not."
+    },
+    {
+      "hypothesis": "Crowding change and graph-regime persistence may add a small, stable increment to compact five-day models without the harmful raw kinematic block.",
+      "status": "test_next",
+      "evidence": "The temporal LOFO screen favored crowding_change_5d and graph_regime_residence_days, but the selected ANN remained too close to placebo for promotion."
     }
   ],
   "do_not_repeat_or_promote": [
     "Do not rerun the seven broad combination screen without a materially different design.",
     "Do not promote the current 20-day ANN.",
     "Do not treat all PCA coordinates as predictive variables.",
+    "Do not rerun the broad temporal activation and loss grid without a materially different hypothesis.",
+    "Do not feed the full raw latent velocity, acceleration, radial expansion, curvature, and convergence block into the next ANN.",
     "Do not use cluster diversification in its tested form.",
     "Do not interpret bubble size, coordinates, or visual separation as predictive evidence without an out-of-sample metric.",
     "Do not open the sealed holdout to choose features, models, gates, costs, or thresholds."
@@ -193,6 +221,25 @@
       "design_signature": "temporal-3d-mc-loss-activation-v1:h5:slider+trails+derived-motion+regime-block-mc+loss-activation-ablation:holdout60",
       "depends_on": "robustness_battery_5d_v1",
       "spec_path": "research_context/temporal_3d_mc_loss_activation_v1.json",
+      "status": "completed_reviewed_provisional",
+      "reviewed_result": {
+        "reviewed_at": "2026-08-27",
+        "holdout_status": "sealed",
+        "winning_activation": "tanh",
+        "winning_loss": "focal_gamma_1",
+        "winner_auc_mean": 0.513004,
+        "winner_brier_mean": 0.254763,
+        "winner_excess_return_mean": 0.007899,
+        "placebo_auc_mean": 0.511923,
+        "interpretation": "Graph persistence and crowding remain narrow confirmatory hypotheses; the broad motion ANN is not promotion-ready."
+      }
+    },
+    {
+      "experiment_id": "graph_signal_confirmatory_v1",
+      "design_signature": "graph-signal-confirmatory-v1:h5:history400:crowding+regime-residence+cluster-switch:elastic+ridge+tanh:6walkforward:date-block-bootstrap:label-placebo:holdout60",
+      "question": "Do the surviving graph-motion signals add repeatable pre-holdout value to compact linear and small tanh models after removing raw kinematics?",
+      "depends_on": "temporal_motion_predictive_ablation_v1",
+      "spec_path": "research_context/graph_signal_confirmatory_v1.json",
       "status": "approved_next"
     }
   ],
