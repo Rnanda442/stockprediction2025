@@ -1,7 +1,42 @@
-import type { SiteSnapshot } from "./site-types";
+import type { PipelineArchitectureData, SiteSnapshot } from "./site-types";
 
 export const REMOTE_SNAPSHOT_URL =
   "https://raw.githubusercontent.com/Rnanda442/stockprediction2025/main/public/data/latest-analysis.json";
+
+export const pipelineArchitecture: PipelineArchitectureData = {
+  version: 1,
+  generated_at: "2026-08-28T18:15:00+00:00",
+  nodes: [
+    { id: "historical_prices", stage: "Inputs", label: "Historical ResearchPrices", detail: "Point-in-time price history retained remotely for panel construction.", status: "active", feeds: ["research_history_db"] },
+    { id: "robinhood_manual", stage: "Inputs", label: "Robinhood manual refresh", detail: "Source refresh is usable when authorization is completed manually.", status: "active", feeds: ["research_history_db"] },
+    { id: "robinhood_auto", stage: "Inputs", label: "Automatic Robinhood login", detail: "No durable unattended authentication flow is connected.", status: "unused", feeds: [] },
+    { id: "dated_sector_map", stage: "Inputs", label: "Dated sector membership", detail: "Required for a leakage-safe sector residual target, but currently missing.", status: "unused", feeds: ["sector_residual_target"] },
+    { id: "research_history_db", stage: "OSL warehouse", label: "research_history.db", detail: "Canonical model, prediction, price, and research history stored in Open Science Lab.", status: "active", feeds: ["point_in_time_panel", "compact_snapshot"] },
+    { id: "raw_archives", stage: "OSL warehouse", label: "Raw run archives", detail: "Large databases, Parquet files, and model artifacts remain in OSL.", status: "active", feeds: ["research_history_db"] },
+    { id: "sealed_holdout", stage: "OSL warehouse", label: "Sealed holdout", detail: "Dates beginning 2026-05-29 are intentionally protected from exploratory tuning.", status: "protected", feeds: ["future_confirmation"] },
+    { id: "point_in_time_panel", stage: "Transforms", label: "Point-in-time 5-year panel", detail: "1.131M rows across 1,131 decision dates and 1,676 tickers.", status: "active", feeds: ["market_residual_target", "feature_families"] },
+    { id: "market_residual_target", stage: "Transforms", label: "5-day market residual target", detail: "Removes the equal-weight market move before model training and evaluation.", status: "active", feeds: ["lean_volatility_ann", "full_residual_ann", "controls"] },
+    { id: "feature_families", stage: "Transforms", label: "Feature-family matrix", detail: "Momentum, volatility, liquidity, and training-only regime context.", status: "active", feeds: ["lean_volatility_ann", "full_residual_ann"] },
+    { id: "sector_residual_target", stage: "Transforms", label: "Sector residual target", detail: "Not generated because dated sector ownership is unavailable.", status: "unused", feeds: [] },
+    { id: "graph_motion_features", stage: "Transforms", label: "Similarity + 3D motion features", detail: "Built and visualized, but not connected to the current residual ANN candidate.", status: "unused", feeds: ["temporal_3d_lab"] },
+    { id: "lean_volatility_ann", stage: "Models", label: "Lean volatility ANN", detail: "Leading frozen candidate: 0.696 AUC and +0.622% mean net residual return per cohort.", status: "active", feeds: ["purged_walk_forward"] },
+    { id: "full_residual_ann", stage: "Models", label: "Full residual ANN", detail: "Research baseline using all four feature families and two random seeds.", status: "active", feeds: ["purged_walk_forward", "regime_policies"] },
+    { id: "controls", stage: "Models", label: "Linear and random controls", detail: "Momentum, logistic, removal, shuffle, and random controls prevent false promotion.", status: "active", feeds: ["purged_walk_forward"] },
+    { id: "similarity_model", stage: "Models", label: "Similarity / 3D prediction model", detail: "Graph-motion variables have not entered the frozen residual candidate architecture.", status: "unused", feeds: [] },
+    { id: "purged_walk_forward", stage: "Validation", label: "Purged walk-forward folds", detail: "Four temporal folds enforce training evaluation dates before each test period.", status: "active", feeds: ["five_sleeve", "uncertainty"] },
+    { id: "five_sleeve", stage: "Validation", label: "Five-sleeve capital replay", detail: "Tracks overlapping positions, turnover, missing returns, drawdown, and transaction costs.", status: "active", feeds: ["context_gate"] },
+    { id: "uncertainty", stage: "Validation", label: "Bootstrap + cost controls", detail: "Weekly-block confidence intervals and 0-40 bps cost sensitivity.", status: "active", feeds: ["context_gate"] },
+    { id: "regime_policies", stage: "Validation", label: "Regime exposure policies", detail: "Stress-only and trend-down cash rules are post-selection hypotheses awaiting future data.", status: "exploratory", feeds: ["future_confirmation"] },
+    { id: "universe_audit", stage: "Validation", label: "Universe + delisting audit", detail: "Point-in-time eligibility and delisting-safe returns remain unverified.", status: "unused", feeds: ["future_confirmation"] },
+    { id: "future_confirmation", stage: "Validation", label: "Future unseen confirmation", detail: "Frozen candidates wait for newly arriving dates without retuning.", status: "exploratory", feeds: ["context_gate"] },
+    { id: "context_gate", stage: "Outputs", label: "Accumulated context gate", detail: "Stores completed experiments, caveats, frozen candidates, and do-not-repeat rules.", status: "active", feeds: ["compact_snapshot", "research_site"] },
+    { id: "compact_snapshot", stage: "Outputs", label: "Compact GitHub snapshot", detail: "Only reviewed summaries leave OSL; raw warehouse artifacts remain remote.", status: "active", feeds: ["research_site"] },
+    { id: "research_site", stage: "Outputs", label: "Private research website", detail: "Current evidence, model status, architecture, and next actions.", status: "active", feeds: [] },
+    { id: "temporal_3d_lab", stage: "Outputs", label: "Temporal 3D stock lab", detail: "Published and interactive, but disconnected from the newest ANN and policy outputs.", status: "unused", feeds: [] },
+    { id: "paper_decisions", stage: "Outputs", label: "Paper-decision monitoring", detail: "Maturing outcomes remain research-only while candidates are validated.", status: "exploratory", feeds: ["context_gate"] },
+    { id: "live_orders", stage: "Outputs", label: "Live brokerage orders", detail: "Explicitly disabled. No model can place trades.", status: "unused", feeds: [] }
+  ],
+};
 
 export const fallbackSnapshot: SiteSnapshot = {
   schema_version: 1,
@@ -157,6 +192,7 @@ export const fallbackSnapshot: SiteSnapshot = {
       { policy: "ann_stress_only", label: "Stress-only exposure", active_day_share: 0.343838, mean_daily_net_residual_return: 0.000834, mean_path_cumulative_net_residual_return: 0.055388, worst_path_cumulative_net_residual_return: 0, worst_maximum_drawdown: -0.055392, mean_turnover: 0.034774, delta_ci_lower: -0.000812, delta_ci_upper: 0.000386, status: "Risk-control only" },
       { policy: "ann_trend_down_cash", label: "Cash during trend-down", active_day_share: 0.948529, mean_daily_net_residual_return: 0.001187, mean_path_cumulative_net_residual_return: 0.078944, worst_path_cumulative_net_residual_return: -0.030716, worst_maximum_drawdown: -0.094342, mean_turnover: 0.108934, delta_ci_lower: -0.000085, delta_ci_upper: 0.000426, status: "Promising, unconfirmed" },
     ],
+    pipeline_architecture: pipelineArchitecture,
   },
   disclaimer:
     "Research and paper-decision review only. No live trading recommendation.",

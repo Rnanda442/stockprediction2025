@@ -138,6 +138,21 @@ export type ExposurePolicyRow = {
   status?: string;
 };
 
+export type PipelineNode = {
+  id: string;
+  stage: string;
+  label: string;
+  detail: string;
+  status: "active" | "exploratory" | "unused" | "protected";
+  feeds: string[];
+};
+
+export type PipelineArchitectureData = {
+  version: number;
+  generated_at: string;
+  nodes: PipelineNode[];
+};
+
 export type SiteSnapshot = {
   schema_version: number;
   generated_at: string;
@@ -173,6 +188,7 @@ export type SiteSnapshot = {
     residual_validation?: ResidualValidationRow[];
     regime_diagnostics?: RegimeValidationRow[];
     exposure_policies?: ExposurePolicyRow[];
+    pipeline_architecture?: PipelineArchitectureData;
   };
   disclaimer: string;
 };
