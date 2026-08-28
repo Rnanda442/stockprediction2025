@@ -394,6 +394,7 @@ export default function Home() {
           <a href="#models">Models</a>
           <a href="#drivers">Drivers</a>
           <a href="#data-flow">Data flow</a>
+          <a href="/market-lab/index.html">3D lab</a>
           <a href="#next-actions">Next actions</a>
         </div>
       </nav>
@@ -406,6 +407,7 @@ export default function Home() {
           <div className="hero-actions">
             <a className="primary-link" href="#next-actions">See the next action</a>
             <a className="secondary-link" href="#data-flow">Follow the data</a>
+            <a className="secondary-link" href="/market-lab/index.html">Open the 3D market lab</a>
           </div>
           <p className="hero-note">No raw run archive is downloaded by or served to this website.</p>
         </div>
