@@ -129,6 +129,48 @@
         "Raw latent kinematics were mixed or harmful and should not be used as an unrestricted ANN block.",
         "All preprocessing and evaluation remained chronological and the final 60-date holdout remained sealed."
       ]
+    },
+    {
+      "experiment_id": "graph_signal_history400_v1",
+      "design_signature": "graph-signal-history400-v1:raw-causal-features:top600:preholdout-only",
+      "status": "completed_reviewed",
+      "source": "artifacts/graph_signal_history400_v1",
+      "reviewed_metrics": {
+        "rows": 240000,
+        "trading_dates": 400,
+        "tickers": 926,
+        "date_min": "2024-10-22",
+        "date_max": "2026-05-28"
+      },
+      "reviewed_findings": [
+        "The causal raw feature panel was successfully extended from 90 to 400 pre-holdout dates.",
+        "Every feature used current or earlier observations and the panel ended before the sealed holdout.",
+        "The compact panel is a reusable OSL asset; its 240,000-row CSV remains off GitHub while its manifest is version controlled."
+      ]
+    },
+    {
+      "experiment_id": "graph_signal_confirmatory_v1",
+      "design_signature": "graph-signal-confirmatory-v1:h5:history400:trainfit-kmeans24:crowding+regime-residence+cluster-switch:elastic+ridge+tanh:6walkforward:date-block-bootstrap:label-placebo:holdout60",
+      "status": "completed_reviewed_not_promoted",
+      "source": "artifacts/graph_signal_confirmatory_v1/results_v2",
+      "reviewed_metrics": {
+        "best_feature_set": "base_plus_crowding",
+        "best_model": "elastic_logistic_c1_l25",
+        "best_auc_mean": 0.50238,
+        "best_auc_std": 0.04460,
+        "best_brier_mean": 0.25076,
+        "best_excess_return_mean": 0.00241,
+        "placebo_auc_mean": 0.49617,
+        "promotion_candidate": false
+      },
+      "reviewed_findings": [
+        "Crowding was the best narrow feature addition, but its average direction-ranking gain was economically and statistically small.",
+        "The full graph-survivor block did not improve linear-model AUC versus base: elastic delta -0.00070 with interval [-0.00417, 0.00305].",
+        "The linear graph-survivor return deltas were positive on average but their intervals crossed zero.",
+        "All tanh ANN feature sets remained below chance by mean AUC, and every paired ANN graph interval crossed zero.",
+        "Training-fitted graph transforms, chronological splits, five-date embargoes, within-date placebos, and block uncertainty passed review.",
+        "The final 60-date holdout remained sealed and this design is not eligible for promotion."
+      ]
     }
   ],
   "promising_hypotheses": [
@@ -149,8 +191,8 @@
     },
     {
       "hypothesis": "Crowding change and graph-regime persistence may add a small, stable increment to compact five-day models without the harmful raw kinematic block.",
-      "status": "test_next",
-      "evidence": "The temporal LOFO screen favored crowding_change_5d and graph_regime_residence_days, but the selected ANN remained too close to placebo for promotion."
+      "status": "mixed_not_confirmed",
+      "evidence": "On 400 dates crowding produced the best linear average, but the full graph block had no positive paired AUC interval and all tanh models remained below chance."
     }
   ],
   "do_not_repeat_or_promote": [
@@ -159,6 +201,8 @@
     "Do not treat all PCA coordinates as predictive variables.",
     "Do not rerun the broad temporal activation and loss grid without a materially different hypothesis.",
     "Do not feed the full raw latent velocity, acceleration, radial expansion, curvature, and convergence block into the next ANN.",
+    "Do not rerun the 24-cluster crowding, regime-residence, and cluster-switch confirmatory design without a materially different target or graph construction.",
+    "Do not promote the tested tanh ANN or the full graph-survivor block.",
     "Do not use cluster diversification in its tested form.",
     "Do not interpret bubble size, coordinates, or visual separation as predictive evidence without an out-of-sample metric.",
     "Do not open the sealed holdout to choose features, models, gates, costs, or thresholds."
@@ -238,7 +282,15 @@
       "experiment_id": "graph_signal_history400_v1",
       "design_signature": "graph-signal-history400-v1:raw-causal-features:top600:preholdout-only",
       "question": "Can a causal 400-date raw feature panel be prepared without reusing the completed temporal visualization experiment?",
-      "status": "approved_next"
+      "status": "completed_reviewed",
+      "reviewed_result": {
+        "rows": 240000,
+        "trading_dates": 400,
+        "tickers": 926,
+        "date_min": "2024-10-22",
+        "date_max": "2026-05-28",
+        "holdout_status": "sealed"
+      }
     },
     {
       "experiment_id": "graph_signal_confirmatory_v1",
@@ -246,7 +298,19 @@
       "question": "Do the surviving graph-motion signals add repeatable pre-holdout value to compact linear and small tanh models after removing raw kinematics?",
       "depends_on": "graph_signal_history400_v1",
       "spec_path": "research_context/graph_signal_confirmatory_v1.json",
-      "status": "approved_next"
+      "status": "completed_reviewed_not_promoted",
+      "reviewed_result": {
+        "reviewed_at": "2026-08-27",
+        "holdout_status": "sealed",
+        "best_feature_set": "base_plus_crowding",
+        "best_model": "elastic_logistic_c1_l25",
+        "best_auc_mean": 0.50238,
+        "best_brier_mean": 0.25076,
+        "best_excess_return_mean": 0.00241,
+        "placebo_auc_mean": 0.49617,
+        "promotion_candidate": false,
+        "interpretation": "Crowding remains a weak descriptive signal, not a confirmed predictor. The full graph block and tanh ANN are not promotion-ready."
+      }
     }
   ],
   "known_biases_and_limits": [
