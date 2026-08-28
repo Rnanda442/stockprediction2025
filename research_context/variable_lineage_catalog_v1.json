@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "catalog_id": "stockprediction2025-variable-lineage-v1",
+  "source_context_id": "stockprediction2025-research-gate",
+  "website_source": "app/pipeline-variable-catalog.ts",
+  "variable_count": 58,
+  "stage_count": 7,
+  "status_meanings": {
+    "supported": "Active, required, or provisionally helpful; never live-trading approval.",
+    "mixed": "Conflicting, small, exploratory, or unconfirmed evidence.",
+    "harmful": "Rejected, noisy, disconnected, or harmful in its tested form.",
+    "protected": "Prediction label, evaluation-only field, or sealed confirmation data."
+  },
+  "guardrail": "Coordinates, bubble sizes, colors, and visual separation remain hypotheses until they improve an out-of-sample metric. The final holdout remains sealed."
+}

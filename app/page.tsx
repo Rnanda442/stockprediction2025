@@ -1,5 +1,6 @@
 "use client";
 
+import VariableLineageExplorer from "./variable-lineage-explorer";
 import { useEffect, useMemo, useState } from "react";
 import { fallbackSnapshot, REMOTE_SNAPSHOT_URL } from "./site-data";
 import type {
@@ -550,6 +551,7 @@ export default function Home() {
       <section className="analysis-section architecture-section" id="architecture">
         <div className="section-heading"><div><p className="eyebrow">End-to-end architecture</p><h2>What feeds what, and what is still disconnected</h2></div><p>This map follows the actual research path from data collection through OSL, targets, models, validation, and publication. Red components are visible on purpose so unfinished connections cannot quietly disappear.</p></div>
         <PipelineMap architecture={snapshot.charts.pipeline_architecture} />
+              <VariableLineageExplorer />
       </section>
 
       <section className="trust-band" id="trust">
