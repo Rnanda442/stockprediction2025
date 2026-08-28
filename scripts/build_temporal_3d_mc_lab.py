@@ -153,7 +153,7 @@ def graph_features_for_date(
     position = daily.index.get_loc(date)
     history = daily.iloc[max(0, position - lookback + 1) : position + 1]
     corr = history.corr(min_periods=max(20, lookback // 2)).reindex(index=tickers, columns=tickers).fillna(0.0)
-    matrix = corr.to_numpy(dtype=float)
+    matrix = corr.to_numpy(dtype=float, copy=True)
     np.fill_diagonal(matrix, 0.0)
     positive = np.clip(matrix, 0.0, 1.0)
     degree = (positive >= 0.35).sum(axis=1).astype(float)
