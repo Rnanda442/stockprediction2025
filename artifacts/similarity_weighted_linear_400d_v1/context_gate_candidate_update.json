@@ -1,0 +1,35 @@
+{
+  "action": "review_then_merge",
+  "base_context_id": "stockprediction2025-research-gate",
+  "completed_experiment": {
+    "experiment_id": "similarity_weighted_linear_400d_v1",
+    "design_signature": "similarity-weighted-linear-400d-v1:h5:elastic-c1-l25:train-knn20:alpha025:p10:r5:cost10:6walkforward:block-bootstrap:neighbor-placebo:holdout60",
+    "status": "completed_pending_review",
+    "generated_at": "2026-08-28T05:27:52.836895+00:00",
+    "rows": 237000,
+    "dates": 395,
+    "tickers": 922,
+    "splits": 6,
+    "holdout_start": "2026-05-29",
+    "holdout_opened": false,
+    "paired_result": {
+      "auc_delta_mean": -0.003974264987179676,
+      "auc_ci_2_5": -0.01422098768673364,
+      "auc_ci_97_5": 0.006312467522445736,
+      "brier_gain_mean": -0.0003459676382543219,
+      "brier_ci_2_5": -0.0004999705390795128,
+      "brier_ci_97_5": -0.0001868678824040074,
+      "excess_return_delta_mean": -0.0054180471676883,
+      "return_ci_2_5": -0.016716302907506957,
+      "return_ci_97_5": 0.0025891038951122852
+    },
+    "placebo_return_delta_mean": 0.0003753238312434049,
+    "promotion_candidate": false,
+    "source_context_id": "stockprediction2025-research-gate"
+  },
+  "holdout_status": {
+    "status": "sealed",
+    "date_start": "2026-05-29",
+    "trading_dates": 60
+  }
+}

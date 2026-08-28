@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "context_id": "stockprediction2025-research-gate",
-  "updated_at": "2026-08-27",
+  "updated_at": "2026-08-28",
   "purpose": "Accumulate reviewed research evidence, prevent duplicate experiments, and provide canonical context for future analysis.",
   "project": {
     "repository": "https://github.com/Rnanda442/stockprediction2025",
@@ -76,7 +76,7 @@
         "five_day_auc_mean": 0.5087,
         "five_day_brier_mean": 0.2567,
         "twenty_day_auc_mean": 0.4894,
-        "twenty_day_brier_mean": 0.2590
+        "twenty_day_brier_mean": 0.259
       },
       "reviewed_findings": [
         "The five-day model was only slightly above chance and remained weak.",
@@ -157,7 +157,7 @@
         "best_feature_set": "base_plus_crowding",
         "best_model": "elastic_logistic_c1_l25",
         "best_auc_mean": 0.50238,
-        "best_auc_std": 0.04460,
+        "best_auc_std": 0.0446,
         "best_brier_mean": 0.25076,
         "best_excess_return_mean": 0.00241,
         "placebo_auc_mean": 0.49617,
@@ -171,6 +171,34 @@
         "Training-fitted graph transforms, chronological splits, five-date embargoes, within-date placebos, and block uncertainty passed review.",
         "The final 60-date holdout remained sealed and this design is not eligible for promotion."
       ]
+    },
+    {
+      "experiment_id": "similarity_weighted_linear_400d_v1",
+      "design_signature": "similarity-weighted-linear-400d-v1:h5:elastic-c1-l25:train-knn20:alpha025:p10:r5:cost10:6walkforward:block-bootstrap:neighbor-placebo:holdout60",
+      "status": "completed_not_promoted",
+      "generated_at": "2026-08-28T05:27:52.836895+00:00",
+      "rows": 237000,
+      "dates": 395,
+      "tickers": 922,
+      "splits": 6,
+      "holdout_start": "2026-05-29",
+      "holdout_opened": false,
+      "paired_result": {
+        "auc_delta_mean": -0.003974264987179676,
+        "auc_ci_2_5": -0.01422098768673364,
+        "auc_ci_97_5": 0.006312467522445736,
+        "brier_gain_mean": -0.0003459676382543219,
+        "brier_ci_2_5": -0.0004999705390795128,
+        "brier_ci_97_5": -0.0001868678824040074,
+        "excess_return_delta_mean": -0.0054180471676883,
+        "return_ci_2_5": -0.016716302907506957,
+        "return_ci_97_5": 0.0025891038951122852
+      },
+      "placebo_return_delta_mean": 0.0003753238312434049,
+      "promotion_candidate": false,
+      "source_context_id": "stockprediction2025-research-gate",
+      "decision": "do_not_promote",
+      "readout": "artifacts/similarity_weighted_linear_400d_v1/similarity_readout.md"
     }
   ],
   "promising_hypotheses": [
@@ -231,10 +259,16 @@
         "winner_excess_return_mean": 0.00549,
         "placebo_auc_mean": 0.49772,
         "similarity_weighted_delta": 0.01467,
-        "similarity_weighted_ci_95": [0.00115, 0.02878],
+        "similarity_weighted_ci_95": [
+          0.00115,
+          0.02878
+        ],
         "similarity_weighted_positive_probability": 0.982,
         "consensus_gate_delta": -0.00219,
-        "consensus_gate_ci_95": [-0.00639, 0.00245],
+        "consensus_gate_ci_95": [
+          -0.00639,
+          0.00245
+        ],
         "feature_findings": {
           "graph_degree_auc_drop": 0.00506,
           "ret_20d_auc_drop": 0.00324,
@@ -245,7 +279,10 @@
         },
         "model_findings": {
           "linear_regularized_models": "best_provisional_family",
-          "ann_auc_range": [0.49216, 0.49396],
+          "ann_auc_range": [
+            0.49216,
+            0.49396
+          ],
           "ann_assessment": "underperformed_and_was_less_well_calibrated"
         },
         "scenario_findings": {
@@ -328,5 +365,18 @@
     "Stocks on the same date are dependent through the common market regime.",
     "Repeated model and feature searches create multiple-testing risk.",
     "Paper returns exclude market impact and may understate execution frictions until cost sensitivity is applied."
+  ],
+  "do_not_repeat": [
+    {
+      "experiment_id": "similarity_weighted_linear_400d_v1",
+      "design_signature": "similarity-weighted-linear-400d-v1:h5:elastic-c1-l25:train-knn20:alpha025:p10:r5:cost10:6walkforward:block-bootstrap:neighbor-placebo:holdout60",
+      "reason": "Training-only 20-neighbor similarity weighting worsened AUC, Brier score, and after-cost excess return; its return interval crossed zero and its point estimate underperformed the neighbor-label placebo."
+    }
+  ],
+  "key_insights": [
+    {
+      "experiment_id": "similarity_weighted_linear_400d_v1",
+      "finding": "On 395 pre-holdout dates, fixed similarity weighting degraded the compact linear ranker. Keep similarity for visualization and diagnostics, not as a probability or portfolio-ranking adjustment."
+    }
   ]
 }
