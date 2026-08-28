@@ -1,0 +1,2 @@
+strategy,auc_mean,brier_mean,mean_excess_return,fits
+neighbor_placebo,0.49977676970480556,0.2508430448529202,0.0008366755146971684,30

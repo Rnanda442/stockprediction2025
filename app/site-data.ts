@@ -5,8 +5,8 @@ export const REMOTE_SNAPSHOT_URL =
 
 export const fallbackSnapshot: SiteSnapshot = {
   schema_version: 1,
-  generated_at: "2026-07-31T01:42:00+00:00",
-  snapshot_fingerprint: "bundled-30587429387",
+  generated_at: "2026-08-28T17:50:01+00:00",
+  snapshot_fingerprint: "bundled-regime-exposure-policy-v1",
   source: {
     kind: "bundled_fallback",
     latest_run_id: "30587429387",
@@ -20,7 +20,7 @@ export const fallbackSnapshot: SiteSnapshot = {
     leakage_issue_rows: 0,
     paper_buy_evaluated: 1,
     reason:
-      "The pipeline passed its compact checks, but champion discrimination is near random and probability skill is negative.",
+      "The residual ANN has strong discrimination and after-cost edge, but feature-family certainty, fold stability, and point-in-time universe controls still block promotion.",
   },
   key_metrics: {
     latest_run_id: "30587429387",
@@ -140,6 +140,23 @@ export const fallbackSnapshot: SiteSnapshot = {
     ],
     feature_group_stability: [],
     model_score_weekly: [],
+    residual_validation: [
+      { model: "baseline_plus_volatility", label: "Lean volatility ANN", mean_auc: 0.696413, mean_rank_ic: 0.044771, mean_net_residual_return: 0.00622, win_rate: 0.619048, mean_turnover: 0.134683, status: "Leading candidate" },
+      { model: "all_families", label: "Full residual ANN", mean_auc: 0.694487, mean_rank_ic: 0.039763, mean_net_residual_return: 0.005656, win_rate: 0.615079, mean_turnover: 0.14754, status: "Promising, unstable" },
+      { model: "logistic_all_families", label: "Logistic control", mean_auc: 0.659389, mean_rank_ic: 0.024867, mean_net_residual_return: 0.000649, win_rate: 0.515873, mean_turnover: 0.118016, status: "Control" },
+      { model: "random_top_50", label: "Random control", mean_auc: 0.497043, mean_rank_ic: -0.001345, mean_net_residual_return: -0.000494, win_rate: 0.440476, mean_turnover: 0.950794, status: "Control" },
+    ],
+    regime_diagnostics: [
+      { regime: "stress", mean_auc: 0.716611, mean_rank_ic: 0.086321, mean_net_residual_return: 0.013618, win_rate: 0.730337 },
+      { regime: "rotation_quiet", mean_auc: 0.688651, mean_rank_ic: 0.029451, mean_net_residual_return: 0.001983, win_rate: 0.56962 },
+      { regime: "trend_up", mean_auc: 0.672711, mean_rank_ic: -0.021728, mean_net_residual_return: 0.001292, win_rate: 0.55 },
+      { regime: "trend_down", mean_auc: 0.695653, mean_rank_ic: 0.109425, mean_net_residual_return: -0.00241, win_rate: 0.464286 },
+    ],
+    exposure_policies: [
+      { policy: "ann_all_regimes", label: "ANN / all regimes", active_day_share: 1, mean_daily_net_residual_return: 0.001033, mean_path_cumulative_net_residual_return: 0.068586, worst_path_cumulative_net_residual_return: -0.083343, worst_maximum_drawdown: -0.126111, mean_turnover: 0.082397, delta_ci_lower: null, delta_ci_upper: null, status: "Research baseline" },
+      { policy: "ann_stress_only", label: "Stress-only exposure", active_day_share: 0.343838, mean_daily_net_residual_return: 0.000834, mean_path_cumulative_net_residual_return: 0.055388, worst_path_cumulative_net_residual_return: 0, worst_maximum_drawdown: -0.055392, mean_turnover: 0.034774, delta_ci_lower: -0.000812, delta_ci_upper: 0.000386, status: "Risk-control only" },
+      { policy: "ann_trend_down_cash", label: "Cash during trend-down", active_day_share: 0.948529, mean_daily_net_residual_return: 0.001187, mean_path_cumulative_net_residual_return: 0.078944, worst_path_cumulative_net_residual_return: -0.030716, worst_maximum_drawdown: -0.094342, mean_turnover: 0.108934, delta_ci_lower: -0.000085, delta_ci_upper: 0.000426, status: "Promising, unconfirmed" },
+    ],
   },
   disclaimer:
     "Research and paper-decision review only. No live trading recommendation.",

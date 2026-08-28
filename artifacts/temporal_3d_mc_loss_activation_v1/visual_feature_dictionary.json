@@ -1,0 +1,41 @@
+{
+  "experiment_id": "temporal_3d_mc_loss_activation_v1",
+  "variables": {
+    "ret_5d": "5-day return",
+    "ret_20d": "20-day momentum",
+    "ret_60d": "60-day return",
+    "vol_20d": "20-day annualized volatility",
+    "vol_60d": "60-day annualized volatility",
+    "drawdown_60d": "60-day drawdown",
+    "dollar_vol_20d_log": "Log median dollar volume",
+    "graph_degree": "Graph degree",
+    "graph_similarity_mean": "Mean neighbor similarity",
+    "neighbor_ret_20d": "Neighbor 20-day return",
+    "neighbor_divergence": "Neighbor divergence",
+    "empirical_upside_probability_5d": "Empirical 5-day upside probability",
+    "prediction_confidence_proxy": "Empirical confidence proxy",
+    "latent_x": "Latent coordinate X",
+    "latent_y": "Latent coordinate Y",
+    "latent_z": "Latent coordinate Z",
+    "latent_velocity": "Latent velocity",
+    "latent_acceleration": "Latent acceleration",
+    "latent_path_curvature": "Latent path curvature",
+    "latent_radial_expansion": "Latent radial expansion",
+    "neighbor_convergence_velocity": "Neighbor convergence velocity",
+    "graph_cluster_switch_count_20d": "Cluster switches over 20 dates",
+    "graph_regime_residence_days": "Cluster residence dates",
+    "crowding_change_5d": "Five-date crowding change"
+  },
+  "motion_features": [
+    "latent_velocity",
+    "latent_acceleration",
+    "latent_path_curvature",
+    "latent_radial_expansion",
+    "neighbor_convergence_velocity",
+    "graph_cluster_switch_count_20d",
+    "graph_regime_residence_days",
+    "crowding_change_5d"
+  ],
+  "acceptance_rule": "temporal-3d-mc-loss-activation-v1:h5:slider+trails+derived-motion+regime-block-mc+loss-activation-ablation:holdout60",
+  "holdout_status": "sealed"
+}

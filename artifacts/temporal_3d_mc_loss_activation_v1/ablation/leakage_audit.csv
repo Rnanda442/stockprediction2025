@@ -1,0 +1,4 @@
+split,fit_end,validation_start,validation_end,test_start,test_end,embargo_dates,holdout_opened
+1,2026-02-27,2026-03-02,2026-03-10,2026-03-18,2026-04-08,5,False
+2,2026-03-19,2026-03-20,2026-03-31,2026-04-09,2026-04-29,5,False
+3,2026-04-10,2026-04-13,2026-04-22,2026-04-30,2026-05-20,5,False

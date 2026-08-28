@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "experiment_id": "purged_walk_forward_residual_baselines_v1",
+  "design_signature": "purged-walk-forward-residual-baselines-v1:h5:4x63d:purge5:top50:cost10:ridge-logit-mlprelu-mlptanh",
+  "purpose": "Determine whether the expanded residual-return panel creates repeatable, after-cost predictive advantage before adding graph or similarity complexity.",
+  "input": {
+    "experiment_id": "point_in_time_residual_panel_5y_v1",
+    "file": "target_panel.csv.gz",
+    "target_return": "primary_residual_return",
+    "target_class": "primary_residual_top_decile",
+    "features": [
+      "ret_5d",
+      "ret_20d",
+      "ret_60d",
+      "vol_20d",
+      "vol_60d",
+      "drawdown_60d",
+      "dollar_vol_20d_log"
+    ]
+  },
+  "evaluation": {
+    "horizon_trading_days": 5,
+    "walk_forward_splits": 4,
+    "test_dates_per_split": 63,
+    "minimum_training_dates": 504,
+    "maximum_training_rows": 300000,
+    "purge_rule": "training evaluation_date must be strictly before test_start",
+    "sealed_holdout_start": "2026-05-29",
+    "sealed_holdout_status": "unopened",
+    "top_k": 50,
+    "primary_cost_bps": 10,
+    "cost_sensitivity_bps": [
+      0,
+      5,
+      10,
+      20
+    ],
+    "bootstrap_samples": 2000,
+    "bootstrap_block": "calendar_week"
+  },
+  "models": [
+    {
+      "name": "ridge_residual",
+      "kind": "regression",
+      "loss": "squared_error",
+      "alpha": 10.0,
+      "seeds": [
+        17
+      ]
+    },
+    {
+      "name": "logistic_top_decile",
+      "kind": "classification",
+      "loss": "log_loss",
+      "C": 0.5,
+      "seeds": [
+        17
+      ]
+    },
+    {
+      "name": "mlp_relu_top_decile",
+      "kind": "classification",
+      "loss": "log_loss",
+      "activation": "relu",
+      "hidden_layers": [
+        32,
+        16
+      ],
+      "seeds": [
+        17,
+        29
+      ]
+    },
+    {
+      "name": "mlp_tanh_top_decile",
+      "kind": "classification",
+      "loss": "log_loss",
+      "activation": "tanh",
+      "hidden_layers": [
+        32,
+        16
+      ],
+      "seeds": [
+        17,
+        29
+      ]
+    }
+  ],
+  "placebos": [
+    "random_top_50",
+    "equal_weight_universe"
+  ],
+  "advantage_gate": {
+    "after_cost_residual_return_ci_lower_gt": 0.0,
+    "auc_ci_lower_gt": 0.5,
+    "rank_ic_ci_lower_gt": 0.0,
+    "ann_paired_net_delta_vs_best_linear_ci_lower_gt": 0.0,
+    "ann_paired_auc_delta_vs_best_linear_ci_lower_gte": -0.002,
+    "model_promotion_allowed": false,
+    "reason": "Passing this research gate authorizes a later confirmatory candidate; it does not open the sealed holdout or enable trading."
+  },
+  "outputs": [
+    "split_metrics.csv",
+    "daily_portfolio_metrics.csv.gz",
+    "cost_sensitivity.csv",
+    "feature_importance.csv",
+    "bootstrap_intervals.csv",
+    "model_comparisons.csv",
+    "leakage_audit.csv",
+    "experiment_manifest.json",
+    "residual_baseline_readout.md",
+    "context_gate_candidate_update.json"
+  ]
+}

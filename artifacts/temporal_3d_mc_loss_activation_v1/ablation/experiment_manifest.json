@@ -1,0 +1,28 @@
+{
+  "experiment_id": "temporal_motion_predictive_ablation_v1",
+  "parent_experiment": "temporal_3d_mc_loss_activation_v1",
+  "status": "completed_pending_review",
+  "generated_at": "2026-08-28T01:51:29.808621+00:00",
+  "rows": 10200,
+  "tickers": 120,
+  "dates": 85,
+  "model_fits": 327,
+  "winning_activation": "tanh",
+  "winning_loss": "focal_gamma_1",
+  "best_feature_set": "base_plus_all_motion",
+  "holdout_opened": false,
+  "outputs": [
+    "ablation_readout.md",
+    "context_gate_candidate_update.json",
+    "feature_set_metrics.csv",
+    "feature_set_summary.csv",
+    "leakage_audit.csv",
+    "loss_activation_metrics.csv",
+    "loss_activation_summary.csv",
+    "motion_lofo_metrics.csv",
+    "motion_lofo_summary.csv",
+    "pid",
+    "placebo_metrics.csv",
+    "run.log"
+  ]
+}

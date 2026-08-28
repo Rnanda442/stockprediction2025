@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "experiment_id": "graph_signal_confirmatory_v1",
+  "design_signature": "graph-signal-confirmatory-v1:h5:history400:trainfit-kmeans24:crowding+regime-residence+cluster-switch:elastic+ridge+tanh:6walkforward:date-block-bootstrap:label-placebo:holdout60",
+  "status": "approved_next",
+  "approved_at": "2026-08-27",
+  "parent_experiment": "graph_signal_history400_v1",
+  "runner_path": "scripts/run_graph_signal_confirmatory_v2.py",
+  "question": "Do the surviving graph-motion signals add repeatable pre-holdout value to compact linear and small tanh models after removing raw kinematics?",
+  "data": {
+    "database": "warehouse/model_runs/runs/32915939359/artifact/research_history.db",
+    "source_table": "ResearchPrices",
+    "raw_history_path": "artifacts/graph_signal_history400_v1/raw_features.csv",
+    "motion_history_dates": 400,
+    "sealed_holdout_start": "2026-05-29",
+    "sealed_holdout_dates": 60
+  },
+  "feature_sets": {
+    "base_only": ["ret_5d", "ret_20d", "ret_60d", "vol_20d", "vol_60d", "drawdown_60d", "dollar_vol_20d_log", "graph_degree"],
+    "base_plus_crowding": ["base_only", "crowding_change_5d"],
+    "base_plus_regime": ["base_only", "graph_regime_residence_days"],
+    "graph_survivors": ["base_only", "crowding_change_5d", "graph_regime_residence_days", "graph_cluster_switch_count_20d"]
+  },
+  "models": [
+    "elastic_logistic_c1_l25",
+    "ridge_logistic_c01",
+    "tanh_mlp_16_8"
+  ],
+  "evaluation": {
+    "horizon_trading_days": 5,
+    "walk_forward_splits": 6,
+    "test_dates_per_split": 20,
+    "embargo_trading_dates": 5,
+    "ann_seeds": [442, 2025, 9001],
+    "placebo_seeds": [117, 442, 8080, 9001, 2025],
+    "date_block_bootstrap_repetitions": 4000,
+    "date_block_size": 5,
+    "portfolio_size": 10,
+    "rebalance_dates": 5,
+    "transaction_cost_bps": 10
+  },
+  "graph_transform": {
+    "method": "MiniBatchKMeans",
+    "clusters": 24,
+    "fit_scope": "training rows only for every split",
+    "crowding": "negative distance to assigned training-fitted centroid, differenced over five ticker observations",
+    "regime_residence": "consecutive observations in the same training-fitted cluster",
+    "cluster_switch_count": "cluster changes over the trailing 20 ticker observations"
+  },
+  "promotion_rule": "Do not open the sealed holdout. A surviving graph block must beat base_only with a positive paired date-block AUC interval, avoid Brier deterioration, and exceed shuffled-label placebo behavior in both linear and ANN families.",
+  "excluded": [
+    "latent_velocity",
+    "latent_acceleration",
+    "latent_radial_expansion",
+    "latent_path_curvature",
+    "neighbor_convergence_velocity"
+  ]
+}

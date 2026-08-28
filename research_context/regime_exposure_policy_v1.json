@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "experiment_id": "regime_exposure_policy_v1",
+  "design_signature": "regime-exposure-policy-v1:saved-predictions:5sleeves:stress-only:trend-down-cash:lean-volatility:cost0-40:posthoc",
+  "status": "completed_exploratory_not_promotable",
+  "purpose": "Evaluate a lean volatility ANN and conservative regime-based capital policies from saved purged walk-forward predictions without retraining or opening the sealed holdout.",
+  "source_experiment": "residual_sleeve_family_confirmation_v1",
+  "policies": {
+    "ann_all_regimes": "Reference five-sleeve ANN exposure.",
+    "ann_stress_only": "Hold the ANN sleeve only when the training-threshold regime label is stress.",
+    "ann_trend_down_cash": "Move the ANN sleeve to cash when the training-threshold regime label is trend_down."
+  },
+  "lean_candidate": "baseline_plus_volatility",
+  "cost_bps": [0, 10, 20, 40],
+  "bootstrap": { "method": "weekly block bootstrap", "samples": 2000, "seed": 20260828, "confidence_level": 0.95 },
+  "turnover_policy": "Charge underlying turnover while active plus full invested-weight entry or exit turnover when the regime gate changes.",
+  "guardrails": { "post_selection_bias": true, "promotion_allowed": false, "brokerage_orders_enabled": false, "sealed_holdout_opened": false, "universe_point_in_time_verified": false },
+  "required_outputs": ["policy_daily.csv.gz", "policy_path_summary.csv", "policy_summary.csv", "policy_paired_intervals.csv", "lean_volatility_summary.csv", "lean_volatility_intervals.csv", "audit.json", "result_summary.json", "readout.md"]
+}

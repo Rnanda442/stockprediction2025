@@ -9,6 +9,9 @@ import type {
   LeakageRow,
   PaperOutcomeRow,
   ProbabilityRow,
+  ExposurePolicyRow,
+  RegimeValidationRow,
+  ResidualValidationRow,
   RidgeDriverRow,
   SimilarityPairRow,
   SiteSnapshot,
@@ -344,6 +347,59 @@ function SimilarityExposure({ rows }: { rows: SimilarityPairRow[] }) {
   );
 }
 
+function ResidualValidation({ rows }: { rows: ResidualValidationRow[] }) {
+  if (!rows.length) return <EmptyState>Residual validation evidence is waiting for its reviewed OSL packet.</EmptyState>;
+  return (
+    <div className="validation-list" aria-label="Residual model comparison">
+      {rows.map((row, index) => (
+        <article className="validation-row" key={`${row.model}-${index}`}>
+          <div className="validation-name"><strong>{row.label || readableLabel(row.model)}</strong><span>{row.status || "Research only"}</span></div>
+          <div><span>AUC</span><strong>{finite(row.mean_auc).toFixed(3)}</strong></div>
+          <div><span>Rank IC</span><strong>{finite(row.mean_rank_ic).toFixed(3)}</strong></div>
+          <div><span>Net / cohort</span><strong className={finite(row.mean_net_residual_return) >= 0 ? "tone-positive" : "tone-negative"}>{signedPercent(row.mean_net_residual_return, 2)}</strong></div>
+          <div><span>Win rate</span><strong>{percent(row.win_rate)}</strong></div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function RegimeValidation({ rows }: { rows: RegimeValidationRow[] }) {
+  if (!rows.length) return <EmptyState>Regime diagnostics are waiting for reviewed walk-forward evidence.</EmptyState>;
+  return (
+    <div className="regime-grid" aria-label="ANN performance by market regime">
+      {rows.map((row) => (
+        <article className={`regime-card ${finite(row.mean_net_residual_return) < 0 ? "regime-adverse" : ""}`} key={row.regime}>
+          <span>{readableLabel(row.regime)}</span>
+          <strong>{signedPercent(row.mean_net_residual_return, 2)}</strong>
+          <div><small>AUC {finite(row.mean_auc).toFixed(3)}</small><small>{percent(row.win_rate)} wins</small></div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function ExposurePolicies({ rows }: { rows: ExposurePolicyRow[] }) {
+  if (!rows.length) return <EmptyState>Capital-policy evidence is waiting for the five-sleeve replay.</EmptyState>;
+  return (
+    <div className="policy-list" aria-label="Capital constrained exposure policy comparison">
+      {rows.map((row) => {
+        const hasInterval = row.delta_ci_lower != null && row.delta_ci_upper != null;
+        return (
+          <article className="policy-row" key={row.policy}>
+            <div className="policy-title"><strong>{row.label || readableLabel(row.policy)}</strong><span>{row.status || "Research only"}</span></div>
+            <div><span>Daily net</span><strong>{signedPercent(row.mean_daily_net_residual_return, 3)}</strong></div>
+            <div><span>Active</span><strong>{percent(row.active_day_share)}</strong></div>
+            <div><span>Worst path</span><strong className="tone-negative">{signedPercent(row.worst_path_cumulative_net_residual_return, 1)}</strong></div>
+            <div><span>Max drawdown</span><strong className="tone-negative">{signedPercent(row.worst_maximum_drawdown, 1)}</strong></div>
+            <p>{hasInterval ? `Paired daily-return delta 95% interval: ${signedPercent(row.delta_ci_lower, 3)} to ${signedPercent(row.delta_ci_upper, 3)}.` : "Reference policy for paired comparisons."}</p>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function Home() {
   const [snapshot, setSnapshot] = useState<SiteSnapshot>(fallbackSnapshot);
   const [isLive, setIsLive] = useState(false);
@@ -392,6 +448,7 @@ export default function Home() {
         <div className="nav-links">
           <a href="#trust">Trust</a>
           <a href="#models">Models</a>
+          <a href="#validation">Validation</a>
           <a href="#drivers">Drivers</a>
           <a href="#data-flow">Data flow</a>
           <a href="/market-lab/index.html">3D lab</a>
@@ -457,6 +514,20 @@ export default function Home() {
       <section className="analysis-section" id="models">
         <div className="section-heading"><div><p className="eyebrow">Model quality</p><h2>Gate heatmap</h2></div><p>Every cell is an explicit promotion requirement. A strong return alone cannot override weak calibration or temporal validation.</p></div>
         <ModelGateMatrix rows={snapshot.charts.model_gate_matrix} />
+      </section>
+
+      <section className="analysis-section validation-section" id="validation">
+        <div className="section-heading"><div><p className="eyebrow">Residual ANN confirmation</p><h2>Strong signal, guarded conclusion</h2></div><p>The 5-day residual experiment uses purged walk-forward folds, weekly-block uncertainty, a true five-sleeve capital replay, and costs up to 40 bps. The sealed holdout remains closed.</p></div>
+        <div className="validation-callouts">
+          <article><span>Five-sleeve daily net</span><strong>+0.100%</strong><small>After 10 bps, pooled across test paths</small></article>
+          <article><span>Leading candidate</span><strong>0.696 AUC</strong><small>Lean volatility ANN</small></article>
+          <article><span>Confirmed families</span><strong>0 of 4</strong><small>No promotion allowed</small></article>
+        </div>
+        <div className="validation-stack">
+          <div className="chart-panel validation-panel"><div className="panel-heading"><p className="eyebrow">Candidate ladder</p><h2>Models after costs</h2></div><ResidualValidation rows={snapshot.charts.residual_validation || []} /></div>
+          <div className="chart-panel validation-panel"><div className="panel-heading"><p className="eyebrow">Market state</p><h2>Where the ANN works</h2></div><RegimeValidation rows={snapshot.charts.regime_diagnostics || []} /></div>
+        </div>
+        <div className="chart-panel policy-panel"><div className="panel-heading"><p className="eyebrow">Capital policy stress test</p><h2>Exposure gates with entry and exit costs</h2></div><ExposurePolicies rows={snapshot.charts.exposure_policies || []} /><p className="selection-warning"><strong>Post-selection warning:</strong> these regime policies were proposed after viewing the source experiment. They are useful design evidence, not confirmatory evidence.</p></div>
       </section>
 
       <section className="two-column analysis-section">

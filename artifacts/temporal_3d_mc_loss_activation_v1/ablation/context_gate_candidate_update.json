@@ -1,0 +1,23 @@
+{
+  "action": "review_then_merge",
+  "base_context_id": "stockprediction2025-research-gate",
+  "completed_experiment": {
+    "id": "temporal_motion_predictive_ablation_v1",
+    "parent_experiment": "temporal_3d_mc_loss_activation_v1",
+    "status": "completed_pending_review",
+    "winning_activation": "tanh",
+    "winning_loss": "focal_gamma_1",
+    "winner_auc_mean": 0.513004,
+    "winner_brier_mean": 0.254763,
+    "winner_excess_return_mean": 0.007899,
+    "best_feature_set": "base_plus_all_motion",
+    "placebo_auc_mean": 0.511923,
+    "holdout_opened": false,
+    "design_signature": "temporal-3d-mc-loss-activation-v1:h5:slider+trails+derived-motion+regime-block-mc+loss-activation-ablation:holdout60"
+  },
+  "holdout_status": {
+    "status": "sealed",
+    "date_start": "2026-05-29",
+    "trading_dates": 60
+  }
+}

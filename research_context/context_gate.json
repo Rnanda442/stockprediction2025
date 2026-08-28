@@ -1,0 +1,549 @@
+{
+  "schema_version": 1,
+  "context_id": "stockprediction2025-research-gate",
+  "updated_at": "2026-08-28T17:50:01+00:00",
+  "purpose": "Accumulate reviewed research evidence, prevent duplicate experiments, and provide canonical context for future analysis.",
+  "project": {
+    "repository": "https://github.com/Rnanda442/stockprediction2025",
+    "branch": "main",
+    "primary_compute": "OpenScienceLab",
+    "paper_only": true
+  },
+  "source_precedence": [
+    "Reviewed OSL experiment CSV, JSON, and Markdown artifacts",
+    "Version-controlled research context gate",
+    "GitHub Action artifacts and logs",
+    "Website snapshots and presentation summaries"
+  ],
+  "guardrails": {
+    "live_trading_enabled": false,
+    "brokerage_orders_allowed": false,
+    "live_probability_display_allowed": false,
+    "sealed_holdout": {
+      "status": "sealed",
+      "date_start": "2026-05-29",
+      "date_end": "2026-08-24",
+      "trading_dates": 60,
+      "opened_for_evaluation": false,
+      "rule": "Do not train, fit graphs or PCA, select features, tune models, score, or calculate metrics on these dates until an explicit final promotion review."
+    },
+    "leakage_rules": [
+      "Use chronological splits and a horizon-sized embargo.",
+      "Fit similarity graphs, scalers, PCA, and feature selection from training rows only.",
+      "Shuffle permutation features within date, not across dates.",
+      "Treat trading dates, not ticker rows, as the effective independent sample size.",
+      "Keep overlapping-label and common-market dependence visible in conclusions."
+    ],
+    "duplicate_rule": "Every new lab must provide a unique experiment_id and design_signature and pass scripts/context_gate.py before compute begins."
+  },
+  "data_context": {
+    "database": "research_history.db",
+    "source_table": "ResearchPrices",
+    "rows": 3258958,
+    "tickers": 2597,
+    "date_min": "2021-08-23",
+    "date_max": "2026-08-24",
+    "source_span": "5year",
+    "database_size_mb": 218,
+    "storage_rule": "Keep bulk history and experiment outputs on OSL; commit scripts, manifests, context, and compact reviewed summaries to GitHub."
+  },
+  "metric_definitions": {
+    "auc": "Cross-sectional direction-ranking discrimination; 0.5 is random.",
+    "brier": "Mean squared probability error; lower is better and must be interpreted against the target base rate.",
+    "mean_excess_return": "Mean paper portfolio forward return minus the same-date eligible-universe mean.",
+    "win_rate": "Fraction of evaluation dates where paper portfolio return exceeded the eligible-universe mean.",
+    "permutation_importance": "Baseline metric minus metric after within-date feature shuffling; positive means the feature helped that metric.",
+    "drop_importance": "Performance change after removal and retraining; positive removal delta means removal helped."
+  },
+  "completed_experiments": [
+    {
+      "experiment_id": "graph_scenario_32683358084",
+      "design_signature": "graph-scenario-v1:h5,h20,h60:ann+ridge+random+universe:blind-paper",
+      "status": "completed",
+      "source": "warehouse/experiments/graph_scenario_32683358084",
+      "reviewed_findings": [
+        "Graph ANN did not establish reliable classification skill.",
+        "Blind scenario results were exploratory and not suitable for live promotion.",
+        "Paper-only scenario machinery and similarity graph outputs were retained for later controlled tests."
+      ]
+    },
+    {
+      "experiment_id": "confirmatory_importance_32915939359",
+      "design_signature": "confirmatory-importance-v1:h5,h20:relu48x24:3seeds:3splits:holdout60",
+      "status": "completed",
+      "source": "warehouse/model_runs/runs/32915939359/experiments/confirmatory_importance",
+      "reviewed_metrics": {
+        "five_day_auc_mean": 0.5087,
+        "five_day_brier_mean": 0.2567,
+        "twenty_day_auc_mean": 0.4894,
+        "twenty_day_brier_mean": 0.259
+      },
+      "reviewed_findings": [
+        "The five-day model was only slightly above chance and remained weak.",
+        "The twenty-day model was below chance and is not ready for promotion.",
+        "Momentum and risk were provisional retain groups.",
+        "Graph, liquidity, and individual similarity variables had mixed confidence intervals.",
+        "Leakage audit passed and the final 60-date holdout remained sealed."
+      ]
+    },
+    {
+      "experiment_id": "combination_similarity_5d_attempt2",
+      "design_signature": "combination-similarity-v1:h5:7groups:relu+tanh+deeprelu:3seeds:3splits:holdout60",
+      "status": "completed",
+      "source": "warehouse/model_runs/runs/32915939359/experiments/combination_similarity_5d_attempt2",
+      "provisional_selection": {
+        "combination": "core_plus_graph_latent3d",
+        "architecture": "relu_48_24",
+        "auc_mean": 0.49962,
+        "brier_mean": 0.26996,
+        "mean_excess_return": 0.00099
+      },
+      "reviewed_findings": [
+        "No tested ANN combination established reliable direction ranking; the provisional winner was effectively random by AUC.",
+        "Consensus gating improved paired excess return over plain selection by 0.00499 on average and won in 8 of 9 runs.",
+        "Similarity weighting improved paired excess return by 0.00385 and won in 8 of 9 runs.",
+        "Cluster diversification reduced paired excess return by 0.00724 and lost in all 9 runs.",
+        "The three PCA coordinates explained about 61 percent of feature variance, but only latent_z had positive ranking importance.",
+        "drawdown_60d and graph_degree were the strongest ranking contributors.",
+        "z_ma20, latent_radius, latent_y, risk_adjusted_momentum, and several raw neighbor variables were noisy or harmful.",
+        "Leakage audit passed and the sealed holdout remained unopened."
+      ]
+    },
+    {
+      "experiment_id": "temporal_motion_predictive_ablation_v1",
+      "design_signature": "temporal-3d-mc-loss-activation-v1:h5:slider+trails+derived-motion+regime-block-mc+loss-activation-ablation:holdout60",
+      "status": "completed_reviewed_provisional",
+      "source": "artifacts/temporal_3d_mc_loss_activation_v1/ablation",
+      "reviewed_metrics": {
+        "winner_activation": "tanh",
+        "winner_loss": "focal_gamma_1",
+        "winner_auc_mean": 0.513004,
+        "winner_brier_mean": 0.254763,
+        "winner_excess_return_mean": 0.007899,
+        "placebo_auc_mean": 0.511923
+      },
+      "reviewed_findings": [
+        "The selected tanh focal-loss ANN was only 0.001081 AUC above the shuffled-label placebo mean and did not establish reliable direction skill.",
+        "Adding all motion variables modestly improved AUC versus the base set but reduced after-cost excess return.",
+        "crowding_change_5d and graph_regime_residence_days were the most promising motion variables.",
+        "Raw latent kinematics were mixed or harmful and should not be used as an unrestricted ANN block.",
+        "All preprocessing and evaluation remained chronological and the final 60-date holdout remained sealed."
+      ]
+    },
+    {
+      "experiment_id": "graph_signal_history400_v1",
+      "design_signature": "graph-signal-history400-v1:raw-causal-features:top600:preholdout-only",
+      "status": "completed_reviewed",
+      "source": "artifacts/graph_signal_history400_v1",
+      "reviewed_metrics": {
+        "rows": 240000,
+        "trading_dates": 400,
+        "tickers": 926,
+        "date_min": "2024-10-22",
+        "date_max": "2026-05-28"
+      },
+      "reviewed_findings": [
+        "The causal raw feature panel was successfully extended from 90 to 400 pre-holdout dates.",
+        "Every feature used current or earlier observations and the panel ended before the sealed holdout.",
+        "The compact panel is a reusable OSL asset; its 240,000-row CSV remains off GitHub while its manifest is version controlled."
+      ]
+    },
+    {
+      "experiment_id": "graph_signal_confirmatory_v1",
+      "design_signature": "graph-signal-confirmatory-v1:h5:history400:trainfit-kmeans24:crowding+regime-residence+cluster-switch:elastic+ridge+tanh:6walkforward:date-block-bootstrap:label-placebo:holdout60",
+      "status": "completed_reviewed_not_promoted",
+      "source": "artifacts/graph_signal_confirmatory_v1/results_v2",
+      "reviewed_metrics": {
+        "best_feature_set": "base_plus_crowding",
+        "best_model": "elastic_logistic_c1_l25",
+        "best_auc_mean": 0.50238,
+        "best_auc_std": 0.0446,
+        "best_brier_mean": 0.25076,
+        "best_excess_return_mean": 0.00241,
+        "placebo_auc_mean": 0.49617,
+        "promotion_candidate": false
+      },
+      "reviewed_findings": [
+        "Crowding was the best narrow feature addition, but its average direction-ranking gain was economically and statistically small.",
+        "The full graph-survivor block did not improve linear-model AUC versus base: elastic delta -0.00070 with interval [-0.00417, 0.00305].",
+        "The linear graph-survivor return deltas were positive on average but their intervals crossed zero.",
+        "All tanh ANN feature sets remained below chance by mean AUC, and every paired ANN graph interval crossed zero.",
+        "Training-fitted graph transforms, chronological splits, five-date embargoes, within-date placebos, and block uncertainty passed review.",
+        "The final 60-date holdout remained sealed and this design is not eligible for promotion."
+      ]
+    },
+    {
+      "experiment_id": "similarity_weighted_linear_400d_v1",
+      "design_signature": "similarity-weighted-linear-400d-v1:h5:elastic-c1-l25:train-knn20:alpha025:p10:r5:cost10:6walkforward:block-bootstrap:neighbor-placebo:holdout60",
+      "status": "completed_not_promoted",
+      "generated_at": "2026-08-28T05:27:52.836895+00:00",
+      "rows": 237000,
+      "dates": 395,
+      "tickers": 922,
+      "splits": 6,
+      "holdout_start": "2026-05-29",
+      "holdout_opened": false,
+      "paired_result": {
+        "auc_delta_mean": -0.003974264987179676,
+        "auc_ci_2_5": -0.01422098768673364,
+        "auc_ci_97_5": 0.006312467522445736,
+        "brier_gain_mean": -0.0003459676382543219,
+        "brier_ci_2_5": -0.0004999705390795128,
+        "brier_ci_97_5": -0.0001868678824040074,
+        "excess_return_delta_mean": -0.0054180471676883,
+        "return_ci_2_5": -0.016716302907506957,
+        "return_ci_97_5": 0.0025891038951122852
+      },
+      "placebo_return_delta_mean": 0.0003753238312434049,
+      "promotion_candidate": false,
+      "source_context_id": "stockprediction2025-research-gate",
+      "decision": "do_not_promote",
+      "readout": "artifacts/similarity_weighted_linear_400d_v1/similarity_readout.md"
+    },
+    {
+      "experiment_id": "residual_sleeve_family_confirmation_v1",
+      "status": "completed_promising_not_promoted",
+      "design_signature": "residual-sleeve-family-confirmation-v1:h5:4x63d:5sleeves:top50:tanh:families:regimes:cost10",
+      "result_summary": {
+        "confirmed_families": [],
+        "all_families_mean_daily_net_10bps": 0.00099931,
+        "all_families_cumulative_net_10bps": 0.6472183,
+        "all_families_mean_turnover": 0.08226217,
+        "lean_volatility_auc": 0.6964126,
+        "lean_volatility_net_per_cohort": 0.00621984,
+        "negative_temporal_split": 2,
+        "sealed_holdout_opened": false,
+        "universe_point_in_time_verified": false
+      },
+      "conclusion": "The residual ANN beat linear and random controls after costs, but no feature family cleared every addition, removal, shuffle, and economic uncertainty gate."
+    },
+    {
+      "experiment_id": "regime_exposure_policy_v1",
+      "status": "completed_exploratory_not_promotable",
+      "design_signature": "regime-exposure-policy-v1:saved-predictions:5sleeves:stress-only:trend-down-cash:lean-volatility:cost0-40:posthoc",
+      "result_summary": {
+        "lean_volatility_vs_logistic_net_ci_lower": 0.00167076,
+        "lean_volatility_vs_logistic_auc_ci_lower": 0.02477544,
+        "lean_volatility_vs_logistic_rank_ic_ci_lower": 0.00263339,
+        "trend_down_cash_mean_daily_net_10bps": 0.00118735,
+        "trend_down_cash_delta_ci": [
+          -8.466e-05,
+          0.00042649
+        ],
+        "stress_only_worst_maximum_drawdown": -0.05539178,
+        "stress_only_delta_ci": [
+          -0.00081193,
+          0.00038561
+        ],
+        "post_selection_bias": true,
+        "sealed_holdout_opened": false
+      },
+      "conclusion": "Lean volatility is the leading candidate and the trend-down cash gate improves the point estimate, but both require future unseen confirmation."
+    }
+  ],
+  "promising_hypotheses": [
+    {
+      "hypothesis": "Similarity is more useful as a portfolio-weighting adjustment to a compact linear model than as unrestricted ANN input or a hard consensus gate.",
+      "status": "test_next",
+      "evidence": "Similarity weighting had a positive paired delta and positive block-bootstrap interval in the robustness battery, while the consensus gate and graph ANN did not confirm."
+    },
+    {
+      "hypothesis": "A compact model centered on drawdown_60d, graph_degree, and ret_20d can outperform the broad feature set.",
+      "status": "test_next",
+      "evidence": "These variables had the strongest within-date ranking importance in the latest lab."
+    },
+    {
+      "hypothesis": "Only latent_z may add predictive information from the 3D transform.",
+      "status": "test_next",
+      "evidence": "latent_z had positive mean AUC importance while latent_x, latent_y, and latent_radius did not."
+    },
+    {
+      "hypothesis": "Crowding change and graph-regime persistence may add a small, stable increment to compact five-day models without the harmful raw kinematic block.",
+      "status": "mixed_not_confirmed",
+      "evidence": "On 400 dates crowding produced the best linear average, but the full graph block had no positive paired AUC interval and all tanh models remained below chance."
+    }
+  ],
+  "do_not_repeat_or_promote": [
+    "Do not rerun the seven broad combination screen without a materially different design.",
+    "Do not promote the current 20-day ANN.",
+    "Do not treat all PCA coordinates as predictive variables.",
+    "Do not rerun the broad temporal activation and loss grid without a materially different hypothesis.",
+    "Do not feed the full raw latent velocity, acceleration, radial expansion, curvature, and convergence block into the next ANN.",
+    "Do not rerun the 24-cluster crowding, regime-residence, and cluster-switch confirmatory design without a materially different target or graph construction.",
+    "Do not promote the tested tanh ANN or the full graph-survivor block.",
+    "Do not use cluster diversification in its tested form.",
+    "Do not interpret bubble size, coordinates, or visual separation as predictive evidence without an out-of-sample metric.",
+    "Do not open the sealed holdout to choose features, models, gates, costs, or thresholds."
+  ],
+  "next_experiments": [
+    {
+      "experiment_id": "compact_consensus_cost_5d_v1",
+      "design_signature": "compact-consensus-cost-v1:h5:novel-pruned-groups:ridge+relu:3splits:holdout60",
+      "question": "Can a compact feature set and consensus gate improve pre-holdout performance after turnover and transaction costs?",
+      "status": "approved_next"
+    },
+    {
+      "experiment_id": "robustness_battery_5d_v1",
+      "design_signature": "robustness-battery-v1:h5:challengers+lofo+placebo+segments+costs+bootstrap:holdout60",
+      "question": "Does the compact winner survive broad model, feature, regime, portfolio, cost, calibration, and placebo stress tests?",
+      "depends_on": "compact_consensus_cost_5d_v1",
+      "status": "completed_reviewed_provisional",
+      "reviewed_result": {
+        "reviewed_at": "2026-08-27",
+        "holdout_status": "sealed",
+        "winning_challenger": "elastic_c1_l25",
+        "winner_auc_mean": 0.51013,
+        "winner_brier_mean": 0.25163,
+        "winner_log_loss_mean": 0.69644,
+        "winner_ece_10_mean": 0.04026,
+        "winner_excess_return_mean": 0.00549,
+        "placebo_auc_mean": 0.49772,
+        "similarity_weighted_delta": 0.01467,
+        "similarity_weighted_ci_95": [
+          0.00115,
+          0.02878
+        ],
+        "similarity_weighted_positive_probability": 0.982,
+        "consensus_gate_delta": -0.00219,
+        "consensus_gate_ci_95": [
+          -0.00639,
+          0.00245
+        ],
+        "feature_findings": {
+          "graph_degree_auc_drop": 0.00506,
+          "ret_20d_auc_drop": 0.00324,
+          "ret_20d_excess_return_drop": 0.00779,
+          "vol_60d_auc_drop": 0.00281,
+          "dollar_vol_20d_log_assessment": "noisy_or_mildly_harmful",
+          "drawdown_60d_assessment": "mixed_classification_and_return_value"
+        },
+        "model_findings": {
+          "linear_regularized_models": "best_provisional_family",
+          "ann_auc_range": [
+            0.49216,
+            0.49396
+          ],
+          "ann_assessment": "underperformed_and_was_less_well_calibrated"
+        },
+        "scenario_findings": {
+          "exploratory_best": "liquidity_low_similarity_weighted_portfolio_5_rebalance_1",
+          "exploratory_best_mean_excess_return": 0.02882,
+          "exploratory_best_mean_excess_return_at_50bps": 0.02707,
+          "exploratory_best_worst_net_return": -0.15044,
+          "preferred_research_configuration": "all_similarity_weighted_portfolio_10_rebalance_5",
+          "preferred_mean_excess_return": 0.02344,
+          "preferred_win_rate": 0.74444
+        },
+        "interpretation": "Direction prediction remains only slightly above chance. Similarity weighting is the strongest robust result. Consensus gating should not be promoted. Scenario results remain paper-only and carry multiple-testing risk."
+      }
+    },
+    {
+      "id": "temporal_3d_mc_loss_activation_v1",
+      "design_signature": "temporal-3d-mc-loss-activation-v1:h5:slider+trails+derived-motion+regime-block-mc+loss-activation-ablation:holdout60",
+      "depends_on": "robustness_battery_5d_v1",
+      "spec_path": "research_context/temporal_3d_mc_loss_activation_v1.json",
+      "status": "completed_reviewed_provisional",
+      "reviewed_result": {
+        "reviewed_at": "2026-08-27",
+        "holdout_status": "sealed",
+        "winning_activation": "tanh",
+        "winning_loss": "focal_gamma_1",
+        "winner_auc_mean": 0.513004,
+        "winner_brier_mean": 0.254763,
+        "winner_excess_return_mean": 0.007899,
+        "placebo_auc_mean": 0.511923,
+        "interpretation": "Graph persistence and crowding remain narrow confirmatory hypotheses; the broad motion ANN is not promotion-ready."
+      }
+    },
+    {
+      "experiment_id": "graph_signal_history400_v1",
+      "design_signature": "graph-signal-history400-v1:raw-causal-features:top600:preholdout-only",
+      "question": "Can a causal 400-date raw feature panel be prepared without reusing the completed temporal visualization experiment?",
+      "status": "completed_reviewed",
+      "reviewed_result": {
+        "rows": 240000,
+        "trading_dates": 400,
+        "tickers": 926,
+        "date_min": "2024-10-22",
+        "date_max": "2026-05-28",
+        "holdout_status": "sealed"
+      }
+    },
+    {
+      "experiment_id": "graph_signal_confirmatory_v1",
+      "design_signature": "graph-signal-confirmatory-v1:h5:history400:trainfit-kmeans24:crowding+regime-residence+cluster-switch:elastic+ridge+tanh:6walkforward:date-block-bootstrap:label-placebo:holdout60",
+      "question": "Do the surviving graph-motion signals add repeatable pre-holdout value to compact linear and small tanh models after removing raw kinematics?",
+      "depends_on": "graph_signal_history400_v1",
+      "spec_path": "research_context/graph_signal_confirmatory_v1.json",
+      "status": "completed_reviewed_not_promoted",
+      "reviewed_result": {
+        "reviewed_at": "2026-08-27",
+        "holdout_status": "sealed",
+        "best_feature_set": "base_plus_crowding",
+        "best_model": "elastic_logistic_c1_l25",
+        "best_auc_mean": 0.50238,
+        "best_brier_mean": 0.25076,
+        "best_excess_return_mean": 0.00241,
+        "placebo_auc_mean": 0.49617,
+        "promotion_candidate": false,
+        "interpretation": "Crowding remains a weak descriptive signal, not a confirmed predictor. The full graph block and tanh ANN are not promotion-ready."
+      }
+    },
+    {
+      "experiment_id": "similarity_weighted_linear_400d_v1",
+      "design_signature": "similarity-weighted-linear-400d-v1:h5:elastic-c1-l25:train-knn20:alpha025:p10:r5:cost10:6walkforward:block-bootstrap:neighbor-placebo:holdout60",
+      "question": "Does a fixed training-only similarity adjustment improve a compact elastic linear portfolio over plain model ranking on the 400-date panel?",
+      "depends_on": "graph_signal_history400_v1",
+      "spec_path": "research_context/similarity_weighted_linear_400d_v1.json",
+      "status": "approved_next"
+    },
+    {
+      "experiment_id": "point_in_time_residual_panel_5y_v1",
+      "design_signature": "point-in-time-residual-panel-5y-v1:h5:1250d:top1000:loo-market:optional-pit-sector:holdout60",
+      "status": "completed_data_stage",
+      "depends_on": [
+        "similarity_weighted_linear_400d_v1"
+      ],
+      "purpose": "Expand the existing OSL ResearchPrices panel and construct leakage-controlled leave-one-out residual-return targets before any new model search.",
+      "sealed_holdout_start": "2026-05-29",
+      "promotion": false,
+      "result_summary": {
+        "panel_rows": 1131000,
+        "panel_dates": 1131,
+        "panel_tickers": 1676,
+        "decision_date_start": "2021-11-16",
+        "decision_date_end": "2026-05-20",
+        "maximum_evaluation_date": "2026-05-28",
+        "sector_target_rows": 0,
+        "sealed_holdout_opened": false,
+        "model_promotion": false
+      }
+    },
+    {
+      "experiment_id": "purged_walk_forward_residual_baselines_v1",
+      "design_signature": "purged-walk-forward-residual-baselines-v1:h5:4x63d:purge5:top50:cost10:ridge-logit-mlprelu-mlptanh",
+      "status": "completed_promising_not_promoted",
+      "depends_on": [
+        "point_in_time_residual_panel_5y_v1"
+      ],
+      "purpose": "Test whether residual targets support repeatable after-cost advantage using purged linear, ANN, and placebo comparisons.",
+      "sealed_holdout_start": "2026-05-29",
+      "promotion": false,
+      "result_summary": {
+        "tanh_auc": 0.695971,
+        "tanh_rank_ic": 0.045713,
+        "tanh_after_10bps_residual_return": 0.007674,
+        "relu_auc": 0.696352,
+        "relu_after_10bps_residual_return": 0.006623,
+        "best_linear": "logistic_top_decile",
+        "tanh_paired_net_delta_ci": [
+          0.002567,
+          0.010367
+        ],
+        "tanh_paired_auc_delta_ci": [
+          0.019783,
+          0.038643
+        ],
+        "sealed_holdout_opened": false,
+        "promotion": false,
+        "limitations": [
+          "Five-day labels overlap across daily cohorts.",
+          "Five-sleeve capital accounting was not yet tested.",
+          "Fold two and three returns were weaker than folds one and four.",
+          "Historical universe ownership remains unverified."
+        ]
+      }
+    },
+    {
+      "experiment_id": "residual_sleeve_family_confirmation_v1",
+      "design_signature": "residual-sleeve-family-confirmation-v1:h5:4x63d:5sleeves:top50:tanh:families:regimes:cost10",
+      "status": "completed_promising_not_promoted",
+      "depends_on": [
+        "purged_walk_forward_residual_baselines_v1"
+      ],
+      "purpose": "Confirm the ANN in a five-sleeve capital replay and run the original roadmap's complete feature-family addition, removal, and shuffled-control matrix.",
+      "sealed_holdout_start": "2026-05-29",
+      "promotion": false,
+      "result_summary": {
+        "confirmed_families": [],
+        "all_families_mean_daily_net_10bps": 0.00099931,
+        "all_families_cumulative_net_10bps": 0.6472183,
+        "all_families_mean_turnover": 0.08226217,
+        "lean_volatility_auc": 0.6964126,
+        "lean_volatility_net_per_cohort": 0.00621984,
+        "negative_temporal_split": 2,
+        "sealed_holdout_opened": false,
+        "universe_point_in_time_verified": false
+      },
+      "conclusion": "The residual ANN beat linear and random controls after costs, but no feature family cleared every addition, removal, shuffle, and economic uncertainty gate."
+    },
+    {
+      "experiment_id": "residual_ann_future_confirmation_v1",
+      "status": "frozen_waiting_for_future_unseen_dates",
+      "purpose": "Confirm the lean volatility ANN and trend-down cash gate without retuning on dates arriving after the 2026-08-28 policy freeze.",
+      "candidates": [
+        "baseline_plus_volatility",
+        "ann_trend_down_cash"
+      ],
+      "controls": [
+        "baseline_momentum",
+        "all_families",
+        "logistic_all_families",
+        "random_top_50"
+      ],
+      "promotion_allowed": false,
+      "required_before_promotion": [
+        "point_in_time_universe_verified",
+        "delisting_returns_resolved",
+        "positive_return_auc_rank_ic_lower_bounds",
+        "no_negative_temporal_split_after_costs"
+      ]
+    }
+  ],
+  "known_biases_and_limits": [
+    "Survivorship and current-universe selection may remain.",
+    "Liquidity top-k selection changes the eligible universe over time.",
+    "Forward-return labels overlap across adjacent dates.",
+    "Stocks on the same date are dependent through the common market regime.",
+    "Repeated model and feature searches create multiple-testing risk.",
+    "Paper returns exclude market impact and may understate execution frictions until cost sensitivity is applied."
+  ],
+  "do_not_repeat": [
+    {
+      "experiment_id": "similarity_weighted_linear_400d_v1",
+      "design_signature": "similarity-weighted-linear-400d-v1:h5:elastic-c1-l25:train-knn20:alpha025:p10:r5:cost10:6walkforward:block-bootstrap:neighbor-placebo:holdout60",
+      "reason": "Training-only 20-neighbor similarity weighting worsened AUC, Brier score, and after-cost excess return; its return interval crossed zero and its point estimate underperformed the neighbor-label placebo."
+    }
+  ],
+  "key_insights": [
+    {
+      "experiment_id": "similarity_weighted_linear_400d_v1",
+      "finding": "On 395 pre-holdout dates, fixed similarity weighting degraded the compact linear ranker. Keep similarity for visualization and diagnostics, not as a probability or portfolio-ranking adjustment."
+    },
+    {
+      "id": "existing_osl_history_span_2026_08_28",
+      "insight": "OSL ResearchPrices already contains 3,258,958 rows, 1,256 dates, and 2,597 tickers from 2021-08-23 through 2026-08-24; prior graph/model experiments deliberately truncated this source to 400 dates, so the next data stage can expand pre-holdout history without another Robinhood export.",
+      "implication": "Use the existing database with strict decision/evaluation cutoffs before requesting new brokerage data."
+    },
+    {
+      "id": "residual_panel_5y_built_2026_08_28",
+      "insight": "The expanded pre-holdout residual panel contains 1,131,000 rows across 1,131 decision dates and 1,676 tickers; its latest evaluation date is 2026-05-28, the sealed 2026-05-29 holdout remains unopened, and sector neutralization correctly remained disabled without dated sector ownership.",
+      "implication": "Use purged walk-forward residual baselines before adding graph, similarity, or larger ANN complexity."
+    },
+    {
+      "id": "purged_residual_ann_promising_2026_08_28",
+      "insight": "Purged residual baselines found a promising nonlinear signal: tanh ANN AUC 0.695971 and 0.7674% mean five-day residual cohort return after 10 bps, with positive paired net and AUC intervals versus logistic. This is not promoted because overlapping cohorts, capital sleeves, regime stability, and coherent family controls still require confirmation.",
+      "implication": "Run five-sleeve and family confirmation before website publication or promotion."
+    },
+    {
+      "insight_id": "residual_volatility_leads_20260828",
+      "finding": "Volatility is the strongest predictive family, but its economic increment versus momentum and the full ANN remains uncertain.",
+      "implication": "Carry the lean volatility ANN forward as a frozen candidate, not a promoted model."
+    },
+    {
+      "insight_id": "regime_gates_posthoc_20260828",
+      "finding": "Stress-only exposure reduces drawdown and trend-down cash improves the point estimate, but both paired intervals cross zero.",
+      "implication": "Use the policies as future-test hypotheses only; do not tune or trade them from these results."
+    }
+  ]
+}

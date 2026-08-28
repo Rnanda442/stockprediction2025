@@ -1,0 +1,152 @@
+{
+  "context_id": "temporal_3d_mc_loss_activation_v1",
+  "status": "approved_next",
+  "created_at": "2026-08-27",
+  "objective": "Turn stock history, graph relationships, and conditional Monte Carlo forecasts into an interactive time-aware 3D research lab, then test whether motion-derived variables, loss functions, and activation functions improve sealed-holdout-safe predictions.",
+  "visual_labs": [
+    {
+      "id": "market_universe_time_map",
+      "description": "An animated 3D universe with a date slider, play/pause controls, selectable trails, hover explanations, and synchronized portfolio diagnostics.",
+      "default_encodings": {
+        "x": "standardized_ret_20d",
+        "y": "standardized_graph_degree",
+        "z": "standardized_vol_60d",
+        "bubble_size": "conditional_mc_upside_probability",
+        "bubble_color": "calibrated_5d_return_probability",
+        "opacity": "prediction_confidence",
+        "trail": "prior_20_observation_dates"
+      },
+      "selectable_encodings": [
+        "ret_5d",
+        "ret_20d",
+        "ret_60d",
+        "graph_degree",
+        "graph_similarity_mean",
+        "neighbor_ret_20d",
+        "neighbor_confirmation",
+        "neighbor_divergence",
+        "vol_20d",
+        "vol_60d",
+        "drawdown_60d",
+        "dollar_vol_20d_log",
+        "latent_x",
+        "latent_y",
+        "latent_z",
+        "mc_expected_return",
+        "mc_upside_probability",
+        "mc_expected_shortfall"
+      ]
+    },
+    {
+      "id": "monte_carlo_probability_tube",
+      "description": "A stock-level animated probability tube showing simulated return percentiles, target and stop-loss hit probabilities, expected shortfall, realized path overlays, and neighbor/regime-conditioned alternatives.",
+      "axes": {
+        "x": "forecast_day",
+        "y": "simulated_cumulative_return",
+        "z": "conditional_path_density_or_market_regime"
+      }
+    },
+    {
+      "id": "graph_cluster_motion_map",
+      "description": "A 3D graph layout whose node trails reveal cluster migration, crowding, divergence, contagion, and regime transitions through time."
+    }
+  ],
+  "candidate_motion_features": [
+    "latent_velocity_5d",
+    "latent_acceleration_5d",
+    "latent_path_curvature_20d",
+    "latent_radial_expansion_5d",
+    "neighbor_convergence_velocity",
+    "neighbor_divergence_acceleration",
+    "graph_cluster_switch_count_20d",
+    "graph_regime_residence_days",
+    "crowding_change_5d",
+    "mc_target_before_stop_probability",
+    "mc_expected_shortfall_5pct",
+    "mc_probability_calibration_residual"
+  ],
+  "monte_carlo_design": {
+    "method": "moving_block_residual_bootstrap_conditioned_on_volatility_graph_cluster_and_market_regime",
+    "comparison_baselines": [
+      "unconditional_moving_block_bootstrap",
+      "gaussian_geometric_brownian_motion",
+      "equal_weight_universe"
+    ],
+    "path_horizons_days": [5, 20, 60],
+    "paths_per_stock": 2000,
+    "requirements": [
+      "Fit every distribution and regime boundary on training rows only.",
+      "Preserve serial dependence with moving blocks.",
+      "Report target-hit, stop-hit, expected return, expected shortfall, and calibration.",
+      "Do not treat simulated paths as new independent training observations."
+    ]
+  },
+  "loss_function_ablation": [
+    {
+      "loss": "binary_cross_entropy",
+      "purpose": "probability baseline"
+    },
+    {
+      "loss": "brier_mse",
+      "purpose": "calibration-sensitive probability learning"
+    },
+    {
+      "loss": "focal_gamma_1",
+      "purpose": "moderate emphasis on difficult observations"
+    },
+    {
+      "loss": "focal_gamma_2",
+      "purpose": "stronger difficult-observation emphasis"
+    },
+    {
+      "loss": "utility_aware_bce",
+      "purpose": "combine probability quality with differentiable return utility, turnover penalty, and downside-risk penalty",
+      "guardrail": "Tune utility weights only inside nested training validation and compare against pure BCE."
+    }
+  ],
+  "activation_ablation": [
+    "relu",
+    "tanh",
+    "leaky_relu",
+    "gelu"
+  ],
+  "experimental_controls": {
+    "chronological_splits": 3,
+    "ann_seeds": [442, 2025, 9001, 117, 8080],
+    "same_parameter_budget": true,
+    "same_early_stopping_budget": true,
+    "nested_training_validation_for_hyperparameters": true,
+    "sealed_holdout_dates": 60,
+    "sealed_holdout_rule": "Do not open until the visual features and model family are frozen."
+  },
+  "evaluation_metrics": [
+    "auc",
+    "brier",
+    "log_loss",
+    "ece_10",
+    "mean_excess_return_after_costs",
+    "turnover",
+    "maximum_drawdown",
+    "expected_shortfall",
+    "weekly_block_bootstrap_confidence_interval"
+  ],
+  "feature_acceptance_gate": {
+    "rule": "A visually inspired variable is retained only if its pre-registered leave-one-feature-out result improves at least two of ranking, calibration, or after-cost return without a material risk deterioration across chronological splits.",
+    "prohibitions": [
+      "Do not promote a feature because its animation looks persuasive.",
+      "Do not select variables using the sealed final holdout.",
+      "Do not infer causality from spatial proximity in a learned projection."
+    ]
+  },
+  "planned_outputs": [
+    "interactive_market_universe_3d.html",
+    "monte_carlo_probability_tube.html",
+    "graph_cluster_motion_map.html",
+    "visual_feature_dictionary.json",
+    "loss_activation_ablation.csv",
+    "motion_feature_ablation.csv",
+    "scenario_and_calibration_readout.md",
+    "website_payload.json",
+    "context_gate_candidate_update.json"
+  ]
+}

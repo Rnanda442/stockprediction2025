@@ -1,0 +1,7 @@
+split,train_start,train_end,test_start,test_end,max_test_label_date,embargo_dates,graph_fit_scope,clusters,holdout_start,holdout_opened
+1,2024-10-22,2025-11-18,2025-11-26,2025-12-24,2026-01-02,5,training_rows_only,24,2026-05-29,False
+2,2024-10-22,2025-12-17,2025-12-26,2026-01-26,2026-02-02,5,training_rows_only,24,2026-05-29,False
+3,2024-10-22,2026-01-16,2026-01-27,2026-02-24,2026-03-03,5,training_rows_only,24,2026-05-29,False
+4,2024-10-22,2026-02-17,2026-02-25,2026-03-24,2026-03-31,5,training_rows_only,24,2026-05-29,False
+5,2024-10-22,2026-03-17,2026-03-25,2026-04-22,2026-04-29,5,training_rows_only,24,2026-05-29,False
+6,2024-10-22,2026-04-15,2026-04-23,2026-05-20,2026-05-28,5,training_rows_only,24,2026-05-29,False

@@ -180,6 +180,10 @@ jobs:
         run: |
           python scripts/export_dashboard_data.py
 
+      - name: Export full-span research history for OSL
+        run: |
+          python scripts/export_research_history.py
+
       - name: Generate automatic paper decisions
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.analysis_only != 'true' }}
         run: |
@@ -240,6 +244,7 @@ jobs:
             checkpoint_filtered.csv
             checkpoint_rejected.csv
             dashboard_data.db
+            research_history.db
             logs/executed-notebook.ipynb
             logs/notebook_stage_manifest.json
             logs/notebook_checkpoints/*.json
