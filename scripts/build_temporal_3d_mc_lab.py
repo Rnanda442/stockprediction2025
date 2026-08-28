@@ -517,6 +517,14 @@ def build_readout(
     latest_date = frame["date"].max()
     latest = frame[frame["date"] == latest_date]
     fastest = latest.nlargest(10, "latent_velocity")[["ticker", "latent_velocity", "ret_20d", "graph_degree"]]
+    fastest_table = [
+        "| ticker | latent_velocity | ret_20d | graph_degree |",
+        "|---|---:|---:|---:|",
+    ]
+    fastest_table.extend(
+        f"| {row.ticker} | {row.latent_velocity:.4f} | {row.ret_20d:.4f} | {row.graph_degree:.4f} |"
+        for row in fastest.itertuples(index=False)
+    )
     mc_rank = sorted(
         ((ticker, values["summary"]["target_before_stop_probability"], values["summary"]["expected_shortfall_5pct"]) for ticker, values in mc_payload.items()),
         key=lambda row: row[1],
@@ -535,7 +543,7 @@ def build_readout(
         "",
         "## Fastest latent movers on the final visual frame",
         "",
-        fastest.to_markdown(index=False, floatfmt=".4f"),
+        "\n".join(fastest_table),
         "",
         "## Highest target-before-stop Monte Carlo probabilities",
         "",
