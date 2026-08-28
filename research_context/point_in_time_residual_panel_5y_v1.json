@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "experiment_id": "point_in_time_residual_panel_5y_v1",
+  "design_signature": "point-in-time-residual-panel-5y-v1:h5:1250d:top1000:loo-market:optional-pit-sector:holdout60",
+  "purpose": "Build an expanded pre-holdout research panel with leave-one-out market and optional dated-sector residual-return targets.",
+  "source": {
+    "table": "ResearchPrices",
+    "observed_min_date": "2021-08-23",
+    "observed_max_date": "2026-08-24",
+    "observed_distinct_dates": 1256,
+    "observed_distinct_tickers": 2597,
+    "observed_rows": 3258958,
+    "universe_point_in_time_verified": false
+  },
+  "sealed_holdout": {
+    "start_date": "2026-05-29",
+    "status": "unopened",
+    "decision_dates_must_be_before_start": true,
+    "evaluation_dates_must_be_before_start": true
+  },
+  "panel": {
+    "requested_history_dates": 1250,
+    "daily_liquidity_cap": 1000,
+    "liquidity_feature": "dollar_vol_20d_log",
+    "features": [
+      "ret_5d",
+      "ret_20d",
+      "ret_60d",
+      "vol_20d",
+      "vol_60d",
+      "drawdown_60d",
+      "dollar_vol_20d_log"
+    ]
+  },
+  "target": {
+    "horizon_trading_days": 5,
+    "market_benchmark": "daily_cross_section_leave_one_out_mean",
+    "sector_benchmark": "optional_dated_valid_from_valid_to_leave_one_out_mean",
+    "primary_target": "sector_residual_when_valid_and_sufficient_else_market_residual",
+    "sector_mapping_required_columns": [
+      "ticker",
+      "sector",
+      "valid_from",
+      "valid_to"
+    ],
+    "minimum_sector_members_including_self": 6,
+    "labels": [
+      "primary_residual_positive",
+      "primary_residual_top_decile"
+    ]
+  },
+  "outputs": [
+    "target_panel.csv.gz",
+    "target_definition.json",
+    "ticker_coverage.csv",
+    "data_quality_summary.csv",
+    "leakage_audit.csv",
+    "experiment_manifest.json",
+    "context_gate_candidate_update.json"
+  ],
+  "promotion": {
+    "model_promotion_allowed": false,
+    "reason": "This is a data and target construction stage, not a model result.",
+    "minimum_pre_holdout_dates": 900,
+    "minimum_distinct_tickers": 500
+  }
+}

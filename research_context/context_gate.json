@@ -356,6 +356,17 @@
       "depends_on": "graph_signal_history400_v1",
       "spec_path": "research_context/similarity_weighted_linear_400d_v1.json",
       "status": "approved_next"
+    },
+    {
+      "experiment_id": "point_in_time_residual_panel_5y_v1",
+      "design_signature": "point-in-time-residual-panel-5y-v1:h5:1250d:top1000:loo-market:optional-pit-sector:holdout60",
+      "status": "approved_next",
+      "depends_on": [
+        "similarity_weighted_linear_400d_v1"
+      ],
+      "purpose": "Expand the existing OSL ResearchPrices panel and construct leakage-controlled leave-one-out residual-return targets before any new model search.",
+      "sealed_holdout_start": "2026-05-29",
+      "promotion": false
     }
   ],
   "known_biases_and_limits": [
@@ -377,6 +388,11 @@
     {
       "experiment_id": "similarity_weighted_linear_400d_v1",
       "finding": "On 395 pre-holdout dates, fixed similarity weighting degraded the compact linear ranker. Keep similarity for visualization and diagnostics, not as a probability or portfolio-ranking adjustment."
+    },
+    {
+      "id": "existing_osl_history_span_2026_08_28",
+      "insight": "OSL ResearchPrices already contains 3,258,958 rows, 1,256 dates, and 2,597 tickers from 2021-08-23 through 2026-08-24; prior graph/model experiments deliberately truncated this source to 400 dates, so the next data stage can expand pre-holdout history without another Robinhood export.",
+      "implication": "Use the existing database with strict decision/evaluation cutoffs before requesting new brokerage data."
     }
   ]
 }
