@@ -1,0 +1,730 @@
+{
+  "matched_count": 120,
+  "retrieved_at": "2026-08-28T18:56:29.208033+00:00",
+  "schema_version": 1,
+  "securities": {
+    "AAPL": {
+      "country": "United States",
+      "industry": "Computer Manufacturing",
+      "name": "Apple Inc. Common Stock",
+      "sector": "Technology"
+    },
+    "ABBV": {
+      "country": "United States",
+      "industry": "Biotechnology: Pharmaceutical Preparations",
+      "name": "AbbVie Inc. Common Stock",
+      "sector": "Health Care"
+    },
+    "ABT": {
+      "country": "United States",
+      "industry": "Biotechnology: Pharmaceutical Preparations",
+      "name": "Abbott Laboratories Common Stock",
+      "sector": "Health Care"
+    },
+    "ACN": {
+      "country": "Ireland",
+      "industry": "Business Services",
+      "name": "Accenture plc Class A Ordinary Shares (Ireland)",
+      "sector": "Consumer Discretionary"
+    },
+    "ADBE": {
+      "country": "United States",
+      "industry": "Computer Software: Prepackaged Software",
+      "name": "Adobe Inc. Common Stock",
+      "sector": "Technology"
+    },
+    "ADI": {
+      "country": "United States",
+      "industry": "Semiconductors",
+      "name": "Analog Devices Inc. Common Stock",
+      "sector": "Technology"
+    },
+    "AMAT": {
+      "country": "United States",
+      "industry": "Semiconductors",
+      "name": "Applied Materials Inc. Common Stock",
+      "sector": "Technology"
+    },
+    "AMD": {
+      "country": "United States",
+      "industry": "Semiconductors",
+      "name": "Advanced Micro Devices Inc. Common Stock",
+      "sector": "Technology"
+    },
+    "AMGN": {
+      "country": "United States",
+      "industry": "Biotechnology: Biological Products (No Diagnostic Substances)",
+      "name": "Amgen Inc. Common Stock",
+      "sector": "Health Care"
+    },
+    "AMZN": {
+      "country": "United States",
+      "industry": "Catalog/Specialty Distribution",
+      "name": "Amazon.com Inc. Common Stock",
+      "sector": "Consumer Discretionary"
+    },
+    "ANET": {
+      "country": "United States",
+      "industry": "Computer Communications Equipment",
+      "name": "Arista Networks Inc. Common Stock",
+      "sector": "Telecommunications"
+    },
+    "APH": {
+      "country": "United States",
+      "industry": "Electrical Products",
+      "name": "Amphenol Corporation Common Stock",
+      "sector": "Technology"
+    },
+    "APP": {
+      "country": "United States",
+      "industry": "Computer Software: Programming Data Processing",
+      "name": "Applovin Corporation Class A Common Stock",
+      "sector": "Technology"
+    },
+    "AVGO": {
+      "country": "United States",
+      "industry": "Semiconductors",
+      "name": "Broadcom Inc. Common Stock",
+      "sector": "Technology"
+    },
+    "AXP": {
+      "country": "United States",
+      "industry": "Finance: Consumer Services",
+      "name": "American Express Company Common Stock",
+      "sector": "Finance"
+    },
+    "AZO": {
+      "country": "United States",
+      "industry": "Auto & Home Supply Stores",
+      "name": "AutoZone Inc. Common Stock",
+      "sector": "Consumer Discretionary"
+    },
+    "BA": {
+      "country": "United States",
+      "industry": "Aerospace",
+      "name": "Boeing Company (The) Common Stock",
+      "sector": "Industrials"
+    },
+    "BAC": {
+      "country": "United States",
+      "industry": "Major Banks",
+      "name": "Bank of America Corporation Common Stock",
+      "sector": "Finance"
+    },
+    "BKNG": {
+      "country": "United States",
+      "industry": "Transportation Services",
+      "name": "Booking Holdings Inc. Common Stock",
+      "sector": "Consumer Discretionary"
+    },
+    "BRK.B": {
+      "country": "United States",
+      "industry": "Not classified",
+      "name": "Berkshire Hathaway Inc.",
+      "sector": "Unclassified"
+    },
+    "BSX": {
+      "country": "United States",
+      "industry": "Medical/Dental Instruments",
+      "name": "Boston Scientific Corporation Common Stock",
+      "sector": "Health Care"
+    },
+    "BX": {
+      "country": "United States",
+      "industry": "Investment Managers",
+      "name": "Blackstone Inc. Common Stock",
+      "sector": "Finance"
+    },
+    "C": {
+      "country": "United States",
+      "industry": "Major Banks",
+      "name": "Citigroup Inc. Common Stock",
+      "sector": "Finance"
+    },
+    "CAT": {
+      "country": "United States",
+      "industry": "Construction/Ag Equipment/Trucks",
+      "name": "Caterpillar Inc. Common Stock",
+      "sector": "Industrials"
+    },
+    "CEG": {
+      "country": "United States",
+      "industry": "Electric Utilities: Central",
+      "name": "Constellation Energy Corporation Common Stock",
+      "sector": "Utilities"
+    },
+    "CIEN": {
+      "country": "United States",
+      "industry": "Telecommunications Equipment",
+      "name": "Ciena Corporation Common Stock",
+      "sector": "Utilities"
+    },
+    "CMCSA": {
+      "country": "United States",
+      "industry": "Cable & Other Pay Television Services",
+      "name": "Comcast Corporation Class A Common Stock",
+      "sector": "Telecommunications"
+    },
+    "COF": {
+      "country": "United States",
+      "industry": "Major Banks",
+      "name": "Capital One Financial Corporation Common Stock",
+      "sector": "Finance"
+    },
+    "COHR": {
+      "country": "United States",
+      "industry": "Electronic Components",
+      "name": "Coherent Corp. Common Stock",
+      "sector": "Technology"
+    },
+    "COIN": {
+      "country": "United States",
+      "industry": "Finance: Consumer Services",
+      "name": "Coinbase Global Inc. Class A Common Stock",
+      "sector": "Finance"
+    },
+    "COP": {
+      "country": "United States",
+      "industry": "Integrated oil Companies",
+      "name": "ConocoPhillips Common Stock",
+      "sector": "Energy"
+    },
+    "COST": {
+      "country": "United States",
+      "industry": "Department/Specialty Retail Stores",
+      "name": "Costco Wholesale Corporation Common Stock",
+      "sector": "Consumer Discretionary"
+    },
+    "CRM": {
+      "country": "United States",
+      "industry": "Computer Software: Prepackaged Software",
+      "name": "Salesforce Inc. Common Stock",
+      "sector": "Technology"
+    },
+    "CRWD": {
+      "country": "United States",
+      "industry": "Computer Software: Prepackaged Software",
+      "name": "CrowdStrike Holdings Inc. Class A Common Stock",
+      "sector": "Technology"
+    },
+    "CSCO": {
+      "country": "United States",
+      "industry": "Computer Communications Equipment",
+      "name": "Cisco Systems Inc. Common Stock (DE)",
+      "sector": "Telecommunications"
+    },
+    "CVNA": {
+      "country": "United States",
+      "industry": "Retail-Auto Dealers and Gas Stations",
+      "name": "Carvana Co. Class A Common Stock",
+      "sector": "Consumer Discretionary"
+    },
+    "CVX": {
+      "country": "United States",
+      "industry": "Integrated oil Companies",
+      "name": "Chevron Corporation Common Stock",
+      "sector": "Energy"
+    },
+    "DELL": {
+      "country": "United States",
+      "industry": "Computer Manufacturing",
+      "name": "Dell Technologies Inc. Class C Common Stock",
+      "sector": "Technology"
+    },
+    "DHR": {
+      "country": "United States",
+      "industry": "Industrial Machinery/Components",
+      "name": "Danaher Corporation Common Stock",
+      "sector": "Industrials"
+    },
+    "DIS": {
+      "country": "United States",
+      "industry": "Services-Misc. Amusement & Recreation",
+      "name": "Walt Disney Company (The) Common Stock",
+      "sector": "Consumer Discretionary"
+    },
+    "ETN": {
+      "country": "Ireland",
+      "industry": "Industrial Machinery/Components",
+      "name": "Eaton Corporation PLC Ordinary Shares",
+      "sector": "Technology"
+    },
+    "FCX": {
+      "country": "United States",
+      "industry": "Metal Mining",
+      "name": "Freeport-McMoRan Inc. Common Stock",
+      "sector": "Basic Materials"
+    },
+    "GE": {
+      "country": "United States",
+      "industry": "Consumer Electronics/Appliances",
+      "name": "GE Aerospace Common Stock",
+      "sector": "Technology"
+    },
+    "GEV": {
+      "country": "United States",
+      "industry": "Consumer Electronics/Appliances",
+      "name": "GE Vernova Inc. Common Stock",
+      "sector": "Technology"
+    },
+    "GILD": {
+      "country": "United States",
+      "industry": "Biotechnology: Biological Products (No Diagnostic Substances)",
+      "name": "Gilead Sciences Inc. Common Stock",
+      "sector": "Health Care"
+    },
+    "GLW": {
+      "country": "United States",
+      "industry": "Telecommunications Equipment",
+      "name": "Corning Incorporated Common Stock",
+      "sector": "Industrials"
+    },
+    "GOOG": {
+      "country": "United States",
+      "industry": "Computer Software: Programming Data Processing",
+      "name": "Alphabet Inc. Class C Capital Stock",
+      "sector": "Technology"
+    },
+    "GOOGL": {
+      "country": "United States",
+      "industry": "Computer Software: Programming Data Processing",
+      "name": "Alphabet Inc. Class A Common Stock",
+      "sector": "Technology"
+    },
+    "GS": {
+      "country": "United States",
+      "industry": "Investment Bankers/Brokers/Service",
+      "name": "Goldman Sachs Group Inc. (The) Common Stock",
+      "sector": "Finance"
+    },
+    "HD": {
+      "country": "United States",
+      "industry": "RETAIL: Building Materials",
+      "name": "Home Depot Inc. (The) Common Stock",
+      "sector": "Consumer Discretionary"
+    },
+    "HON": {
+      "country": "United States",
+      "industry": "Aerospace",
+      "name": "Honeywell International Inc. Common Stock",
+      "sector": "Industrials"
+    },
+    "HOOD": {
+      "country": "United States",
+      "industry": "Investment Bankers/Brokers/Service",
+      "name": "Robinhood Markets Inc. Class A Common Stock",
+      "sector": "Finance"
+    },
+    "IBM": {
+      "country": "United States",
+      "industry": "Computer Manufacturing",
+      "name": "International Business Machines Corporation Common Stock",
+      "sector": "Technology"
+    },
+    "INTC": {
+      "country": "United States",
+      "industry": "Semiconductors",
+      "name": "Intel Corporation Common Stock",
+      "sector": "Technology"
+    },
+    "INTU": {
+      "country": "United States",
+      "industry": "Computer Software: Prepackaged Software",
+      "name": "Intuit Inc. Common Stock",
+      "sector": "Technology"
+    },
+    "ISRG": {
+      "country": "United States",
+      "industry": "Industrial Specialties",
+      "name": "Intuitive Surgical Inc. Common Stock",
+      "sector": "Health Care"
+    },
+    "JNJ": {
+      "country": "United States",
+      "industry": "Biotechnology: Pharmaceutical Preparations",
+      "name": "Johnson & Johnson Common Stock",
+      "sector": "Health Care"
+    },
+    "JPM": {
+      "country": "United States",
+      "industry": "Major Banks",
+      "name": "JP Morgan Chase & Co. Common Stock",
+      "sector": "Finance"
+    },
+    "KLAC": {
+      "country": "United States",
+      "industry": "Electronic Components",
+      "name": "KLA Corporation Common Stock",
+      "sector": "Technology"
+    },
+    "KO": {
+      "country": "United States",
+      "industry": "Beverages (Production/Distribution)",
+      "name": "Coca-Cola Company (The) Common Stock",
+      "sector": "Consumer Staples"
+    },
+    "LIN": {
+      "country": "United States",
+      "industry": "Major Chemicals",
+      "name": "Linde plc Ordinary Shares",
+      "sector": "Basic Materials"
+    },
+    "LLY": {
+      "country": "United States",
+      "industry": "Biotechnology: Pharmaceutical Preparations",
+      "name": "Eli Lilly and Company Common Stock",
+      "sector": "Health Care"
+    },
+    "LRCX": {
+      "country": "United States",
+      "industry": "Industrial Machinery/Components",
+      "name": "Lam Research Corporation Common Stock",
+      "sector": "Technology"
+    },
+    "MA": {
+      "country": "United States",
+      "industry": "Business Services",
+      "name": "Mastercard Incorporated Common Stock",
+      "sector": "Consumer Discretionary"
+    },
+    "MCD": {
+      "country": "United States",
+      "industry": "Restaurants",
+      "name": "McDonald's Corporation Common Stock",
+      "sector": "Consumer Discretionary"
+    },
+    "MCHP": {
+      "country": "United States",
+      "industry": "Semiconductors",
+      "name": "Microchip Technology Incorporated Common Stock",
+      "sector": "Technology"
+    },
+    "MDT": {
+      "country": "United States",
+      "industry": "Biotechnology: Electromedical & Electrotherapeutic Apparatus",
+      "name": "Medtronic plc. Ordinary Shares",
+      "sector": "Health Care"
+    },
+    "MELI": {
+      "country": "Argentina",
+      "industry": "Business Services",
+      "name": "MercadoLibre Inc. Common Stock",
+      "sector": "Consumer Discretionary"
+    },
+    "META": {
+      "country": "United States",
+      "industry": "Computer Software: Programming Data Processing",
+      "name": "Meta Platforms Inc. Class A Common Stock",
+      "sector": "Technology"
+    },
+    "MPWR": {
+      "country": "United States",
+      "industry": "Semiconductors",
+      "name": "Monolithic Power Systems Inc. Common Stock",
+      "sector": "Technology"
+    },
+    "MRK": {
+      "country": "United States",
+      "industry": "Biotechnology: Pharmaceutical Preparations",
+      "name": "Merck & Company Inc. Common Stock (new)",
+      "sector": "Health Care"
+    },
+    "MRVL": {
+      "country": "United States",
+      "industry": "Semiconductors",
+      "name": "Marvell Technology Inc. Common Stock",
+      "sector": "Technology"
+    },
+    "MS": {
+      "country": "United States",
+      "industry": "Investment Bankers/Brokers/Service",
+      "name": "Morgan Stanley Common Stock",
+      "sector": "Finance"
+    },
+    "MSFT": {
+      "country": "United States",
+      "industry": "Computer Software: Prepackaged Software",
+      "name": "Microsoft Corporation Common Stock",
+      "sector": "Technology"
+    },
+    "MSTR": {
+      "country": "United States",
+      "industry": "Computer Software: Prepackaged Software",
+      "name": "Strategy Inc Common Stock Class A",
+      "sector": "Technology"
+    },
+    "MU": {
+      "country": "United States",
+      "industry": "Semiconductors",
+      "name": "Micron Technology Inc. Common Stock",
+      "sector": "Technology"
+    },
+    "NEE": {
+      "country": "United States",
+      "industry": "Electric Utilities: Central",
+      "name": "NextEra Energy Inc. Common Stock",
+      "sector": "Utilities"
+    },
+    "NEM": {
+      "country": "United States",
+      "industry": "Precious Metals",
+      "name": "Newmont Corporation",
+      "sector": "Basic Materials"
+    },
+    "NET": {
+      "country": "United States",
+      "industry": "Computer Software: Prepackaged Software",
+      "name": "Cloudflare Inc. Class A Common Stock",
+      "sector": "Technology"
+    },
+    "NFLX": {
+      "country": "United States",
+      "industry": "Consumer Electronics/Video Chains",
+      "name": "Netflix Inc. Common Stock",
+      "sector": "Consumer Discretionary"
+    },
+    "NKE": {
+      "country": "United States",
+      "industry": "Shoe Manufacturing",
+      "name": "Nike Inc. Common Stock",
+      "sector": "Consumer Discretionary"
+    },
+    "NOW": {
+      "country": "United States",
+      "industry": "Computer Software: Prepackaged Software",
+      "name": "ServiceNow Inc. Common Stock",
+      "sector": "Technology"
+    },
+    "NVDA": {
+      "country": "United States",
+      "industry": "Semiconductors",
+      "name": "NVIDIA Corporation Common Stock",
+      "sector": "Technology"
+    },
+    "ON": {
+      "country": "United States",
+      "industry": "Semiconductors",
+      "name": "ON Semiconductor Corporation Common Stock",
+      "sector": "Technology"
+    },
+    "ORCL": {
+      "country": "United States",
+      "industry": "Computer Software: Prepackaged Software",
+      "name": "Oracle Corporation Common Stock",
+      "sector": "Technology"
+    },
+    "OXY": {
+      "country": "United States",
+      "industry": "Oil & Gas Production",
+      "name": "Occidental Petroleum Corporation Common Stock",
+      "sector": "Energy"
+    },
+    "PANW": {
+      "country": "United States",
+      "industry": "Computer peripheral equipment",
+      "name": "Palo Alto Networks Inc. Common Stock",
+      "sector": "Technology"
+    },
+    "PEP": {
+      "country": "United States",
+      "industry": "Beverages (Production/Distribution)",
+      "name": "PepsiCo Inc. Common Stock",
+      "sector": "Consumer Staples"
+    },
+    "PFE": {
+      "country": "United States",
+      "industry": "Biotechnology: Pharmaceutical Preparations",
+      "name": "Pfizer Inc. Common Stock",
+      "sector": "Health Care"
+    },
+    "PG": {
+      "country": "United States",
+      "industry": "Package Goods/Cosmetics",
+      "name": "Procter & Gamble Company (The) Common Stock",
+      "sector": "Consumer Discretionary"
+    },
+    "PLTR": {
+      "country": "United States",
+      "industry": "Computer Software: Prepackaged Software",
+      "name": "Palantir Technologies Inc. Class A Common Stock",
+      "sector": "Technology"
+    },
+    "PM": {
+      "country": "United States",
+      "industry": "Medicinal Chemicals and Botanical Products",
+      "name": "Philip Morris International Inc Common Stock",
+      "sector": "Health Care"
+    },
+    "QCOM": {
+      "country": "United States",
+      "industry": "Radio And Television Broadcasting And Communications Equipment",
+      "name": "QUALCOMM Incorporated Common Stock",
+      "sector": "Technology"
+    },
+    "RTX": {
+      "country": "United States",
+      "industry": "Aerospace",
+      "name": "RTX Corporation Common Stock",
+      "sector": "Industrials"
+    },
+    "SCHW": {
+      "country": "United States",
+      "industry": "Investment Bankers/Brokers/Service",
+      "name": "Charles Schwab Corporation (The) Common Stock",
+      "sector": "Finance"
+    },
+    "SHOP": {
+      "country": "Canada",
+      "industry": "Computer Software: Prepackaged Software",
+      "name": "Shopify Inc. Class A Subordinate Voting Shares",
+      "sector": "Technology"
+    },
+    "SLB": {
+      "country": "France",
+      "industry": "Oilfield Services/Equipment",
+      "name": "SLB Limited Common Shares",
+      "sector": "Energy"
+    },
+    "SNOW": {
+      "country": "United States",
+      "industry": "Computer Software: Prepackaged Software",
+      "name": "Snowflake Inc. Common Stock",
+      "sector": "Technology"
+    },
+    "SNPS": {
+      "country": "United States",
+      "industry": "Computer Software: Prepackaged Software",
+      "name": "Synopsys Inc. Common Stock",
+      "sector": "Technology"
+    },
+    "SOFI": {
+      "country": "United States",
+      "industry": "Finance: Consumer Services",
+      "name": "SoFi Technologies Inc. Common Stock",
+      "sector": "Finance"
+    },
+    "SPGI": {
+      "country": "United States",
+      "industry": "Finance: Consumer Services",
+      "name": "S&P Global Inc. Common Stock",
+      "sector": "Finance"
+    },
+    "SPOT": {
+      "country": "Luxembourg",
+      "industry": "Broadcasting",
+      "name": "Spotify Technology S.A. Ordinary Shares",
+      "sector": "Consumer Discretionary"
+    },
+    "STX": {
+      "country": "Ireland",
+      "industry": "Electronic Components",
+      "name": "Seagate Technology Holdings PLC Ordinary Shares (Ireland)",
+      "sector": "Technology"
+    },
+    "SYK": {
+      "country": "United States",
+      "industry": "Medical/Dental Instruments",
+      "name": "Stryker Corporation Common Stock",
+      "sector": "Health Care"
+    },
+    "T": {
+      "country": "United States",
+      "industry": "Telecommunications Equipment",
+      "name": "AT&T Inc.",
+      "sector": "Telecommunications"
+    },
+    "TER": {
+      "country": "United States",
+      "industry": "Electrical Products",
+      "name": "Teradyne Inc. Common Stock",
+      "sector": "Industrials"
+    },
+    "TMO": {
+      "country": "United States",
+      "industry": "Industrial Machinery/Components",
+      "name": "Thermo Fisher Scientific Inc Common Stock",
+      "sector": "Industrials"
+    },
+    "TMUS": {
+      "country": "United States",
+      "industry": "Telecommunications Equipment",
+      "name": "T-Mobile US Inc. Common Stock",
+      "sector": "Telecommunications"
+    },
+    "TSLA": {
+      "country": "United States",
+      "industry": "Auto Manufacturing",
+      "name": "Tesla Inc. Common Stock",
+      "sector": "Industrials"
+    },
+    "TXN": {
+      "country": "United States",
+      "industry": "Semiconductors",
+      "name": "Texas Instruments Incorporated Common Stock",
+      "sector": "Technology"
+    },
+    "UBER": {
+      "country": "United States",
+      "industry": "Business Services",
+      "name": "Uber Technologies Inc. Common Stock",
+      "sector": "Consumer Discretionary"
+    },
+    "UNH": {
+      "country": "United States",
+      "industry": "Medical Specialities",
+      "name": "UnitedHealth Group Incorporated Common Stock (DE)",
+      "sector": "Health Care"
+    },
+    "V": {
+      "country": "United States",
+      "industry": "Business Services",
+      "name": "Visa Inc.",
+      "sector": "Consumer Discretionary"
+    },
+    "VLO": {
+      "country": "United States",
+      "industry": "Integrated oil Companies",
+      "name": "Valero Energy Corporation Common Stock",
+      "sector": "Energy"
+    },
+    "VRT": {
+      "country": "United States",
+      "industry": "Industrial Machinery/Components",
+      "name": "Vertiv Holdings LLC Class A Common Stock",
+      "sector": "Technology"
+    },
+    "VZ": {
+      "country": "United States",
+      "industry": "Telecommunications Equipment",
+      "name": "Verizon Communications Inc. Common Stock",
+      "sector": "Telecommunications"
+    },
+    "WDC": {
+      "country": "United States",
+      "industry": "Electronic Components",
+      "name": "Western Digital Corporation Common Stock",
+      "sector": "Technology"
+    },
+    "WFC": {
+      "country": "United States",
+      "industry": "Major Banks",
+      "name": "Wells Fargo & Company Common Stock",
+      "sector": "Finance"
+    },
+    "WMT": {
+      "country": "United States",
+      "industry": "Department/Specialty Retail Stores",
+      "name": "Walmart Inc. Common Stock",
+      "sector": "Consumer Discretionary"
+    },
+    "XOM": {
+      "country": "United States",
+      "industry": "Integrated oil Companies",
+      "name": "ExxonMobil Holdings Corporation Common Stock",
+      "sector": "Energy"
+    }
+  },
+  "source": "Nasdaq Stock Screener",
+  "source_url": "https://www.nasdaq.com/market-activity/stocks/screener",
+  "ticker_count": 120
+}
