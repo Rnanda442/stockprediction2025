@@ -1,0 +1,28 @@
+{
+  "action": "review_then_merge",
+  "base_context_id": "stockprediction2025-research-gate",
+  "completed_experiment": {
+    "experiment_id": "graph_signal_confirmatory_v1",
+    "design_signature": "graph-signal-confirmatory-v1:h5:history400:trainfit-kmeans24:crowding+regime-residence+cluster-switch:elastic+ridge+tanh:6walkforward:date-block-bootstrap:label-placebo:holdout60",
+    "status": "completed_pending_review",
+    "generated_at": "2026-08-28T03:50:51.566614+00:00",
+    "rows": 237000,
+    "dates": 395,
+    "tickers": 922,
+    "splits": 6,
+    "graph_fit_scope": "training_rows_only",
+    "holdout_start": "2026-05-29",
+    "holdout_opened": false,
+    "best_feature_set": "base_plus_crowding",
+    "best_model": "elastic_logistic_c1_l25",
+    "best_auc_mean": 0.502383294571143,
+    "placebo_auc_mean": 0.49617432232739606,
+    "promotion_candidate": false,
+    "source_context_id": "stockprediction2025-research-gate"
+  },
+  "holdout_status": {
+    "status": "sealed",
+    "date_start": "2026-05-29",
+    "trading_dates": 60
+  }
+}

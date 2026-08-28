@@ -1,0 +1,14 @@
+{
+  "experiment_id": "graph_signal_history400_v1",
+  "design_signature": "graph-signal-history400-v1:raw-causal-features:top600:preholdout-only",
+  "status": "completed_pending_review",
+  "generated_at": "2026-08-28T03:32:21.236360+00:00",
+  "rows": 240000,
+  "dates": 400,
+  "tickers": 926,
+  "date_min": "2024-10-22",
+  "date_max": "2026-05-28",
+  "holdout_start": "2026-05-29",
+  "holdout_opened": false,
+  "source_context_id": "stockprediction2025-research-gate"
+}
