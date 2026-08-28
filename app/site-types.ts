@@ -105,6 +105,39 @@ export type SimilarityPairRow = {
   max_similarity?: number;
 };
 
+export type ResidualValidationRow = {
+  model?: string;
+  label?: string;
+  mean_auc?: number;
+  mean_rank_ic?: number;
+  mean_net_residual_return?: number;
+  win_rate?: number;
+  mean_turnover?: number;
+  status?: string;
+};
+
+export type RegimeValidationRow = {
+  regime?: string;
+  mean_auc?: number;
+  mean_rank_ic?: number;
+  mean_net_residual_return?: number;
+  win_rate?: number;
+};
+
+export type ExposurePolicyRow = {
+  policy?: string;
+  label?: string;
+  active_day_share?: number;
+  mean_daily_net_residual_return?: number;
+  mean_path_cumulative_net_residual_return?: number;
+  worst_path_cumulative_net_residual_return?: number;
+  worst_maximum_drawdown?: number;
+  mean_turnover?: number;
+  delta_ci_lower?: number | null;
+  delta_ci_upper?: number | null;
+  status?: string;
+};
+
 export type SiteSnapshot = {
   schema_version: number;
   generated_at: string;
@@ -137,6 +170,9 @@ export type SiteSnapshot = {
     model_score_weekly: Record<string, unknown>[];
     ridge_target_feature_stability?: RidgeDriverRow[];
     similarity_pair_stability?: SimilarityPairRow[];
+    residual_validation?: ResidualValidationRow[];
+    regime_diagnostics?: RegimeValidationRow[];
+    exposure_policies?: ExposurePolicyRow[];
   };
   disclaimer: string;
 };

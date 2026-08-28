@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-24T21:00:57+00:00",
+  "generated_at": "2026-08-28T17:50:01+00:00",
   "source": {
     "kind": "open_science_lab",
     "latest_run_id": 32683358084,
@@ -13,7 +13,7 @@
     "paper_ready_champions": 0,
     "leakage_issue_rows": 0,
     "paper_buy_evaluated": 39,
-    "reason": "A model remains research-only until discrimination, calibration, economic edge, temporal stability, and leakage gates pass."
+    "reason": "The residual ANN has strong discrimination and after-cost edge, but feature-family certainty, fold stability, post-selection bias, and point-in-time universe controls still block promotion."
   },
   "key_metrics": {
     "generated_at": "2026-08-24T21:00:57+00:00",
@@ -26,9 +26,35 @@
     "paper_buy_evaluated": 39,
     "latest_max_high_confidence_share": 0.1884284597,
     "latest_max_extreme_share": 0.006645817,
-    "probability_shape_min_rows": 100
+    "probability_shape_min_rows": 100,
+    "residual_ann_five_sleeve_daily_net_10bps": 0.00099931,
+    "residual_ann_cumulative_net_10bps": 0.6472183,
+    "lean_volatility_auc": 0.6964126,
+    "confirmed_feature_families": 0,
+    "sealed_holdout_opened": false
   },
   "findings": [
+    {
+      "priority": "P0",
+      "area": "residual_ann_validation",
+      "finding": "The residual ANN is economically promising but unstable by time period.",
+      "evidence": "The five-sleeve replay averaged +0.100% daily after 10 bps, while one of four temporal splits was negative for both seeds.",
+      "next_step": "Freeze the lean-volatility and trend-down policies now and confirm them only on future unseen dates."
+    },
+    {
+      "priority": "P1",
+      "area": "volatility_family",
+      "finding": "Volatility is the clearest predictive feature family.",
+      "evidence": "The lean volatility ANN reached 0.696 AUC and beat logistic on return, AUC, and rank IC with positive weekly-block lower bounds.",
+      "next_step": "Retain volatility as the leading candidate while requiring fresh economic confirmation against momentum and the full ANN."
+    },
+    {
+      "priority": "P1",
+      "area": "regime_policy",
+      "finding": "Moving to cash in trend-down regimes improved the point estimate, not the confidence bound.",
+      "evidence": "The gated policy raised mean daily residual return to +0.119%, but its paired 95% interval still crossed zero.",
+      "next_step": "Treat the gate as a frozen research candidate rather than a deployable rule."
+    },
     {
       "priority": "P0",
       "area": "model_trust",
@@ -54,58 +80,34 @@
   "model_actions": [
     {
       "priority": "P0",
-      "component": "probability_calibration",
-      "recommended_change": "Fit probability calibration inside training folds only and cap decision confidence until it validates.",
-      "evidence": "3 champion rows fail brier_gate; affected horizons: 20d, 5d, 60d.",
-      "acceptance_test": "Out-of-sample Brier skill is non-negative and reliability buckets track observed outcomes.",
+      "component": "future_policy_confirmation",
+      "recommended_change": "Freeze the lean volatility ANN and trend-down cash rule, then evaluate them on newly arriving dates without retuning.",
+      "evidence": "Both candidates improved point estimates, but neither cleared every pre-specified uncertainty gate against all relevant controls.",
+      "acceptance_test": "Return, AUC, and rank-IC deltas retain positive lower bounds on future unseen dates, with no negative temporal split after costs.",
       "execution": "review_required"
     },
     {
       "priority": "P0",
-      "component": "ranking_discrimination",
-      "recommended_change": "Run temporal feature ablations and compare every candidate with the simple logistic baseline.",
-      "evidence": "2 champion rows fail auc_gate; affected horizons: 5d, 60d.",
-      "acceptance_test": "Walk-forward ROC AUC is at least 0.52 on each promoted horizon without a test-set tuning loop.",
+      "component": "point_in_time_universe",
+      "recommended_change": "Add dated universe membership, delisting outcomes, and missing-return disposition before any promotion decision.",
+      "evidence": "Temporal leakage checks passed, but point-in-time universe ownership remains unverified and maximum missing portfolio weight reached 9.2%.",
+      "acceptance_test": "Every ticker-date has a verified eligibility state and delisting-safe return path.",
       "execution": "review_required"
     },
     {
       "priority": "P1",
-      "component": "economic_edge",
-      "recommended_change": "Measure selected-return edge against equal-weight and simple momentum baselines after costs.",
-      "evidence": "1 champion rows fail return_edge_gate; affected horizons: 60d.",
-      "acceptance_test": "Return edge remains positive across a majority of walk-forward splits after cost assumptions.",
+      "component": "probability_calibration",
+      "recommended_change": "Calibrate the frozen candidate inside training folds only and continue to cap decision confidence.",
+      "evidence": "Residual ranking improved, but full probability calibration has not passed a promotion gate.",
+      "acceptance_test": "Out-of-sample Brier skill is non-negative and reliability buckets track observed outcomes.",
       "execution": "review_required"
     },
     {
       "priority": "P1",
       "component": "paper_validation",
-      "recommended_change": "Keep automatic decisions in paper mode and retain watch and avoid groups as baselines.",
-      "evidence": "Only 39 matured paper buy outcomes are available.",
-      "acceptance_test": "At least 50 matching-horizon buy outcomes exist with baseline comparisons and confidence intervals.",
-      "execution": "automated_by_osl"
-    },
-    {
-      "priority": "P1",
-      "component": "temporal_stability",
-      "recommended_change": "Reduce unstable complexity and tune only inside nested time splits.",
-      "evidence": "1 champion rows fail walk_forward_gate; affected horizons: 60d.",
-      "acceptance_test": "Average walk-forward score is positive and at least half of splits are positive.",
-      "execution": "review_required"
-    },
-    {
-      "priority": "P2",
-      "component": "feature_timestamp_audit",
-      "recommended_change": "Add feature-availability timestamps to the next leakage audit.",
-      "evidence": "Compact train/test and embargo checks pass, but they cannot prove every feature was available at prediction time.",
-      "acceptance_test": "Every model feature has an availability timestamp no later than its prediction timestamp.",
-      "execution": "review_required"
-    },
-    {
-      "priority": "P2",
-      "component": "pipeline_artifacts",
-      "recommended_change": "Keep failed or expired artifact runs visible in the health summary instead of silently dropping them.",
-      "evidence": "2 archived run rows are not analysis-ready.",
-      "acceptance_test": "Every new successful run exports model scores and predictions, or records an explicit failure reason.",
+      "recommended_change": "Keep all candidate decisions in paper mode while future unseen outcomes accumulate.",
+      "evidence": "The policy rules are post-selection hypotheses and no family passed all confirmation tests.",
+      "acceptance_test": "Frozen candidates pass the future confirmation protocol without rule changes.",
       "execution": "automated_by_osl"
     }
   ],
@@ -10536,8 +10538,121 @@
         "avg_score": -0.0437014418,
         "avg_return_edge": -0.0111344738
       }
+    ],
+    "residual_validation": [
+      {
+        "model": "baseline_plus_volatility",
+        "label": "Lean volatility ANN",
+        "mean_auc": 0.6964126,
+        "mean_rank_ic": 0.04477084,
+        "mean_net_residual_return": 0.00621984,
+        "win_rate": 0.61904762,
+        "mean_turnover": 0.13468254,
+        "status": "Leading candidate"
+      },
+      {
+        "model": "all_families",
+        "label": "Full residual ANN",
+        "mean_auc": 0.69448686,
+        "mean_rank_ic": 0.03976274,
+        "mean_net_residual_return": 0.00565619,
+        "win_rate": 0.61507937,
+        "mean_turnover": 0.14753968,
+        "status": "Promising, unstable"
+      },
+      {
+        "model": "logistic_all_families",
+        "label": "Logistic control",
+        "mean_auc": 0.65938921,
+        "mean_rank_ic": 0.02486655,
+        "mean_net_residual_return": 0.00064929,
+        "win_rate": 0.51587302,
+        "mean_turnover": 0.11801587,
+        "status": "Control"
+      },
+      {
+        "model": "random_top_50",
+        "label": "Random control",
+        "mean_auc": 0.4970434,
+        "mean_rank_ic": -0.00134525,
+        "mean_net_residual_return": -0.00049367,
+        "win_rate": 0.44047619,
+        "mean_turnover": 0.95079365,
+        "status": "Control"
+      }
+    ],
+    "regime_diagnostics": [
+      {
+        "regime": "stress",
+        "mean_auc": 0.71661106,
+        "mean_rank_ic": 0.08632099,
+        "mean_net_residual_return": 0.01361783,
+        "win_rate": 0.73033708
+      },
+      {
+        "regime": "rotation_quiet",
+        "mean_auc": 0.68865073,
+        "mean_rank_ic": 0.02945116,
+        "mean_net_residual_return": 0.00198341,
+        "win_rate": 0.56962025
+      },
+      {
+        "regime": "trend_up",
+        "mean_auc": 0.67271084,
+        "mean_rank_ic": -0.02172784,
+        "mean_net_residual_return": 0.00129187,
+        "win_rate": 0.55
+      },
+      {
+        "regime": "trend_down",
+        "mean_auc": 0.69565272,
+        "mean_rank_ic": 0.10942499,
+        "mean_net_residual_return": -0.00241048,
+        "win_rate": 0.46428572
+      }
+    ],
+    "exposure_policies": [
+      {
+        "policy": "ann_all_regimes",
+        "label": "ANN / all regimes",
+        "active_day_share": 1.0,
+        "mean_daily_net_residual_return": 0.00103275,
+        "mean_path_cumulative_net_residual_return": 0.06858604,
+        "worst_path_cumulative_net_residual_return": -0.08334324,
+        "worst_maximum_drawdown": -0.12611126,
+        "mean_turnover": 0.08239741,
+        "delta_ci_lower": null,
+        "delta_ci_upper": null,
+        "status": "Research baseline"
+      },
+      {
+        "policy": "ann_stress_only",
+        "label": "Stress-only exposure",
+        "active_day_share": 0.34383754,
+        "mean_daily_net_residual_return": 0.00083448,
+        "mean_path_cumulative_net_residual_return": 0.05538789,
+        "worst_path_cumulative_net_residual_return": 0.0,
+        "worst_maximum_drawdown": -0.05539178,
+        "mean_turnover": 0.03477404,
+        "delta_ci_lower": -0.00081193,
+        "delta_ci_upper": 0.00038561,
+        "status": "Risk-control only"
+      },
+      {
+        "policy": "ann_trend_down_cash",
+        "label": "Cash during trend-down",
+        "active_day_share": 0.94852941,
+        "mean_daily_net_residual_return": 0.00118735,
+        "mean_path_cumulative_net_residual_return": 0.07894439,
+        "worst_path_cumulative_net_residual_return": -0.03071559,
+        "worst_maximum_drawdown": -0.09434218,
+        "mean_turnover": 0.10893417,
+        "delta_ci_lower": -8.466e-05,
+        "delta_ci_upper": 0.00042649,
+        "status": "Promising, unconfirmed"
+      }
     ]
   },
   "disclaimer": "Research and paper-decision review only. No live trading recommendation.",
-  "snapshot_fingerprint": "8dc3d562f4b0063c458ff707725902e99500199dcb0738dff68a20e9f73ce841"
+  "snapshot_fingerprint": "47ca6ac128a21d5459d175338a1a5856fca4a2020f883d9eb6384d9dc03b4e22"
 }

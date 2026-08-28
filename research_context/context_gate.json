@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "context_id": "stockprediction2025-research-gate",
-  "updated_at": "2026-08-28",
+  "updated_at": "2026-08-28T17:50:01+00:00",
   "purpose": "Accumulate reviewed research evidence, prevent duplicate experiments, and provide canonical context for future analysis.",
   "project": {
     "repository": "https://github.com/Rnanda442/stockprediction2025",
@@ -199,6 +199,46 @@
       "source_context_id": "stockprediction2025-research-gate",
       "decision": "do_not_promote",
       "readout": "artifacts/similarity_weighted_linear_400d_v1/similarity_readout.md"
+    },
+    {
+      "experiment_id": "residual_sleeve_family_confirmation_v1",
+      "status": "completed_promising_not_promoted",
+      "design_signature": "residual-sleeve-family-confirmation-v1:h5:4x63d:5sleeves:top50:tanh:families:regimes:cost10",
+      "result_summary": {
+        "confirmed_families": [],
+        "all_families_mean_daily_net_10bps": 0.00099931,
+        "all_families_cumulative_net_10bps": 0.6472183,
+        "all_families_mean_turnover": 0.08226217,
+        "lean_volatility_auc": 0.6964126,
+        "lean_volatility_net_per_cohort": 0.00621984,
+        "negative_temporal_split": 2,
+        "sealed_holdout_opened": false,
+        "universe_point_in_time_verified": false
+      },
+      "conclusion": "The residual ANN beat linear and random controls after costs, but no feature family cleared every addition, removal, shuffle, and economic uncertainty gate."
+    },
+    {
+      "experiment_id": "regime_exposure_policy_v1",
+      "status": "completed_exploratory_not_promotable",
+      "design_signature": "regime-exposure-policy-v1:saved-predictions:5sleeves:stress-only:trend-down-cash:lean-volatility:cost0-40:posthoc",
+      "result_summary": {
+        "lean_volatility_vs_logistic_net_ci_lower": 0.00167076,
+        "lean_volatility_vs_logistic_auc_ci_lower": 0.02477544,
+        "lean_volatility_vs_logistic_rank_ic_ci_lower": 0.00263339,
+        "trend_down_cash_mean_daily_net_10bps": 0.00118735,
+        "trend_down_cash_delta_ci": [
+          -8.466e-05,
+          0.00042649
+        ],
+        "stress_only_worst_maximum_drawdown": -0.05539178,
+        "stress_only_delta_ci": [
+          -0.00081193,
+          0.00038561
+        ],
+        "post_selection_bias": true,
+        "sealed_holdout_opened": false
+      },
+      "conclusion": "Lean volatility is the leading candidate and the trend-down cash gate improves the point estimate, but both require future unseen confirmation."
     }
   ],
   "promising_hypotheses": [
@@ -417,13 +457,47 @@
     {
       "experiment_id": "residual_sleeve_family_confirmation_v1",
       "design_signature": "residual-sleeve-family-confirmation-v1:h5:4x63d:5sleeves:top50:tanh:families:regimes:cost10",
-      "status": "approved_next",
+      "status": "completed_promising_not_promoted",
       "depends_on": [
         "purged_walk_forward_residual_baselines_v1"
       ],
       "purpose": "Confirm the ANN in a five-sleeve capital replay and run the original roadmap's complete feature-family addition, removal, and shuffled-control matrix.",
       "sealed_holdout_start": "2026-05-29",
-      "promotion": false
+      "promotion": false,
+      "result_summary": {
+        "confirmed_families": [],
+        "all_families_mean_daily_net_10bps": 0.00099931,
+        "all_families_cumulative_net_10bps": 0.6472183,
+        "all_families_mean_turnover": 0.08226217,
+        "lean_volatility_auc": 0.6964126,
+        "lean_volatility_net_per_cohort": 0.00621984,
+        "negative_temporal_split": 2,
+        "sealed_holdout_opened": false,
+        "universe_point_in_time_verified": false
+      },
+      "conclusion": "The residual ANN beat linear and random controls after costs, but no feature family cleared every addition, removal, shuffle, and economic uncertainty gate."
+    },
+    {
+      "experiment_id": "residual_ann_future_confirmation_v1",
+      "status": "frozen_waiting_for_future_unseen_dates",
+      "purpose": "Confirm the lean volatility ANN and trend-down cash gate without retuning on dates arriving after the 2026-08-28 policy freeze.",
+      "candidates": [
+        "baseline_plus_volatility",
+        "ann_trend_down_cash"
+      ],
+      "controls": [
+        "baseline_momentum",
+        "all_families",
+        "logistic_all_families",
+        "random_top_50"
+      ],
+      "promotion_allowed": false,
+      "required_before_promotion": [
+        "point_in_time_universe_verified",
+        "delisting_returns_resolved",
+        "positive_return_auc_rank_ic_lower_bounds",
+        "no_negative_temporal_split_after_costs"
+      ]
     }
   ],
   "known_biases_and_limits": [
@@ -460,6 +534,16 @@
       "id": "purged_residual_ann_promising_2026_08_28",
       "insight": "Purged residual baselines found a promising nonlinear signal: tanh ANN AUC 0.695971 and 0.7674% mean five-day residual cohort return after 10 bps, with positive paired net and AUC intervals versus logistic. This is not promoted because overlapping cohorts, capital sleeves, regime stability, and coherent family controls still require confirmation.",
       "implication": "Run five-sleeve and family confirmation before website publication or promotion."
+    },
+    {
+      "insight_id": "residual_volatility_leads_20260828",
+      "finding": "Volatility is the strongest predictive family, but its economic increment versus momentum and the full ANN remains uncertain.",
+      "implication": "Carry the lean volatility ANN forward as a frozen candidate, not a promoted model."
+    },
+    {
+      "insight_id": "regime_gates_posthoc_20260828",
+      "finding": "Stress-only exposure reduces drawdown and trend-down cash improves the point estimate, but both paired intervals cross zero.",
+      "implication": "Use the policies as future-test hypotheses only; do not tune or trade them from these results."
     }
   ]
 }
