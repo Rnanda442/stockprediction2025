@@ -175,9 +175,9 @@
   ],
   "promising_hypotheses": [
     {
-      "hypothesis": "Similarity is more useful as a consensus gate than as unrestricted ANN input.",
-      "status": "confirm",
-      "evidence": "Consensus gate beat plain probability selection in 8 of 9 paired pre-holdout runs."
+      "hypothesis": "Similarity is more useful as a portfolio-weighting adjustment to a compact linear model than as unrestricted ANN input or a hard consensus gate.",
+      "status": "test_next",
+      "evidence": "Similarity weighting had a positive paired delta and positive block-bootstrap interval in the robustness battery, while the consensus gate and graph ANN did not confirm."
     },
     {
       "hypothesis": "A compact model centered on drawdown_60d, graph_degree, and ret_20d can outperform the broad feature set.",
@@ -311,6 +311,14 @@
         "promotion_candidate": false,
         "interpretation": "Crowding remains a weak descriptive signal, not a confirmed predictor. The full graph block and tanh ANN are not promotion-ready."
       }
+    },
+    {
+      "experiment_id": "similarity_weighted_linear_400d_v1",
+      "design_signature": "similarity-weighted-linear-400d-v1:h5:elastic-c1-l25:train-knn20:alpha025:p10:r5:cost10:6walkforward:block-bootstrap:neighbor-placebo:holdout60",
+      "question": "Does a fixed training-only similarity adjustment improve a compact elastic linear portfolio over plain model ranking on the 400-date panel?",
+      "depends_on": "graph_signal_history400_v1",
+      "spec_path": "research_context/similarity_weighted_linear_400d_v1.json",
+      "status": "approved_next"
     }
   ],
   "known_biases_and_limits": [

@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "experiment_id": "similarity_weighted_linear_400d_v1",
+  "design_signature": "similarity-weighted-linear-400d-v1:h5:elastic-c1-l25:train-knn20:alpha025:p10:r5:cost10:6walkforward:block-bootstrap:neighbor-placebo:holdout60",
+  "status": "approved_next",
+  "approved_at": "2026-08-28",
+  "parent_experiment": "graph_signal_history400_v1",
+  "question": "Does a fixed training-only similarity adjustment improve a compact elastic linear portfolio over plain model ranking on the 400-date panel?",
+  "data": {
+    "raw_features": "artifacts/graph_signal_history400_v1/raw_features.csv",
+    "database": "warehouse/model_runs/runs/32915939359/artifact/research_history.db",
+    "sealed_holdout_start": "2026-05-29"
+  },
+  "primary_model": {
+    "family": "elastic_logistic",
+    "c": 1.0,
+    "l1_ratio": 0.25,
+    "features": [
+      "ret_5d",
+      "ret_20d",
+      "ret_60d",
+      "vol_20d",
+      "vol_60d",
+      "drawdown_60d",
+      "dollar_vol_20d_log"
+    ]
+  },
+  "similarity_adjustment": {
+    "reference_scope": "training rows only",
+    "neighbors": 20,
+    "maximum_reference_rows": 80000,
+    "maximum_alpha": 0.25,
+    "distance_weight": "exp(-distance / training_reference_scale)",
+    "probability_rule": "base_probability + alpha * confidence * (neighbor_consensus - base_probability)",
+    "placebo": "shuffle reference labels within training date"
+  },
+  "evaluation": {
+    "horizon_trading_days": 5,
+    "walk_forward_splits": 6,
+    "test_dates_per_split": 20,
+    "embargo_trading_dates": 5,
+    "portfolio_size": 10,
+    "rebalance_dates": 5,
+    "primary_cost_bps": 10,
+    "cost_sensitivity_bps": [0, 10, 25, 50],
+    "placebo_seeds": [117, 442, 2025, 8080, 9001],
+    "date_block_bootstrap_repetitions": 5000,
+    "date_block_size": 5
+  },
+  "promotion_rule": "Keep the holdout sealed. Require a positive paired after-cost return interval, AUC non-inferiority, no material Brier deterioration, and a return delta above neighbor-label placebos.",
+  "excluded": [
+    "ANN architecture search",
+    "hard consensus gate",
+    "cluster diversification",
+    "portfolio-size tuning",
+    "rebalance tuning",
+    "similarity-alpha tuning"
+  ]
+}
