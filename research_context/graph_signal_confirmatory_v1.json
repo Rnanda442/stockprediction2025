@@ -1,14 +1,16 @@
 {
   "schema_version": 1,
   "experiment_id": "graph_signal_confirmatory_v1",
-  "design_signature": "graph-signal-confirmatory-v1:h5:history400:crowding+regime-residence+cluster-switch:elastic+ridge+tanh:6walkforward:date-block-bootstrap:label-placebo:holdout60",
+  "design_signature": "graph-signal-confirmatory-v1:h5:history400:trainfit-kmeans24:crowding+regime-residence+cluster-switch:elastic+ridge+tanh:6walkforward:date-block-bootstrap:label-placebo:holdout60",
   "status": "approved_next",
   "approved_at": "2026-08-27",
-  "parent_experiment": "temporal_motion_predictive_ablation_v1",
+  "parent_experiment": "graph_signal_history400_v1",
+  "runner_path": "scripts/run_graph_signal_confirmatory_v2.py",
   "question": "Do the surviving graph-motion signals add repeatable pre-holdout value to compact linear and small tanh models after removing raw kinematics?",
   "data": {
     "database": "warehouse/model_runs/runs/32915939359/artifact/research_history.db",
     "source_table": "ResearchPrices",
+    "raw_history_path": "artifacts/graph_signal_history400_v1/raw_features.csv",
     "motion_history_dates": 400,
     "sealed_holdout_start": "2026-05-29",
     "sealed_holdout_dates": 60
@@ -36,6 +38,14 @@
     "portfolio_size": 10,
     "rebalance_dates": 5,
     "transaction_cost_bps": 10
+  },
+  "graph_transform": {
+    "method": "MiniBatchKMeans",
+    "clusters": 24,
+    "fit_scope": "training rows only for every split",
+    "crowding": "negative distance to assigned training-fitted centroid, differenced over five ticker observations",
+    "regime_residence": "consecutive observations in the same training-fitted cluster",
+    "cluster_switch_count": "cluster changes over the trailing 20 ticker observations"
   },
   "promotion_rule": "Do not open the sealed holdout. A surviving graph block must beat base_only with a positive paired date-block AUC interval, avoid Brier deterioration, and exceed shuffled-label placebo behavior in both linear and ANN families.",
   "excluded": [

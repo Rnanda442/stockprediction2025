@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "experiment_id": "graph_signal_history400_v1",
+  "design_signature": "graph-signal-history400-v1:raw-causal-features:top600:preholdout-only",
+  "status": "approved_next",
+  "approved_at": "2026-08-27",
+  "question": "Can a causal 400-date raw feature panel be prepared without reusing the completed temporal visualization experiment?",
+  "source": {
+    "database": "warehouse/model_runs/runs/32915939359/artifact/research_history.db",
+    "table": "ResearchPrices",
+    "holdout_start": "2026-05-29"
+  },
+  "output": "artifacts/graph_signal_history400_v1/raw_features.csv",
+  "history_dates": 400,
+  "daily_liquidity_universe": 600,
+  "features": [
+    "ret_5d",
+    "ret_20d",
+    "ret_60d",
+    "vol_20d",
+    "vol_60d",
+    "drawdown_60d",
+    "dollar_vol_20d_log"
+  ],
+  "guardrails": [
+    "Every feature uses current or earlier prices only.",
+    "The daily universe is selected by trailing 20-date dollar volume.",
+    "No row on or after the sealed holdout start is loaded.",
+    "No graph, scaler, cluster model, label, or prediction is fit in this extraction stage."
+  ]
+}

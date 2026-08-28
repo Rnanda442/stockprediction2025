@@ -235,10 +235,16 @@
       }
     },
     {
+      "experiment_id": "graph_signal_history400_v1",
+      "design_signature": "graph-signal-history400-v1:raw-causal-features:top600:preholdout-only",
+      "question": "Can a causal 400-date raw feature panel be prepared without reusing the completed temporal visualization experiment?",
+      "status": "approved_next"
+    },
+    {
       "experiment_id": "graph_signal_confirmatory_v1",
-      "design_signature": "graph-signal-confirmatory-v1:h5:history400:crowding+regime-residence+cluster-switch:elastic+ridge+tanh:6walkforward:date-block-bootstrap:label-placebo:holdout60",
+      "design_signature": "graph-signal-confirmatory-v1:h5:history400:trainfit-kmeans24:crowding+regime-residence+cluster-switch:elastic+ridge+tanh:6walkforward:date-block-bootstrap:label-placebo:holdout60",
       "question": "Do the surviving graph-motion signals add repeatable pre-holdout value to compact linear and small tanh models after removing raw kinematics?",
-      "depends_on": "temporal_motion_predictive_ablation_v1",
+      "depends_on": "graph_signal_history400_v1",
       "spec_path": "research_context/graph_signal_confirmatory_v1.json",
       "status": "approved_next"
     }
