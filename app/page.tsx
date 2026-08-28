@@ -10,6 +10,7 @@ import type {
   PaperOutcomeRow,
   ProbabilityRow,
   ExposurePolicyRow,
+  PipelineArchitectureData,
   RegimeValidationRow,
   ResidualValidationRow,
   RidgeDriverRow,
@@ -400,6 +401,46 @@ function ExposurePolicies({ rows }: { rows: ExposurePolicyRow[] }) {
   );
 }
 
+const pipelineStages = ["Inputs", "OSL warehouse", "Transforms", "Models", "Validation", "Outputs"];
+
+function PipelineMap({ architecture }: { architecture?: PipelineArchitectureData }) {
+  if (!architecture?.nodes.length) return <EmptyState>The end-to-end pipeline map is waiting for its reviewed snapshot.</EmptyState>;
+  const counts = architecture.nodes.reduce(
+    (totals, node) => ({ ...totals, [node.status]: (totals[node.status] || 0) + 1 }),
+    {} as Record<string, number>,
+  );
+  return (
+    <div className="pipeline-map-shell">
+      <div className="pipeline-legend" aria-label="Pipeline status legend">
+        <span className="legend-active">Active / connected <b>{counts.active || 0}</b></span>
+        <span className="legend-exploratory">Exploratory <b>{counts.exploratory || 0}</b></span>
+        <span className="legend-unused">Unused / blocked <b>{counts.unused || 0}</b></span>
+        <span className="legend-protected">Protected <b>{counts.protected || 0}</b></span>
+      </div>
+      <div className="pipeline-grid" aria-label="End-to-end stock research architecture">
+        {pipelineStages.map((stage) => (
+          <section className="pipeline-stage" key={stage}>
+            <header><span>{String(pipelineStages.indexOf(stage) + 1).padStart(2, "0")}</span><strong>{stage}</strong></header>
+            <div className="pipeline-node-list">
+              {architecture.nodes.filter((node) => node.stage === stage).map((node) => (
+                <article className={`pipeline-node node-${node.status}`} key={node.id}>
+                  <div><span className="pipeline-status">{node.status}</span><strong>{node.label}</strong></div>
+                  <p>{node.detail}</p>
+                  <small>{node.feeds.length ? `Feeds -> ${node.feeds.join(", ").replaceAll("_", " ")}` : "Stops here in the current architecture"}</small>
+                </article>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+      <div className="pipeline-reading-note">
+        <p><strong>Red does not always mean delete.</strong> It means the component is missing, blocked, disabled, or not connected to the current candidate.</p>
+        <p><strong>Protected is intentional.</strong> The sealed holdout stays outside the exploratory flow until a frozen candidate earns confirmation.</p>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const [snapshot, setSnapshot] = useState<SiteSnapshot>(fallbackSnapshot);
   const [isLive, setIsLive] = useState(false);
@@ -449,6 +490,7 @@ export default function Home() {
           <a href="#trust">Trust</a>
           <a href="#models">Models</a>
           <a href="#validation">Validation</a>
+          <a href="#architecture">Architecture</a>
           <a href="#drivers">Drivers</a>
           <a href="#data-flow">Data flow</a>
           <a href="/market-lab/index.html">3D lab</a>
@@ -503,6 +545,11 @@ export default function Home() {
           <article className="flow-card flow-site"><span className="flow-index">03</span><span className="flow-label">GitHub + Sites</span><strong>Research desk</strong><p>Website code and one compact JSON snapshot, designed for fast review on any device.</p><small>No raw warehouse dependency</small></article>
         </div>
         <div className="flow-rule"><strong>Boundary rule</strong><span>Code and compact evidence may leave OSL. Raw archives and credentials do not.</span></div>
+      </section>
+
+      <section className="analysis-section architecture-section" id="architecture">
+        <div className="section-heading"><div><p className="eyebrow">End-to-end architecture</p><h2>What feeds what, and what is still disconnected</h2></div><p>This map follows the actual research path from data collection through OSL, targets, models, validation, and publication. Red components are visible on purpose so unfinished connections cannot quietly disappear.</p></div>
+        <PipelineMap architecture={snapshot.charts.pipeline_architecture} />
       </section>
 
       <section className="trust-band" id="trust">
