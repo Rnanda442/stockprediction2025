@@ -360,11 +360,33 @@
     {
       "experiment_id": "point_in_time_residual_panel_5y_v1",
       "design_signature": "point-in-time-residual-panel-5y-v1:h5:1250d:top1000:loo-market:optional-pit-sector:holdout60",
-      "status": "approved_next",
+      "status": "completed_data_stage",
       "depends_on": [
         "similarity_weighted_linear_400d_v1"
       ],
       "purpose": "Expand the existing OSL ResearchPrices panel and construct leakage-controlled leave-one-out residual-return targets before any new model search.",
+      "sealed_holdout_start": "2026-05-29",
+      "promotion": false,
+      "result_summary": {
+        "panel_rows": 1131000,
+        "panel_dates": 1131,
+        "panel_tickers": 1676,
+        "decision_date_start": "2021-11-16",
+        "decision_date_end": "2026-05-20",
+        "maximum_evaluation_date": "2026-05-28",
+        "sector_target_rows": 0,
+        "sealed_holdout_opened": false,
+        "model_promotion": false
+      }
+    },
+    {
+      "experiment_id": "purged_walk_forward_residual_baselines_v1",
+      "design_signature": "purged-walk-forward-residual-baselines-v1:h5:4x63d:purge5:top50:cost10:ridge-logit-mlprelu-mlptanh",
+      "status": "approved_next",
+      "depends_on": [
+        "point_in_time_residual_panel_5y_v1"
+      ],
+      "purpose": "Test whether residual targets support repeatable after-cost advantage using purged linear, ANN, and placebo comparisons.",
       "sealed_holdout_start": "2026-05-29",
       "promotion": false
     }
@@ -393,6 +415,11 @@
       "id": "existing_osl_history_span_2026_08_28",
       "insight": "OSL ResearchPrices already contains 3,258,958 rows, 1,256 dates, and 2,597 tickers from 2021-08-23 through 2026-08-24; prior graph/model experiments deliberately truncated this source to 400 dates, so the next data stage can expand pre-holdout history without another Robinhood export.",
       "implication": "Use the existing database with strict decision/evaluation cutoffs before requesting new brokerage data."
+    },
+    {
+      "id": "residual_panel_5y_built_2026_08_28",
+      "insight": "The expanded pre-holdout residual panel contains 1,131,000 rows across 1,131 decision dates and 1,676 tickers; its latest evaluation date is 2026-05-28, the sealed 2026-05-29 holdout remains unopened, and sector neutralization correctly remained disabled without dated sector ownership.",
+      "implication": "Use purged walk-forward residual baselines before adding graph, similarity, or larger ANN complexity."
     }
   ]
 }
