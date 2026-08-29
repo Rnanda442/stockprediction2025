@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "architecture_id": "stockprediction2025-causal-routes-v1",
+  "website_source": "app/causal-architecture-data.ts",
+  "node_count": 23,
+  "edge_count": 39,
+  "route_views": ["main", "graph", "validation", "wrong", "all"],
+  "edge_categories": ["main", "experimental", "protected", "visualization", "blocked"],
+  "minor_variable_layer": "app/pipeline-variable-catalog.ts",
+  "guardrail": "Green routes are active research infrastructure, not live-trading approval. Protected and blocked routes remain one-way or disconnected."
+}
