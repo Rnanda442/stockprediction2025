@@ -2,8 +2,10 @@
 
 import CausalArchitectureExplorer from "./causal-architecture-explorer";
 import VariableLineageExplorer from "./variable-lineage-explorer";
+import ResearchNextSteps from "./research-next-steps";
+import { PROGRESS_REVIEW_DATE } from "./research-progress";
 import { useEffect, useMemo, useState } from "react";
-import { fallbackSnapshot, REMOTE_SNAPSHOT_URL } from "./site-data";
+import { fallbackSnapshot, pipelineArchitecture, REMOTE_SNAPSHOT_URL } from "./site-data";
 import type {
   ArtifactRow,
   CalibrationRow,
@@ -479,7 +481,6 @@ export default function Home() {
   }, [snapshot]);
 
   const archiveMb = finite(snapshot.source.latest_archive_megabytes);
-  const primaryAction = snapshot.model_actions[0];
 
   return (
     <main className="site-shell">
@@ -496,7 +497,7 @@ export default function Home() {
           <a href="#drivers">Drivers</a>
           <a href="#data-flow">Data flow</a>
           <a href="/market-lab/index.html">3D lab</a>
-          <a href="#next-actions">Next actions</a>
+          <a href="#next-actions">Next steps</a>
         </div>
       </nav>
 
@@ -529,7 +530,7 @@ export default function Home() {
           <span className={`connection-dot ${isLive ? "dot-connected" : "dot-fallback"}`} aria-hidden="true" />
           <div><strong>{isLive ? "GitHub snapshot connected" : "Bundled snapshot in use"}</strong><span>Published {shortDate(snapshot.generated_at)}</span></div>
         </div>
-        <p>Market evidence currently ends on <strong>{shortDate(snapshot.source.latest_market_date)}</strong>. Website polish and OSL transfer work can continue without a Robinhood refresh.</p>
+        <p>This model packet ends on <strong>{shortDate(snapshot.source.latest_market_date)}</strong>; it is not the full price-history cutoff. Infrastructure progress was reviewed separately on <strong>{PROGRESS_REVIEW_DATE}</strong>. No model rerun is implied.</p>
       </section>
 
       <section className="metric-grid" aria-label="Latest snapshot metrics">
@@ -551,7 +552,8 @@ export default function Home() {
 
       <section className="analysis-section architecture-section" id="architecture">
         <div className="section-heading"><div><p className="eyebrow">End-to-end architecture</p><h2>What feeds what, and what is still disconnected</h2></div><p>This map follows the actual research path from data collection through OSL, targets, models, validation, and publication. Red components are visible on purpose so unfinished connections cannot quietly disappear.</p></div>
-        <PipelineMap architecture={snapshot.charts.pipeline_architecture} />
+        <p className="small-note">Architecture and next steps share a curated {PROGRESS_REVIEW_DATE} progress record. Older model packets cannot overwrite these infrastructure updates. Green infrastructure does not certify the stock universe or model quality.</p>
+        <PipelineMap architecture={pipelineArchitecture} />
               <CausalArchitectureExplorer />
               <VariableLineageExplorer />
       </section>
@@ -559,7 +561,7 @@ export default function Home() {
       <section className="trust-band" id="trust">
         <div><p className="eyebrow">Current verdict</p><h2>{snapshot.trust.status}</h2></div>
         <p>{snapshot.trust.reason}</p>
-        <div className="trust-facts"><span>{snapshot.trust.leakage_issue_rows} leakage review rows</span><span>{snapshot.trust.paper_buy_evaluated} matured paper buys</span><span>{snapshot.model_actions.filter((action) => action.priority === "P0").length} P0 actions</span></div>
+        <div className="trust-facts"><span>{snapshot.trust.leakage_issue_rows} compact leakage flags</span><span>{snapshot.trust.paper_buy_evaluated} matured paper buys</span><span>Historical lineage still unresolved</span></div>
       </section>
 
       <section className="analysis-section" id="models">
@@ -568,7 +570,7 @@ export default function Home() {
       </section>
 
       <section className="analysis-section validation-section" id="validation">
-        <div className="section-heading"><div><p className="eyebrow">Residual ANN confirmation</p><h2>Strong signal, guarded conclusion</h2></div><p>The 5-day residual experiment uses purged walk-forward folds, weekly-block uncertainty, a true five-sleeve capital replay, and costs up to 40 bps. The sealed holdout remains closed.</p></div>
+        <div className="section-heading"><div><p className="eyebrow">Prior residual ANN research</p><h2>Promising results, unresolved bias</h2></div><p>These results predate the new eligible-price snapshot and are not a rerun on the updated input path. Purged walk-forward folds, block uncertainty, and costed replay do not resolve missing historical universe membership. The sealed holdout remains closed.</p></div>
         <div className="validation-callouts">
           <article><span>Five-sleeve daily net</span><strong>+0.100%</strong><small>After 10 bps, pooled across test paths</small></article>
           <article><span>Leading candidate</span><strong>0.696 AUC</strong><small>Lean volatility ANN</small></article>
@@ -617,25 +619,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="analysis-section" id="next-actions">
-        <div className="section-heading"><div><p className="eyebrow">Recommended work</p><h2>Model and analysis action plan</h2></div><p>OSL generates these recommendations after each run. Model-code changes remain review-required; reporting and evidence collection can stay automatic.</p></div>
-        {primaryAction ? (
-          <div className="priority-callout">
-            <div><span>Immediate research priority</span><strong>{primaryAction.component.replaceAll("_", " ")}</strong></div>
-            <p>{primaryAction.recommended_change}</p>
-            <small>Acceptance test: {primaryAction.acceptance_test}</small>
-          </div>
-        ) : null}
-        <ol className="action-list">
-          {snapshot.model_actions.map((action, index) => (
-            <li key={`${action.component}-${index}`}>
-              <div className="action-rank"><span>{action.priority}</span><b>{index + 1}</b></div>
-              <div className="action-body"><strong>{action.component.replaceAll("_", " ")}</strong><p>{action.recommended_change}</p><small>{action.evidence}</small></div>
-              <div className="acceptance"><span>Done when</span><p>{action.acceptance_test}</p><small>{action.execution.replaceAll("_", " ")}</small></div>
-            </li>
-          ))}
-        </ol>
-      </section>
+      <ResearchNextSteps />
 
       <section className="two-column analysis-section bottom-section">
         <div className="chart-panel">

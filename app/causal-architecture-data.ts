@@ -1,7 +1,8 @@
 import type { EvidenceStatus } from "./pipeline-variable-catalog";
+import { RESEARCH_PROGRESS } from "./research-progress";
 
-export type EdgeCategory = "main" | "experimental" | "protected" | "visualization" | "blocked";
-export type RouteFocus = "all" | "main" | "graph" | "validation" | "wrong";
+export type EdgeCategory = "main" | "pending" | "experimental" | "protected" | "visualization" | "blocked";
+export type RouteFocus = "all" | "main" | "data" | "graph" | "validation" | "wrong";
 
 export type ArchitectureNode = {
   id: string;
@@ -13,6 +14,7 @@ export type ArchitectureNode = {
   variables: string[];
   detail: string;
   verdict: string;
+  progressId?: string;
 };
 
 export type ArchitectureEdge = {
@@ -25,12 +27,23 @@ export type ArchitectureEdge = {
   explanation: string;
 };
 
-const n = (id: string, title: string, subtitle: string, status: EvidenceStatus, x: number, y: number, variables: string[], detail: string, verdict: string): ArchitectureNode => ({ id, title, subtitle, status, x, y, variables, detail, verdict });
+const n = (id: string, title: string, subtitle: string, status: EvidenceStatus, x: number, y: number, variables: string[], detail: string, verdict: string): ArchitectureNode => ({ id, title, subtitle, status, x: id === "core" ? 1520 : x >= 620 ? x + 1220 : x, y, variables, detail, verdict });
+const progressNode = (id: string, progressId: string, status: EvidenceStatus, x: number, y: number, variables: string[]): ArchitectureNode => {
+  const item = RESEARCH_PROGRESS[progressId];
+  return { id, progressId, title: item.title, subtitle: item.summary, status, x, y, variables, detail: item.evidence, verdict: item.doneWhen };
+};
 const e = (id: string, from: string, to: string, label: string, category: EdgeCategory, routes: RouteFocus[], explanation: string): ArchitectureEdge => ({ id, from, to, label, category, routes, explanation });
 
 export const ARCHITECTURE_NODES: ArchitectureNode[] = [
   n("osl", "OSL research warehouse", "Bulk history and experiment artifacts", "supported", 40, 70, [], "OpenScienceLab stores the large research database, raw archives, and experiment outputs so the local computer and GitHub only carry compact reviewed artifacts.", "This is the active compute and storage origin."),
-  n("raw", "Point-in-time observations", "Identity, price, volume, and descriptive profile", "supported", 310, 70, ["ticker", "company_name", "sector", "begins_at", "close_price", "volume"], "Each row represents information associated with one ticker and one trading date. Company and sector metadata are descriptive; historical sector membership is not yet point-in-time verified.", "Price, volume, ticker, and date are active inputs. Sector is mixed for historical modeling."),
+  n("raw", "Observed historical prices", "Price coverage is not verified historical membership", "mixed", 310, 70, ["ticker", "company_name", "sector", "begins_at", "close_price", "volume"], "The source spans nearly five years. The new stage reads only 2021-08-23 through 2026-05-28. All 2,597 tickers reach the final pre-holdout date; only seven enter after the source start. Current profiles are descriptive only.", "Usable observed prices, but fixed-survivor bias and historical identity coverage remain unresolved."),
+  progressNode("membership", "universe_audit", "supported", 620, 70, ["ticker", "begins_at", "history_observations", "universe_eligible"]),
+  progressNode("eligible_snapshot", "eligible_snapshot", "supported", 920, 70, ["close_price", "volume", "universe_eligible", "materialization_id", "warmup_prices_retained"]),
+  progressNode("staged_loader", "loader_smoke", "mixed", 1220, 70, ["eligible_price_materialization_id", "sealed_holdout_start"]),
+  { id: "decision_eligibility", title: "Decision-date eligibility", subtitle: "Apply eligibility AFTER trailing features; integration pending", status: "mixed", x: 1840, y: 70, variables: ["universe_eligible", "label_maturity"], detail: "Warm-up prices remain available for rolling calculations. Only then are decision rows filtered by universe_eligible; forward labels must mature before the pre-holdout cutoff. Source eligibility does not certify listing or delisting truth.", verdict: "Implemented in the staged input path, but awaiting the bounded panel smoke test.", progressId: "loader_smoke" },
+  progressNode("security_master", "security_master", "supported", 310, 390, ["source_authority", "effective_date", "match_status"]),
+  progressNode("lineage_sources", "lineage_sources", "harmful", 620, 390, ["listing_date", "delisting_date", "symbol_change", "sector_effective_date"]),
+  { id: "legacy_join", title: "Old cross-database join", subtitle: "Superseded loading route, not a model failure", status: "harmful", x: 920, y: 390, variables: [], detail: "The previous read-only join was too slow for the bounded check. The streaming materialization now avoids this join during price loading. No model result was produced by that attempt.", verdict: "Superseded. Use the staged database and complete its integration check; do not rerun the slow join as the default path." },
   n("core", "Core feature factory", "Causal returns, risk, drawdown, and liquidity", "supported", 620, 70, ["daily_log_return", "dollar_volume", "ret_5d", "ret_20d", "ret_60d", "vol_20d", "vol_60d", "drawdown_60d", "dollar_vol_20d_log", "z_ma20", "risk_adjusted_momentum"], "Only current and earlier prices are used. Some produced variables are supported, while z_ma20, risk-adjusted momentum, and predictive use of log dollar volume are red in their tested forms.", "The factory is green; individual outputs retain their own evidence status below."),
   n("target", "Residual target construction", "Protected future label and market removal", "protected", 940, 70, ["future_return_5d", "universe_mean_return_5d", "residual_return_5d"], "The future five-day stock return is compared with the same-date eligible-universe mean to create a stock-specific residual target.", "These variables are legal training and evaluation labels only. They must never flow backward into prediction-time features."),
   n("models", "Frozen model families", "Ridge control, residual ANN, and lean volatility ANN", "mixed", 1250, 70, ["ridge_score", "ann_probability"], "Chronological training compares transparent linear controls with ANN candidates. The residual ANN is promising economically, but no family cleared every confirmation gate.", "Ridge is a required green control. ANN candidates remain gold and paper-only."),
@@ -57,10 +70,23 @@ export const ARCHITECTURE_NODES: ArchitectureNode[] = [
 ];
 
 export const ARCHITECTURE_EDGES: ArchitectureEdge[] = [
-  e("osl_raw", "osl", "raw", "warehouse query", "main", ["main"], "OSL supplies compact point-in-time rows to the research pipeline while retaining bulk history remotely."),
-  e("raw_core", "raw", "core", "causal transforms", "main", ["main"], "Price and volume observations become return, volatility, drawdown, and liquidity variables using current or earlier dates only."),
+  e("osl_raw", "osl", "raw", "read-only pre-holdout prices", "main", ["main", "data"], "The original source stays unchanged in OSL. Price coverage is observed, not authoritative point-in-time identity membership."),
+  e("raw_membership", "raw", "membership", "past-only coverage audit", "main", ["main", "data"], RESEARCH_PROGRESS.universe_audit.evidence),
+  e("membership_snapshot", "membership", "eligible_snapshot", "stream eligibility flags", "main", ["main", "data"], "Sorted ticker-date keys are merged in bounded batches, retaining both eligible and warm-up rows. No cross-database SQL join is needed."),
+  e("raw_snapshot", "raw", "eligible_snapshot", "retain all warm-up prices", "main", ["data"], RESEARCH_PROGRESS.eligible_snapshot.evidence),
+  e("snapshot_loader", "eligible_snapshot", "staged_loader", "pin staged input / test next", "pending", ["main", "data"], RESEARCH_PROGRESS.loader_smoke.summary),
+  e("loader_core", "staged_loader", "core", "trailing history preserved", "pending", ["main", "data"], "The new loader must be exercised end-to-end. Trailing features are computed before filtering out ineligible decision rows."),
+  e("core_eligibility", "core", "decision_eligibility", "features before filtering", "pending", ["main", "data"], "Keep early prices for rolling features. Apply the decision-date universe_eligible flag only after feature construction."),
+  e("eligibility_target", "decision_eligibility", "target", "eligible, mature labels only", "protected", ["main", "data", "validation"], "Future residual labels are isolated from features and must mature before the exclusive 2026-05-29 cutoff. Integration is awaiting its bounded check."),
+  e("eligibility_models", "decision_eligibility", "models", "new panel not yet exercised", "pending", ["main", "data"], "This intended route is not evidence of a model rerun. Complete the loader check and approve a unique comparison before training."),
+  e("raw_master", "raw", "security_master", "observed / provisional identity", "main", ["data"], "Observed first and last prices can populate provisional coverage, not authoritative listing or delisting dates."),
+  e("events_master", "lineage_sources", "security_master", "dated sources still missing", "blocked", ["data", "wrong"], RESEARCH_PROGRESS.lineage_sources.evidence),
+  e("master_membership", "security_master", "membership", "identity certification blocked", "blocked", ["data", "wrong"], "The scaffold contains zero authoritative dated events. It cannot yet certify historical membership or resolve survivorship bias."),
+  e("master_sector", "security_master", "sector_gap", "120 current profiles only", "blocked", ["data", "wrong"], "Current descriptive sector labels do not supply historical effective dates; sector residual targets remain blocked."),
+  e("raw_legacy", "raw", "legacy_join", "superseded SQL join", "blocked", ["data", "wrong"], "The old loading route was too slow and is no longer the recommended input path."),
+  e("membership_legacy", "membership", "legacy_join", "do not use as default", "blocked", ["wrong"], "Eligibility flags now enter a streaming materialization instead of a slow attached-database join."),
+  e("snapshot_context", "eligible_snapshot", "context", "completion review pending", "pending", ["data"], RESEARCH_PROGRESS.context_review.evidence),
   e("core_target", "core", "target", "future evaluation labels", "protected", ["validation"], "Core dates and prices define where future labels are measured, but those labels remain isolated from prediction-time inputs."),
-  e("core_models", "core", "models", "prediction-time features", "main", ["main"], "Only variables available at the decision date may enter ridge or ANN prediction matrices."),
   e("target_models", "target", "models", "training label only", "protected", ["main", "validation"], "Residual future return supervises model fitting inside training windows. It is never included as an input column."),
   e("models_scores", "models", "scores", "out-of-sample scores", "main", ["main"], "Frozen models produce scores only on later chronological rows not used to fit them."),
   e("scores_portfolio", "scores", "portfolio", "rank and select", "main", ["main"], "Same-date ranks become top-k paper cohorts and overlapping sleeves."),
@@ -102,12 +128,13 @@ export const ARCHITECTURE_EDGES: ArchitectureEdge[] = [
 ];
 
 export const EDGE_CATEGORY_COPY: Record<EdgeCategory, { label: string; description: string }> = {
-  main: { label: "Main research route", description: "Active prediction, paper-portfolio, validation, and publishing flow." },
+  main: { label: "Built research route", description: "Existing infrastructure or prior research flow. Green does not imply a new model run, certified historical membership, or live-trading approval." },
+  pending: { label: "Integration pending", description: "An implemented or intended connection that still needs a bounded check or explicit evidence review. Not a completed end-to-end run." },
   experimental: { label: "Experimental branch", description: "A legal research hypothesis that remains mixed or unconfirmed." },
   protected: { label: "Protected label route", description: "Future outcomes and sealed confirmation data with one-way access rules." },
   visualization: { label: "Visualization-only route", description: "Data used for interpretation and hypothesis discovery, not predictive proof." },
   blocked: { label: "Blocked or wrong turn", description: "Leakage, rejected architecture, missing lineage, or prohibited execution." },
 };
 
-export const ARCHITECTURE_WIDTH = 2760;
+export const ARCHITECTURE_WIDTH = 3980;
 export const ARCHITECTURE_HEIGHT = 1260;

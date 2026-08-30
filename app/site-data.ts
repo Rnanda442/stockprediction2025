@@ -1,20 +1,24 @@
 import type { PipelineArchitectureData, SiteSnapshot } from "./site-types";
+import { PROGRESS_REVIEW_DATE, RESEARCH_PROGRESS } from "./research-progress";
 
 export const REMOTE_SNAPSHOT_URL =
   "https://raw.githubusercontent.com/Rnanda442/stockprediction2025/main/public/data/latest-analysis.json";
 
 export const pipelineArchitecture: PipelineArchitectureData = {
   version: 1,
-  generated_at: "2026-08-28T18:15:00+00:00",
+  generated_at: PROGRESS_REVIEW_DATE,
   nodes: [
-    { id: "historical_prices", stage: "Inputs", label: "Historical ResearchPrices", detail: "Point-in-time price history retained remotely for panel construction.", status: "active", feeds: ["research_history_db"] },
+    { id: "historical_prices", stage: "Inputs", label: "Historical ResearchPrices", detail: "Nearly five years of observed prices; historical listing and delisting coverage is not certified.", status: "active", feeds: ["research_history_db"] },
     { id: "robinhood_manual", stage: "Inputs", label: "Robinhood manual refresh", detail: "Source refresh is usable when authorization is completed manually.", status: "active", feeds: ["research_history_db"] },
     { id: "robinhood_auto", stage: "Inputs", label: "Automatic Robinhood login", detail: "No durable unattended authentication flow is connected.", status: "unused", feeds: [] },
     { id: "dated_sector_map", stage: "Inputs", label: "Dated sector membership", detail: "Required for a leakage-safe sector residual target, but currently missing.", status: "unused", feeds: ["sector_residual_target"] },
-    { id: "research_history_db", stage: "OSL warehouse", label: "research_history.db", detail: "Canonical model, prediction, price, and research history stored in Open Science Lab.", status: "active", feeds: ["point_in_time_panel", "compact_snapshot"] },
+    { id: "research_history_db", stage: "OSL warehouse", label: "research_history.db", detail: "Original source retained unchanged in OSL. Only pre-holdout rows entered the new snapshot.", status: "active", feeds: ["universe_audit", "eligible_snapshot", "compact_snapshot"] },
+    { id: "security_master_scaffold", stage: "OSL warehouse", label: RESEARCH_PROGRESS.security_master.title, detail: RESEARCH_PROGRESS.security_master.evidence, status: "active", feeds: ["historical_lineage"] },
+    { id: "eligible_snapshot", stage: "OSL warehouse", label: RESEARCH_PROGRESS.eligible_snapshot.title, detail: RESEARCH_PROGRESS.eligible_snapshot.evidence, status: "active", feeds: ["staged_panel_loader"] },
     { id: "raw_archives", stage: "OSL warehouse", label: "Raw run archives", detail: "Large databases, Parquet files, and model artifacts remain in OSL.", status: "active", feeds: ["research_history_db"] },
     { id: "sealed_holdout", stage: "OSL warehouse", label: "Sealed holdout", detail: "Dates beginning 2026-05-29 are intentionally protected from exploratory tuning.", status: "protected", feeds: ["future_confirmation"] },
-    { id: "point_in_time_panel", stage: "Transforms", label: "Point-in-time 5-year panel", detail: "1.131M rows across 1,131 decision dates and 1,676 tickers.", status: "active", feeds: ["market_residual_target", "feature_families"] },
+    { id: "staged_panel_loader", stage: "Transforms", label: "New staged loader: awaiting check", detail: RESEARCH_PROGRESS.loader_smoke.summary, status: "exploratory", feeds: ["point_in_time_panel"] },
+    { id: "point_in_time_panel", stage: "Transforms", label: "Prior research panel / new input pending", detail: "Prior study: 1.131M rows, 1,131 decision dates, 1,676 tickers. Do not confuse this with the 2,951,410 eligible source rows; a new panel has not been run.", status: "active", feeds: ["market_residual_target", "feature_families"] },
     { id: "market_residual_target", stage: "Transforms", label: "5-day market residual target", detail: "Removes the equal-weight market move before model training and evaluation.", status: "active", feeds: ["lean_volatility_ann", "full_residual_ann", "controls"] },
     { id: "feature_families", stage: "Transforms", label: "Feature-family matrix", detail: "Momentum, volatility, liquidity, and training-only regime context.", status: "active", feeds: ["lean_volatility_ann", "full_residual_ann"] },
     { id: "sector_residual_target", stage: "Transforms", label: "Sector residual target", detail: "Not generated because dated sector ownership is unavailable.", status: "unused", feeds: [] },
@@ -27,9 +31,10 @@ export const pipelineArchitecture: PipelineArchitectureData = {
     { id: "five_sleeve", stage: "Validation", label: "Five-sleeve capital replay", detail: "Tracks overlapping positions, turnover, missing returns, drawdown, and transaction costs.", status: "active", feeds: ["context_gate"] },
     { id: "uncertainty", stage: "Validation", label: "Bootstrap + cost controls", detail: "Weekly-block confidence intervals and 0-40 bps cost sensitivity.", status: "active", feeds: ["context_gate"] },
     { id: "regime_policies", stage: "Validation", label: "Regime exposure policies", detail: "Stress-only and trend-down cash rules are post-selection hypotheses awaiting future data.", status: "exploratory", feeds: ["future_confirmation"] },
-    { id: "universe_audit", stage: "Validation", label: "Universe + delisting audit", detail: "Point-in-time eligibility and delisting-safe returns remain unverified.", status: "unused", feeds: ["future_confirmation"] },
+    { id: "universe_audit", stage: "Validation", label: RESEARCH_PROGRESS.universe_audit.title, detail: RESEARCH_PROGRESS.universe_audit.evidence, status: "active", feeds: ["eligible_snapshot", "historical_lineage"] },
+    { id: "historical_lineage", stage: "Validation", label: "Authoritative historical lineage missing", detail: RESEARCH_PROGRESS.lineage_sources.evidence, status: "unused", feeds: ["future_confirmation"] },
     { id: "future_confirmation", stage: "Validation", label: "Future unseen confirmation", detail: "Frozen candidates wait for newly arriving dates without retuning.", status: "exploratory", feeds: ["context_gate"] },
-    { id: "context_gate", stage: "Outputs", label: "Accumulated context gate", detail: "Stores completed experiments, caveats, frozen candidates, and do-not-repeat rules.", status: "active", feeds: ["compact_snapshot", "research_site"] },
+    { id: "context_gate", stage: "Outputs", label: "Accumulated context gate", detail: "Stores reviewed experiments and do-not-repeat rules. The new materialization completion candidate still needs review and merge.", status: "active", feeds: ["compact_snapshot", "research_site"] },
     { id: "compact_snapshot", stage: "Outputs", label: "Compact GitHub snapshot", detail: "Only reviewed summaries leave OSL; raw warehouse artifacts remain remote.", status: "active", feeds: ["research_site"] },
     { id: "research_site", stage: "Outputs", label: "Private research website", detail: "Current evidence, model status, architecture, and next actions.", status: "active", feeds: [] },
     { id: "temporal_3d_lab", stage: "Outputs", label: "Temporal 3D stock lab", detail: "Published and interactive, but disconnected from the newest ANN and policy outputs.", status: "unused", feeds: [] },
