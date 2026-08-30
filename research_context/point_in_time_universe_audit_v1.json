@@ -1,0 +1,48 @@
+{
+  "audit_id": "point_in_time_universe_audit_v1",
+  "design_signature": "point-in-time-universe-audit-v1:researchprices:past-only-membership+lifecycle+sector-lineage:preholdout-only:holdout60",
+  "objective": "Create a reusable dated stock-universe membership layer and audit survivorship, disappearance, and sector-lineage limitations without opening the sealed holdout.",
+  "source": {
+    "database": "research_history.db on OpenScienceLab",
+    "table": "ResearchPrices",
+    "available_columns": [
+      "ticker",
+      "begins_at",
+      "close_price",
+      "volume"
+    ]
+  },
+  "cutoff_policy": {
+    "cutoff_exclusive": "2026-05-29",
+    "sealed_holdout_read": false,
+    "required_sql_guard": "begins_at < cutoff_exclusive"
+  },
+  "membership_rule": {
+    "minimum_history_observations": 60,
+    "past_only": true,
+    "requires_single_source_row_on_date": true,
+    "requires_close": true,
+    "uses_future_disappearance": false
+  },
+  "disappearance_rule": {
+    "terminal_absence_calendar_days": 60,
+    "classification": "posthoc_data_quality_proxy_only",
+    "confirmed_delisting_claim_allowed": false
+  },
+  "sector_lineage_rule": {
+    "current_nasdaq_snapshot_is_historical_truth": false,
+    "historical_sector_features_allowed": false,
+    "unblock_condition": "Add a dated external security master with effective-from and effective-to lineage."
+  },
+  "expected_outputs": [
+    "audit_manifest.json",
+    "ticker_lifecycle_audit.csv",
+    "monthly_universe_audit.csv",
+    "sector_lineage_audit.csv",
+    "point_in_time_universe.db",
+    "readout.md"
+  ],
+  "compute_location": "OpenScienceLab",
+  "bulk_artifact_policy": "Keep the materialized membership database on OpenScienceLab; commit only compact design and summary artifacts.",
+  "status": "implementation_ready"
+}
