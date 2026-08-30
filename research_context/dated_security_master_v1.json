@@ -1,0 +1,36 @@
+{
+  "security_master_id": "dated_security_master_v1",
+  "design_signature": "dated-security-master-v1:observed-lifecycle+authoritative-events:source-confidence+effective-dates:no-inferred-delistings:no-current-sector-backfill",
+  "objective": "Represent ticker, listing, delisting, symbol-change, and classification lineage with explicit source authority, confidence, and effective dates.",
+  "trusted_authorities": [
+    "SEC",
+    "FINRA",
+    "NASDAQ"
+  ],
+  "source_policy": {
+    "observed_price_first_last_dates": "provisional_coverage_only",
+    "current_nasdaq_profiles": "descriptive_only",
+    "sec_form_25_nse": "authoritative_exchange_delisting_event_after_confirmed_match",
+    "finra_daily_list": "authoritative_otc_event_after_confirmed_match",
+    "nasdaq_daily_list": "authoritative_listed_event_after_confirmed_match_and_access"
+  },
+  "point_in_time_safe_requirements": [
+    "Trusted source authority",
+    "Confirmed security match",
+    "Valid effective date"
+  ],
+  "blocked_shortcuts": [
+    "Treating final price observation as a confirmed delisting",
+    "Backfilling a current sector across historical dates",
+    "Joining ticker-name fuzzy matches as confirmed lineage",
+    "Using post-hoc disappearance flags as model features"
+  ],
+  "model_integration": {
+    "past_only_membership_database": "point_in_time_universe.db on OpenScienceLab",
+    "residual_panel_cli_option": "--universe-db",
+    "historical_sector_features_enabled": false,
+    "promotion_allowed": false
+  },
+  "bulk_artifact_policy": "Keep security_master.db and event extracts on OpenScienceLab; commit compact specifications and summaries only.",
+  "status": "implementation_ready_with_authoritative_source_gaps"
+}

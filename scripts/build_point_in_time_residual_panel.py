@@ -32,6 +32,10 @@ FEATURES = [
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--db", required=True, help="SQLite database containing ResearchPrices")
+    parser.add_argument(
+        "--universe-db",
+        help="Optional point_in_time_universe.db; eligible rows are joined by ticker and date",
+    )
     parser.add_argument("--context-gate", required=True)
     parser.add_argument("--spec", required=True)
     parser.add_argument("--output-dir", required=True)
@@ -95,18 +99,40 @@ def validate_registration(gate: dict, spec: dict, args: argparse.Namespace) -> N
         raise ValueError("Experiment is not registered in context_gate.json")
 
 
-def load_prices(db_path: str, holdout_start: pd.Timestamp) -> pd.DataFrame:
-    query = """
-        SELECT
-            ticker,
-            begins_at AS date,
-            close_price,
-            volume
-        FROM ResearchPrices
-        WHERE begins_at < ?
-        ORDER BY ticker, begins_at
-    """
+def load_prices(
+    db_path: str,
+    holdout_start: pd.Timestamp,
+    universe_db: str | None,
+) -> pd.DataFrame:
+    if universe_db:
+        query = """
+            SELECT
+                prices.ticker,
+                prices.begins_at AS date,
+                prices.close_price,
+                prices.volume
+            FROM ResearchPrices AS prices
+            INNER JOIN universe.point_in_time_universe AS membership
+                ON membership.ticker = UPPER(TRIM(prices.ticker))
+               AND membership.as_of_date = date(prices.begins_at)
+               AND membership.universe_eligible = 1
+            WHERE prices.begins_at < ?
+            ORDER BY prices.ticker, prices.begins_at
+        """
+    else:
+        query = """
+            SELECT
+                ticker,
+                begins_at AS date,
+                close_price,
+                volume
+            FROM ResearchPrices
+            WHERE begins_at < ?
+            ORDER BY ticker, begins_at
+        """
     with sqlite3.connect(db_path) as connection:
+        if universe_db:
+            connection.execute("ATTACH DATABASE ? AS universe", (universe_db,))
         prices = pd.read_sql_query(
             query,
             connection,
@@ -332,13 +358,15 @@ def main() -> None:
     spec = read_json(args.spec)
     validate_registration(gate, spec, args)
 
-    prices = load_prices(args.db, holdout_start)
+    prices = load_prices(args.db, holdout_start, args.universe_db)
     source_summary = {
         "source_rows_pre_holdout": int(len(prices)),
         "source_min_date": prices["date"].min().strftime("%Y-%m-%d"),
         "source_max_date": prices["date"].max().strftime("%Y-%m-%d"),
         "source_dates_pre_holdout": int(prices["date"].nunique()),
         "source_tickers_pre_holdout": int(prices["ticker"].nunique()),
+        "point_in_time_membership_filter_enabled": bool(args.universe_db),
+        "point_in_time_membership_database": args.universe_db or "",
     }
     duplicate_count = int(prices.duplicated(["ticker", "date"]).sum())
 
@@ -441,6 +469,12 @@ def main() -> None:
         metric_row("market_leave_one_out_rows_without_peers", self_benchmark_failures, self_benchmark_failures == 0),
         metric_row("minimum_pre_holdout_dates", panel_dates, panel_dates >= minimum_dates),
         metric_row("minimum_distinct_tickers", panel_tickers, panel_tickers >= minimum_tickers),
+        metric_row(
+            "past_only_universe_membership_enforced",
+            bool(args.universe_db),
+            bool(args.universe_db),
+        ),
+        metric_row("historical_security_master_verified", False, False),
         metric_row("universe_point_in_time_verified", False, False),
         metric_row("model_promotion_allowed", False, True),
     ]
@@ -479,6 +513,8 @@ def main() -> None:
             "decision_and_evaluation_dates_pre_holdout": True,
             "market_benchmark_leave_one_out": True,
             "sector_mapping_requires_dated_intervals": True,
+            "past_only_universe_membership_enforced": bool(args.universe_db),
+            "historical_security_master_verified": False,
             "universe_point_in_time_verified": False,
             "model_promotion_allowed": False,
         },
@@ -501,6 +537,8 @@ def main() -> None:
         "summary": {
             **panel_summary,
             **sector_summary,
+            "past_only_universe_membership_enforced": bool(args.universe_db),
+            "historical_security_master_verified": False,
             "universe_point_in_time_verified": False,
             "sealed_holdout_opened": False,
         },
