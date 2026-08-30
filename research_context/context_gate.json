@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "context_id": "stockprediction2025-research-gate",
-  "updated_at": "2026-08-28T17:50:01+00:00",
+  "updated_at": "2026-08-30T20:13:28.7560092Z",
   "purpose": "Accumulate reviewed research evidence, prevent duplicate experiments, and provide canonical context for future analysis.",
   "project": {
     "repository": "https://github.com/Rnanda442/stockprediction2025",
@@ -176,7 +176,7 @@
       "experiment_id": "similarity_weighted_linear_400d_v1",
       "design_signature": "similarity-weighted-linear-400d-v1:h5:elastic-c1-l25:train-knn20:alpha025:p10:r5:cost10:6walkforward:block-bootstrap:neighbor-placebo:holdout60",
       "status": "completed_not_promoted",
-      "generated_at": "2026-08-28T05:27:52.836895+00:00",
+      "generated_at": "2026-08-28T00:27:52.836895-05:00",
       "rows": 237000,
       "dates": 395,
       "tickers": 922,
@@ -227,7 +227,7 @@
         "lean_volatility_vs_logistic_rank_ic_ci_lower": 0.00263339,
         "trend_down_cash_mean_daily_net_10bps": 0.00118735,
         "trend_down_cash_delta_ci": [
-          -8.466e-05,
+          -8.466E-05,
           0.00042649
         ],
         "stress_only_worst_maximum_drawdown": -0.05539178,
@@ -498,6 +498,15 @@
         "positive_return_auc_rank_ic_lower_bounds",
         "no_negative_temporal_split_after_costs"
       ]
+    },
+    {
+      "experiment_id": "materialized_eligible_prices_v1",
+      "design_signature": "materialized-eligible-prices-v1:researchprices+membership:streaming-merge:warmup-preserved:preholdout2026-05-29",
+      "status": "approved_next",
+      "stage": "data_infrastructure_only",
+      "spec": "research_context/materialized_eligible_prices_v1.json",
+      "compute_location": "OpenScienceLab",
+      "objective": "Materialize immutable pre-holdout prices with past-only eligibility and retained warm-up history; no model training or scoring."
     }
   ],
   "known_biases_and_limits": [

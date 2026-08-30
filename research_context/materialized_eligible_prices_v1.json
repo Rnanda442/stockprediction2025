@@ -1,0 +1,34 @@
+{
+  "experiment_id": "materialized_eligible_prices_v1",
+  "design_signature": "materialized-eligible-prices-v1:researchprices+membership:streaming-merge:warmup-preserved:preholdout2026-05-29",
+  "stage": "data_infrastructure_only",
+  "cutoff_exclusive": "2026-05-29",
+  "objective": "Replace the slow cross-database eligibility join with a self-contained OSL price snapshot while preserving rolling-feature warm-up history.",
+  "algorithm": "Read both inputs in ticker-date order and merge matching keys once in bounded batches; reject unmatched keys, duplicates, changed inputs, and cutoff violations.",
+  "source_policy": "Open both input databases read-only and never copy holdout rows.",
+  "storage_policy": "Store all matched pre-holdout observations once with eligibility flags; expose EligiblePrices as a view. Retain warm-up rows only for trailing features and apply eligibility on the decision date before panel selection.",
+  "known_input_counts": {
+    "pre_holdout_rows": 3104633,
+    "eligible_rows": 2951410,
+    "tickers": 2597
+  },
+  "guardrails": {
+    "sealed_holdout_opened": false,
+    "source_databases_modified": false,
+    "historical_security_master_verified": false,
+    "model_training_or_scoring_allowed": false,
+    "survivorship_bias_resolved": false
+  },
+  "model_integration": {
+    "script": "scripts/build_point_in_time_residual_panel.py",
+    "option": "--eligible-prices-db",
+    "requires_explicit_materialization_pin_in_panel_spec": true,
+    "does_not_rerun_completed_experiments": true
+  },
+  "outputs": [
+    "eligible_prices.db",
+    "materialization_manifest.json",
+    "context_gate_candidate_update.json"
+  ],
+  "status": "approved_next"
+}

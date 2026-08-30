@@ -36,6 +36,10 @@ def parse_args() -> argparse.Namespace:
         "--universe-db",
         help="Optional point_in_time_universe.db; eligible rows are joined by ticker and date",
     )
+    parser.add_argument(
+        "--eligible-prices-db",
+        help="Self-contained materialized price database; retains warm-up history without a cross-database join",
+    )
     parser.add_argument("--context-gate", required=True)
     parser.add_argument("--spec", required=True)
     parser.add_argument("--output-dir", required=True)
@@ -48,7 +52,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--top-liquidity", type=int, default=1000)
     parser.add_argument("--horizon", type=int, default=5)
     parser.add_argument("--min-sector-members", type=int, default=6)
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.universe_db and args.eligible_prices_db:
+        parser.error("Use --eligible-prices-db or --universe-db, not both")
+    return args
 
 
 def read_json(path: str | Path) -> dict:
@@ -72,6 +79,8 @@ def validate_registration(gate: dict, spec: dict, args: argparse.Namespace) -> N
         raise ValueError("CLI holdout start differs from the frozen specification")
     target = spec.get("target", {})
     panel = spec.get("panel", {})
+    if args.eligible_prices_db and panel.get("eligible_price_materialization_id") != "materialized_eligible_prices_v1":
+        raise ValueError("Register the materialized price input explicitly in the panel specification before running")
     frozen_values = {
         "horizon": (args.horizon, target.get("horizon_trading_days")),
         "history_dates": (args.history_dates, panel.get("requested_history_dates")),
@@ -97,6 +106,42 @@ def validate_registration(gate: dict, spec: dict, args: argparse.Namespace) -> N
             break
     if not registered:
         raise ValueError("Experiment is not registered in context_gate.json")
+
+
+def load_materialized_prices(
+    staged_db: str,
+    source_db: str,
+    holdout_start: pd.Timestamp,
+) -> pd.DataFrame:
+    path = Path(staged_db).resolve(strict=True)
+    with sqlite3.connect(path.as_uri() + "?mode=ro", uri=True) as connection:
+        row = connection.execute(
+            "SELECT value FROM MaterializationMetadata WHERE key = 'manifest'"
+        ).fetchone()
+        if row is None:
+            raise ValueError("Materialized database is missing its completion manifest")
+        manifest = json.loads(row[0])
+        if manifest.get("status") != "ready" or manifest.get("experiment_id") != "materialized_eligible_prices_v1":
+            raise ValueError("The selected materialization is incomplete or unsupported")
+        if manifest.get("cutoff_exclusive") != holdout_start.strftime("%Y-%m-%d"):
+            raise ValueError("Materialized database and panel holdout boundaries differ")
+        if manifest.get("sealed_holdout_read") is not False or manifest.get("warmup_prices_retained") is not True:
+            raise ValueError("Materialized database lacks the required holdout and warm-up guarantees")
+        if Path(manifest["source_database"]).resolve() != Path(source_db).resolve():
+            raise ValueError("Materialized prices belong to a different source database")
+        prices = pd.read_sql_query(
+            "SELECT ticker, begins_at AS date, close_price, volume, universe_eligible "
+            "FROM ResearchPrices WHERE begins_at < ? ORDER BY ticker, begins_at",
+            connection,
+            params=[holdout_start.strftime("%Y-%m-%d")],
+        )
+    prices["date"] = pd.to_datetime(prices["date"], errors="coerce").dt.normalize()
+    prices["ticker"] = prices["ticker"].astype(str).str.strip().str.upper()
+    prices["close_price"] = pd.to_numeric(prices["close_price"], errors="coerce")
+    prices["volume"] = pd.to_numeric(prices["volume"], errors="coerce")
+    prices = prices.dropna(subset=["ticker", "date", "close_price", "volume"])
+    prices = prices[(prices["ticker"] != "") & (prices["close_price"] > 0)]
+    return prices.sort_values(["ticker", "date"]).reset_index(drop=True)
 
 
 def load_prices(
@@ -358,20 +403,28 @@ def main() -> None:
     spec = read_json(args.spec)
     validate_registration(gate, spec, args)
 
-    prices = load_prices(args.db, holdout_start, args.universe_db)
+    membership_enabled = bool(args.universe_db or args.eligible_prices_db)
+    if args.eligible_prices_db:
+        prices = load_materialized_prices(args.eligible_prices_db, args.db, holdout_start)
+    else:
+        prices = load_prices(args.db, holdout_start, args.universe_db)
     source_summary = {
         "source_rows_pre_holdout": int(len(prices)),
         "source_min_date": prices["date"].min().strftime("%Y-%m-%d"),
         "source_max_date": prices["date"].max().strftime("%Y-%m-%d"),
         "source_dates_pre_holdout": int(prices["date"].nunique()),
         "source_tickers_pre_holdout": int(prices["ticker"].nunique()),
-        "point_in_time_membership_filter_enabled": bool(args.universe_db),
+        "point_in_time_membership_filter_enabled": membership_enabled,
         "point_in_time_membership_database": args.universe_db or "",
+        "materialized_eligible_prices_database": args.eligible_prices_db or "",
+        "warmup_prices_retained": bool(args.eligible_prices_db),
     }
     duplicate_count = int(prices.duplicated(["ticker", "date"]).sum())
 
     prices = add_trailing_features(prices)
     prices = add_forward_target(prices, args.horizon, holdout_start)
+    if args.eligible_prices_db:
+        prices = prices.loc[prices["universe_eligible"] == 1].copy()
     prices = select_panel(prices, args.history_dates, args.top_liquidity)
     prices, sector_summary = attach_point_in_time_sector(prices, args.sector_map)
     prices = add_residual_targets(prices, args.min_sector_members)
@@ -471,8 +524,8 @@ def main() -> None:
         metric_row("minimum_distinct_tickers", panel_tickers, panel_tickers >= minimum_tickers),
         metric_row(
             "past_only_universe_membership_enforced",
-            bool(args.universe_db),
-            bool(args.universe_db),
+            membership_enabled,
+            membership_enabled,
         ),
         metric_row("historical_security_master_verified", False, False),
         metric_row("universe_point_in_time_verified", False, False),
@@ -513,7 +566,8 @@ def main() -> None:
             "decision_and_evaluation_dates_pre_holdout": True,
             "market_benchmark_leave_one_out": True,
             "sector_mapping_requires_dated_intervals": True,
-            "past_only_universe_membership_enforced": bool(args.universe_db),
+            "past_only_universe_membership_enforced": membership_enabled,
+            "materialized_warmup_prices_retained": bool(args.eligible_prices_db),
             "historical_security_master_verified": False,
             "universe_point_in_time_verified": False,
             "model_promotion_allowed": False,
@@ -537,7 +591,8 @@ def main() -> None:
         "summary": {
             **panel_summary,
             **sector_summary,
-            "past_only_universe_membership_enforced": bool(args.universe_db),
+            "past_only_universe_membership_enforced": membership_enabled,
+            "materialized_warmup_prices_retained": bool(args.eligible_prices_db),
             "historical_security_master_verified": False,
             "universe_point_in_time_verified": False,
             "sealed_holdout_opened": False,
