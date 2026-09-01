@@ -53,7 +53,7 @@ def load_trading_dates(db_path: Path, lower: str, upper: str) -> list[str]:
         rows = connection.execute(
             """
             SELECT DISTINCT substr(begins_at, 1, 10) AS trading_date
-            FROM RecentPrices
+            FROM ResearchPrices
             WHERE substr(begins_at, 1, 10) >= ?
               AND substr(begins_at, 1, 10) <= ?
             ORDER BY trading_date
