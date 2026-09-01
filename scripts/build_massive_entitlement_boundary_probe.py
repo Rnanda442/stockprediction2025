@@ -122,6 +122,8 @@ def classify(result: dict[str, Any]) -> str:
         "historical entitlement" in message
         or "not_authorized" in message
         or "not authorized" in message
+        or "doesn't include this data timeframe" in message
+        or "does not include this data timeframe" in message
     ):
         return "unavailable"
     if status == 429:
@@ -193,11 +195,12 @@ def main() -> int:
         state = initial_state(args, dates)
         write_json(progress_path, state)
 
-    prior = {
-        item["date"]: item["classification"]
-        for item in state.get("requests", [])
-        if item.get("classification") in {"available", "unavailable"}
-    }
+    prior = {}
+    for item in state.get("requests", []):
+        recovered_classification = classify(item)
+        if recovered_classification in {"available", "unavailable"}:
+            item["classification"] = recovered_classification
+            prior[item["date"]] = recovered_classification
     lower_index = 0
     upper_index = len(dates) - 1
     for index, trading_date in enumerate(dates):
