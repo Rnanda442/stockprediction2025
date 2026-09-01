@@ -1,0 +1,32 @@
+{
+  "experiment_id": "staged_eligible_loader_smoke_v1",
+  "design_signature": "staged-eligible-loader-smoke-v1:h5:90d:top100:warmup60:materialized-v1:holdout60:no-model",
+  "stage": "data_infrastructure_validation_only",
+  "objective": "Validate the completed eligible-price materialization through a bounded, leakage-audited point-in-time panel load without model training or scoring.",
+  "sealed_holdout": {
+    "start_date": "2026-05-29",
+    "opened": false
+  },
+  "target": {
+    "horizon_trading_days": 5,
+    "minimum_sector_members_including_self": 6
+  },
+  "panel": {
+    "eligible_price_materialization_id": "materialized_eligible_prices_v1",
+    "requested_history_dates": 90,
+    "daily_liquidity_cap": 100,
+    "feature_warmup_dates": 60
+  },
+  "promotion": {
+    "minimum_pre_holdout_dates": 90,
+    "minimum_distinct_tickers": 50,
+    "allowed": false
+  },
+  "guardrails": {
+    "model_training_or_scoring_allowed": false,
+    "trailing_features_before_eligibility_filter": true,
+    "historical_security_master_verified": false,
+    "survivorship_bias_resolved": false
+  },
+  "status": "approved_next"
+}

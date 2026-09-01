@@ -30,5 +30,21 @@
     "materialization_manifest.json",
     "context_gate_candidate_update.json"
   ],
-  "status": "approved_next"
+  "status": "completed_reviewed",
+  "reviewed_result": {
+    "completed_at": "2026-08-30T03:39:57Z",
+    "rows_materialized": 3104633,
+    "eligible_rows": 2951410,
+    "warmup_or_ineligible_rows": 153223,
+    "tickers": 2597,
+    "first_date": "2021-08-23",
+    "last_date": "2026-05-28",
+    "cutoff_exclusive": "2026-05-29",
+    "database_bytes": 257949696,
+    "elapsed_seconds": 34.97,
+    "sealed_holdout_read": false,
+    "source_databases_modified": false,
+    "historical_security_master_verified": false,
+    "model_training_or_scoring_performed": false
+  }
 }

@@ -239,6 +239,30 @@
         "sealed_holdout_opened": false
       },
       "conclusion": "Lean volatility is the leading candidate and the trend-down cash gate improves the point estimate, but both require future unseen confirmation."
+    },
+    {
+      "experiment_id": "materialized_eligible_prices_v1",
+      "design_signature": "materialized-eligible-prices-v1:researchprices+membership:streaming-merge:warmup-preserved:preholdout2026-05-29",
+      "status": "completed_reviewed",
+      "stage": "data_infrastructure_only",
+      "result_summary": {
+        "rows_materialized": 3104633,
+        "eligible_rows": 2951410,
+        "warmup_or_ineligible_rows": 153223,
+        "tickers": 2597,
+        "first_date": "2021-08-23",
+        "last_date": "2026-05-28",
+        "cutoff_exclusive": "2026-05-29",
+        "database_bytes": 257949696,
+        "elapsed_seconds": 34.97,
+        "warmup_prices_retained": true,
+        "eligibility_applied_after_trailing_features": true,
+        "sealed_holdout_read": false,
+        "source_databases_modified": false,
+        "historical_security_master_verified": false,
+        "model_training_or_scoring_performed": false
+      },
+      "conclusion": "The immutable staged price database is complete and safe for bounded pre-holdout loader validation; it does not resolve historical security-master or survivorship concerns."
     }
   ],
   "promising_hypotheses": [
@@ -500,13 +524,14 @@
       ]
     },
     {
-      "experiment_id": "materialized_eligible_prices_v1",
-      "design_signature": "materialized-eligible-prices-v1:researchprices+membership:streaming-merge:warmup-preserved:preholdout2026-05-29",
+      "experiment_id": "staged_eligible_loader_smoke_v1",
+      "design_signature": "staged-eligible-loader-smoke-v1:h5:90d:top100:warmup60:materialized-v1:holdout60:no-model",
       "status": "approved_next",
-      "stage": "data_infrastructure_only",
-      "spec": "research_context/materialized_eligible_prices_v1.json",
+      "stage": "data_infrastructure_validation_only",
+      "spec": "research_context/staged_eligible_loader_smoke_v1.json",
       "compute_location": "OpenScienceLab",
-      "objective": "Materialize immutable pre-holdout prices with past-only eligibility and retained warm-up history; no model training or scoring."
+      "depends_on": "materialized_eligible_prices_v1",
+      "objective": "Validate a bounded staged-price load with warm-up preservation, point-in-time eligibility, and sealed-holdout checks; no model training or scoring."
     }
   ],
   "known_biases_and_limits": [

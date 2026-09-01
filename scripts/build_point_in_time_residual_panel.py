@@ -18,6 +18,12 @@ DESIGN_SIGNATURE = (
     "point-in-time-residual-panel-5y-v1:"
     "h5:1250d:top1000:loo-market:optional-pit-sector:holdout60"
 )
+SMOKE_EXPERIMENT_ID = "staged_eligible_loader_smoke_v1"
+SMOKE_DESIGN_SIGNATURE = (
+    "staged-eligible-loader-smoke-v1:"
+    "h5:90d:top100:warmup60:materialized-v1:holdout60:no-model"
+)
+FEATURE_WARMUP_DATES = 60
 FEATURES = [
     "ret_5d",
     "ret_20d",
@@ -52,6 +58,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--top-liquidity", type=int, default=1000)
     parser.add_argument("--horizon", type=int, default=5)
     parser.add_argument("--min-sector-members", type=int, default=6)
+    parser.add_argument(
+        "--smoke-test",
+        action="store_true",
+        help="Bound the staged-price load for integration validation without model training.",
+    )
     args = parser.parse_args()
     if args.universe_db and args.eligible_prices_db:
         parser.error("Use --eligible-prices-db or --universe-db, not both")
@@ -69,10 +80,16 @@ def write_json(path: Path, payload: dict) -> None:
         handle.write("\n")
 
 
-def validate_registration(gate: dict, spec: dict, args: argparse.Namespace) -> None:
-    if spec.get("experiment_id") != EXPERIMENT_ID:
+def validate_registration(
+    gate: dict,
+    spec: dict,
+    args: argparse.Namespace,
+) -> tuple[str, str]:
+    expected_id = SMOKE_EXPERIMENT_ID if args.smoke_test else EXPERIMENT_ID
+    expected_signature = SMOKE_DESIGN_SIGNATURE if args.smoke_test else DESIGN_SIGNATURE
+    if spec.get("experiment_id") != expected_id:
         raise ValueError("Spec experiment_id does not match the frozen builder")
-    if spec.get("design_signature") != DESIGN_SIGNATURE:
+    if spec.get("design_signature") != expected_signature:
         raise ValueError("Spec design_signature does not match the frozen builder")
     holdout = spec.get("sealed_holdout", {}).get("start_date")
     if holdout != args.holdout_start:
@@ -81,6 +98,8 @@ def validate_registration(gate: dict, spec: dict, args: argparse.Namespace) -> N
     panel = spec.get("panel", {})
     if args.eligible_prices_db and panel.get("eligible_price_materialization_id") != "materialized_eligible_prices_v1":
         raise ValueError("Register the materialized price input explicitly in the panel specification before running")
+    if args.smoke_test and not args.eligible_prices_db:
+        raise ValueError("--smoke-test requires --eligible-prices-db")
     frozen_values = {
         "horizon": (args.horizon, target.get("horizon_trading_days")),
         "history_dates": (args.history_dates, panel.get("requested_history_dates")),
@@ -97,8 +116,8 @@ def validate_registration(gate: dict, spec: dict, args: argparse.Namespace) -> N
     registered = False
     for entry in gate.get("next_experiments", []):
         entry_id = entry.get("experiment_id", entry.get("id"))
-        if entry_id == EXPERIMENT_ID:
-            if entry.get("design_signature") != DESIGN_SIGNATURE:
+        if entry_id == expected_id:
+            if entry.get("design_signature") != expected_signature:
                 raise ValueError("Context-gate design signature mismatch")
             if entry.get("status") not in {"approved_next", "approved_after_dependency"}:
                 raise ValueError("Context gate has not approved this experiment")
@@ -106,12 +125,14 @@ def validate_registration(gate: dict, spec: dict, args: argparse.Namespace) -> N
             break
     if not registered:
         raise ValueError("Experiment is not registered in context_gate.json")
+    return expected_id, expected_signature
 
 
 def load_materialized_prices(
     staged_db: str,
     source_db: str,
     holdout_start: pd.Timestamp,
+    bounded_dates: int | None = None,
 ) -> pd.DataFrame:
     path = Path(staged_db).resolve(strict=True)
     with sqlite3.connect(path.as_uri() + "?mode=ro", uri=True) as connection:
@@ -129,11 +150,37 @@ def load_materialized_prices(
             raise ValueError("Materialized database lacks the required holdout and warm-up guarantees")
         if Path(manifest["source_database"]).resolve() != Path(source_db).resolve():
             raise ValueError("Materialized prices belong to a different source database")
+        cutoff = holdout_start.strftime("%Y-%m-%d")
+        lower_bound = None
+        if bounded_dates is not None:
+            lower_bound_row = connection.execute(
+                """
+                SELECT MIN(sample_date)
+                FROM (
+                    SELECT date(begins_at) AS sample_date
+                    FROM ResearchPrices
+                    WHERE begins_at < ?
+                    GROUP BY date(begins_at)
+                    ORDER BY sample_date DESC
+                    LIMIT ?
+                )
+                """,
+                (cutoff, bounded_dates),
+            ).fetchone()
+            lower_bound = lower_bound_row[0] if lower_bound_row else None
+            if lower_bound is None:
+                raise ValueError("Materialized database has no pre-holdout dates")
+
+        where_clause = "begins_at < ?"
+        params: list[object] = [cutoff]
+        if lower_bound is not None:
+            where_clause = "begins_at >= ? AND begins_at < ?"
+            params = [lower_bound, cutoff]
         prices = pd.read_sql_query(
             "SELECT ticker, begins_at AS date, close_price, volume, universe_eligible "
-            "FROM ResearchPrices WHERE begins_at < ? ORDER BY ticker, begins_at",
+            f"FROM ResearchPrices WHERE {where_clause} ORDER BY ticker, begins_at",
             connection,
-            params=[holdout_start.strftime("%Y-%m-%d")],
+            params=params,
         )
     prices["date"] = pd.to_datetime(prices["date"], errors="coerce").dt.normalize()
     prices["ticker"] = prices["ticker"].astype(str).str.strip().str.upper()
@@ -401,11 +448,19 @@ def main() -> None:
 
     gate = read_json(args.context_gate)
     spec = read_json(args.spec)
-    validate_registration(gate, spec, args)
+    experiment_id, design_signature = validate_registration(gate, spec, args)
 
     membership_enabled = bool(args.universe_db or args.eligible_prices_db)
     if args.eligible_prices_db:
-        prices = load_materialized_prices(args.eligible_prices_db, args.db, holdout_start)
+        bounded_dates = None
+        if args.smoke_test:
+            bounded_dates = args.history_dates + FEATURE_WARMUP_DATES + args.horizon
+        prices = load_materialized_prices(
+            args.eligible_prices_db,
+            args.db,
+            holdout_start,
+            bounded_dates,
+        )
     else:
         prices = load_prices(args.db, holdout_start, args.universe_db)
     source_summary = {
@@ -418,6 +473,7 @@ def main() -> None:
         "point_in_time_membership_database": args.universe_db or "",
         "materialized_eligible_prices_database": args.eligible_prices_db or "",
         "warmup_prices_retained": bool(args.eligible_prices_db),
+        "bounded_loader_smoke_test": args.smoke_test,
     }
     duplicate_count = int(prices.duplicated(["ticker", "date"]).sum())
 
@@ -534,8 +590,8 @@ def main() -> None:
     pd.DataFrame(audit_rows).to_csv(output_dir / "leakage_audit.csv", index=False)
 
     target_definition = {
-        "experiment_id": EXPERIMENT_ID,
-        "design_signature": DESIGN_SIGNATURE,
+        "experiment_id": experiment_id,
+        "design_signature": design_signature,
         "horizon_trading_days": args.horizon,
         "raw_return": "future_close / close_price - 1",
         "market_benchmark": "cross-sectional leave-one-out mean future return",
@@ -554,8 +610,8 @@ def main() -> None:
     write_json(output_dir / "target_definition.json", target_definition)
 
     manifest = {
-        "experiment_id": EXPERIMENT_ID,
-        "design_signature": DESIGN_SIGNATURE,
+        "experiment_id": experiment_id,
+        "design_signature": design_signature,
         "status": "panel_built",
         "source": source_summary,
         "panel": panel_summary,
@@ -571,6 +627,7 @@ def main() -> None:
             "historical_security_master_verified": False,
             "universe_point_in_time_verified": False,
             "model_promotion_allowed": False,
+            "model_training_or_scoring_performed": False,
         },
         "known_limitations": [
             "Historical universe membership and delistings are not independently verified.",
@@ -584,8 +641,8 @@ def main() -> None:
     write_json(output_dir / "experiment_manifest.json", manifest)
 
     candidate_update = {
-        "experiment_id": EXPERIMENT_ID,
-        "design_signature": DESIGN_SIGNATURE,
+        "experiment_id": experiment_id,
+        "design_signature": design_signature,
         "candidate_status": "completed_data_stage_pending_review",
         "promotion": False,
         "summary": {
@@ -598,8 +655,9 @@ def main() -> None:
             "sealed_holdout_opened": False,
         },
         "next_experiment": (
-            "purged_walk_forward_residual_baselines_v1 after panel and leakage "
-            "audit review"
+            "review staged-loader smoke evidence before approving any model run"
+            if args.smoke_test
+            else "purged_walk_forward_residual_baselines_v1 after panel and leakage audit review"
         ),
     }
     write_json(output_dir / "context_gate_candidate_update.json", candidate_update)
