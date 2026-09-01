@@ -526,12 +526,40 @@
     {
       "experiment_id": "staged_eligible_loader_smoke_v1",
       "design_signature": "staged-eligible-loader-smoke-v1:h5:90d:top100:warmup60:materialized-v1:holdout60:no-model",
-      "status": "approved_next",
+      "status": "completed_reviewed",
       "stage": "data_infrastructure_validation_only",
       "spec": "research_context/staged_eligible_loader_smoke_v1.json",
       "compute_location": "OpenScienceLab",
       "depends_on": "materialized_eligible_prices_v1",
-      "objective": "Validate a bounded staged-price load with warm-up preservation, point-in-time eligibility, and sealed-holdout checks; no model training or scoring."
+      "objective": "Validate a bounded staged-price load with warm-up preservation, point-in-time eligibility, and sealed-holdout checks; no model training or scoring.",
+      "reviewed_result": {
+        "source_rows_loaded": 402535,
+        "source_dates_loaded": 155,
+        "source_tickers_loaded": 2597,
+        "panel_rows": 9000,
+        "panel_dates": 90,
+        "panel_tickers": 140,
+        "panel_min_decision_date": "2026-01-12",
+        "panel_max_decision_date": "2026-05-20",
+        "panel_max_evaluation_date": "2026-05-28",
+        "past_only_universe_membership_enforced": true,
+        "warmup_prices_retained": true,
+        "sealed_holdout_opened": false,
+        "model_training_or_scoring_performed": false
+      }
+    },
+    {
+      "experiment_id": "polygon_lineage_coverage_probe_v1",
+      "design_signature": "polygon-lineage-coverage-probe-v1:3dates:grouped-daily+dated-tickers:source-comparison:preholdout-only:no-model",
+      "status": "approved_next",
+      "stage": "external_lineage_coverage_validation",
+      "spec": "research_context/polygon_lineage_coverage_probe_v1.json",
+      "compute_location": "OpenScienceLab",
+      "depends_on": [
+        "point_in_time_universe_audit_v1",
+        "dated_security_master_v1"
+      ],
+      "objective": "Quantify missing historical symbols and validate Polygon entitlements before any five-year lineage backfill; no model training or scoring."
     }
   ],
   "known_biases_and_limits": [

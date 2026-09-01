@@ -1,0 +1,40 @@
+{
+  "experiment_id": "polygon_lineage_coverage_probe_v1",
+  "design_signature": "polygon-lineage-coverage-probe-v1:3dates:grouped-daily+dated-tickers:source-comparison:preholdout-only:no-model",
+  "stage": "external_lineage_coverage_validation",
+  "objective": "Measure how much full-market point-in-time Polygon coverage is absent from the current survivor-selected source before approving a five-year backfill.",
+  "provider": "Polygon/Massive",
+  "inputs": {
+    "source_database": "research_history.db on OpenScienceLab",
+    "source_table": "ResearchPrices",
+    "api_key_environment_variable": "POLYGON_API_KEY"
+  },
+  "probe": {
+    "dates": 3,
+    "date_selection": "deterministic first-middle-last across the pre-holdout source calendar",
+    "grouped_daily_adjusted": false,
+    "include_otc": false,
+    "historical_ticker_snapshot": true
+  },
+  "cutoff_policy": {
+    "cutoff_exclusive": "2026-05-29",
+    "sealed_holdout_read": false
+  },
+  "guardrails": {
+    "api_key_must_not_be_logged_or_committed": true,
+    "source_database_read_only": true,
+    "model_training_or_scoring_allowed": false,
+    "promotion_allowed": false,
+    "full_backfill_requires_probe_review": true
+  },
+  "success_criteria": {
+    "all_probe_dates_completed": true,
+    "daily_bars_returned": true,
+    "dated_ticker_snapshots_returned": true,
+    "source_coverage_deltas_quantified": true,
+    "sealed_holdout_opened": false
+  },
+  "compute_location": "OpenScienceLab",
+  "bulk_artifact_policy": "Keep provider responses and SQLite artifacts on OpenScienceLab; commit only compact specifications and reviewed summaries.",
+  "status": "approved_next"
+}
