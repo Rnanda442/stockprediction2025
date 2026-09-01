@@ -265,6 +265,7 @@ def main() -> int:
         state["requests"].append(grouped_verification)
 
     verified = grouped_verification is None or grouped_verification["classification"] == "available"
+    state.pop("blocking_result", None)
     state.update(
         {
             "updated_at_utc": utc_now(),
