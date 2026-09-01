@@ -1,0 +1,89 @@
+{
+  "artifact_id": "massive_eligible_missing_candidates_v1",
+  "review_status": "completed_reviewed_source_audit",
+  "objective": "Measure and bound stale-universe bias with the free Massive history window before purchasing deeper history or changing any model.",
+  "source_policy": {
+    "robinhood_source_db": "warehouse/model_runs/runs/32915939359/artifact/research_history.db",
+    "massive_overlap_audit": "warehouse/lineage/massive_recent_universe_overlap_audit_v1_20260901",
+    "massive_candidate_artifact": "warehouse/lineage/massive_eligible_missing_candidates_v1_20260901",
+    "api_key_stored": false,
+    "sealed_holdout_read": false,
+    "model_or_target_used": false
+  },
+  "method": {
+    "anchors": [
+      "2025-09-02",
+      "2026-05-28"
+    ],
+    "trailing_trading_dates": 20,
+    "liquidity_measure": "mean(close * max(volume, 0)) over 20 complete past-and-current trading dates",
+    "selection": "stable descending daily top-1000 rank",
+    "conservative_candidate_definition": "Massive active common stock, absent from the stored Robinhood source on the anchor date, inside the all-security top-1000 liquidity rank",
+    "sensitivity_definition": "Massive active common stock, absent from the stored Robinhood source, inside the common-stock-only top-1000 liquidity rank",
+    "identity_precedence": [
+      "share_class_figi",
+      "composite_figi",
+      "cik",
+      "ticker_fallback"
+    ]
+  },
+  "confirmed_findings": {
+    "2025-09-02": {
+      "complete_history_symbols": 10668,
+      "source_overlap_in_all_market_top_1000": 667,
+      "conservative_missing_common_stocks": 94,
+      "common_stock_sensitivity_candidates": 142,
+      "duplicate_grouped_rows_removed": 40
+    },
+    "2026-05-28": {
+      "complete_history_symbols": 11297,
+      "source_overlap_in_all_market_top_1000": 653,
+      "conservative_missing_common_stocks": 90,
+      "common_stock_sensitivity_candidates": 133,
+      "duplicate_grouped_rows_removed": 40
+    },
+    "persistent_conservative_entities": 59,
+    "total_candidate_rows_including_sensitivity": 275,
+    "persistent_examples": [
+      "SNDK",
+      "LITE",
+      "BMNR",
+      "CRWV",
+      "NBIS",
+      "RKLB",
+      "IREN",
+      "BE",
+      "CRCL",
+      "SMCI",
+      "ASTS",
+      "AAOI",
+      "HIMS",
+      "IONQ",
+      "OPEN"
+    ]
+  },
+  "interpretation": {
+    "confirmed": "The stored Robinhood symbol population is stale in both directions: it can omit historical exits and also liquid entrants, spin-offs, renamed securities, and newer listings.",
+    "materiality": "After reproducing the model's exact point-in-time liquidity rule, 90 to 94 missing common stocks remain per anchor and 59 stable entities persist across both anchors.",
+    "not_yet_confirmed": "Candidate membership alone does not establish corrected delisting returns, corporate-action continuity, or improvement in out-of-sample model metrics."
+  },
+  "data_quality_findings": [
+    "Massive grouped responses contained two duplicate ticker rows per sampled trading date; deterministic ticker-date deduplication is required before feature construction.",
+    "Massive reference snapshots contained two duplicate ticker keys at each final anchor; stable identifiers and explicit collision reporting are required.",
+    "Ticker strings are insufficient join keys for entrants, spin-offs, mergers, and symbol changes."
+  ],
+  "decision": {
+    "status": "accept_for_repair_staging_only",
+    "website_or_live_probability_use": false,
+    "model_training_use": false,
+    "brokerage_order_use": false,
+    "next_gate": "Backfill candidate prices and listing/corporate-action lineage, build daily point-in-time membership, then run a leakage-safe source-ablation comparison before model adoption."
+  },
+  "remaining_limitations": [
+    "The free Massive plan covers only the recent two-year window and cannot repair the full five-year history.",
+    "Only two anchors have exact 20-date liquidity rankings; daily membership is not yet materialized.",
+    "Historical exits and delisting returns are not yet included.",
+    "Provider-only candidates must pass identifier continuity and corporate-action review before price joins.",
+    "No evidence yet shows that the repaired universe improves calibrated out-of-sample predictions or net returns."
+  ]
+}
