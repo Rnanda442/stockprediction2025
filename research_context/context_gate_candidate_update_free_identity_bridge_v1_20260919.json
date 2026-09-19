@@ -1,0 +1,14 @@
+{
+  "action": "append_next_experiment",
+  "entry": {
+    "experiment_id": "architecture_v3_free_stable_identity_bridge_qualification_v1",
+    "design_signature": "architecture-v3-free-stable-identity-bridge-qualification-v1:fixed-12-cases:sec-cik+openfigi+finra+nasdaq:effective-alias+event-reason+terminal-value:no-model:no-holdout:no-bulk-before-pass",
+    "specification": "research_context/architecture_v3_free_stable_identity_bridge_qualification_v1_20260919.json",
+    "status": "approved_after_dependency",
+    "model_fitting_allowed": false,
+    "bulk_reconstruction_allowed": false,
+    "promotion_allowed": false,
+    "trading_allowed": false,
+    "consumed_holdout_reuse_allowed": false
+  }
+}

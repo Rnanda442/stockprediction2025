@@ -121,7 +121,7 @@
   },
   "schema_version": 1,
   "context_id": "stockprediction2025-research-gate",
-  "updated_at": "2026-09-19T20:17:27.339248+00:00",
+  "updated_at": "2026-09-19T21:31:07.811889+00:00",
   "purpose": "Accumulate reviewed research evidence, prevent duplicate experiments, and provide canonical context for future analysis.",
   "project": {
     "repository": "https://github.com/Rnanda442/stockprediction2025",
@@ -445,6 +445,23 @@
       "completed_on": "2026-09-07",
       "result_path": "research_context/one_time_sealed_holdout_evaluation_result_v1.json",
       "conclusion": "The mature-candidate sleeve improved AUC and relative after-cost performance, but neither frozen policy demonstrated usable economic or residual-ranking performance on the one-time blind holdout. No model is promoted."
+    },
+    {
+      "experiment_id": "architecture_v3_free_stable_identity_bridge_qualification_v1",
+      "design_signature": "architecture-v3-free-stable-identity-bridge-qualification-v1:fixed-12-cases:sec-cik+openfigi+finra+nasdaq:effective-alias+event-reason+terminal-value:no-model:no-holdout:no-bulk-before-pass",
+      "specification": "research_context/architecture_v3_free_stable_identity_bridge_qualification_v1_20260919.json",
+      "status": "completed_source_qualification_failed_do_not_repeat",
+      "model_fitting_allowed": false,
+      "bulk_reconstruction_allowed": false,
+      "promotion_allowed": false,
+      "trading_allowed": false,
+      "consumed_holdout_reuse_allowed": false,
+      "completed_on": "2026-09-19",
+      "result_path": "research_context/architecture_v3_free_stable_identity_bridge_qualification_result_v1_20260919.json",
+      "decision": "fail_stop_before_full_reconstruction",
+      "full_reconstruction_authorized": false,
+      "consumed_holdout_rows_read": 0,
+      "conclusion": "Free SEC/OpenFIGI/FINRA/Nasdaq sources cannot supply effective-dated security identity, full historical membership, and terminal values; stop before bulk reconstruction."
     }
   ],
   "promising_hypotheses": [
@@ -992,7 +1009,7 @@
       "implication": "Use the policies as future-test hypotheses only; do not tune or trade them from these results."
     }
   ],
-  "updated_at_utc": "2026-09-19T20:17:27.339248+00:00",
+  "updated_at_utc": "2026-09-19T21:31:07.811889+00:00",
   "one_time_sealed_holdout_evaluation": {
     "schema_version": "1.0",
     "experiment_id": "one_time_sealed_holdout_evaluation_v1",

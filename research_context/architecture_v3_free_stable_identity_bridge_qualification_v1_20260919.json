@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "experiment_id": "architecture_v3_free_stable_identity_bridge_qualification_v1",
+  "design_signature": "architecture-v3-free-stable-identity-bridge-qualification-v1:fixed-12-cases:sec-cik+openfigi+finra+nasdaq:effective-alias+event-reason+terminal-value:no-model:no-holdout:no-bulk-before-pass",
+  "status": "preregistered_approved_after_dependency",
+  "objective": "Determine whether free SEC, OpenFIGI, FINRA and Nasdaq evidence can create stable security identities, dated ticker mappings, classified exits and defensible terminal values for a fixed edge-case panel.",
+  "qualification_dates": [
+    "2021-08-23",
+    "2024-01-02",
+    "2026-05-28"
+  ],
+  "fixed_cases": [
+    {
+      "case": "continuous",
+      "symbols": [
+        "AAPL"
+      ],
+      "cik": "0000320193"
+    },
+    {
+      "case": "continuous",
+      "symbols": [
+        "MSFT"
+      ],
+      "cik": "0000789019"
+    },
+    {
+      "case": "new_listing",
+      "symbols": [
+        "ABNB"
+      ],
+      "cik": "0001559720"
+    },
+    {
+      "case": "new_listing",
+      "symbols": [
+        "ARM"
+      ],
+      "cik": "0001973239"
+    },
+    {
+      "case": "new_listing",
+      "symbols": [
+        "CAVA"
+      ],
+      "cik": "0001639438"
+    },
+    {
+      "case": "ticker_change_reuse",
+      "symbols": [
+        "FB",
+        "META"
+      ],
+      "cik": "0001326801"
+    },
+    {
+      "case": "ticker_change",
+      "symbols": [
+        "SNE",
+        "SONY"
+      ],
+      "cik": "0000313838"
+    },
+    {
+      "case": "merger_exit",
+      "symbols": [
+        "ATVI"
+      ],
+      "cik": "0000718877"
+    },
+    {
+      "case": "acquisition_exit",
+      "symbols": [
+        "TWTR"
+      ],
+      "cik": "0001418091"
+    },
+    {
+      "case": "bankruptcy_exit",
+      "symbols": [
+        "BBBY",
+        "BBBYQ"
+      ],
+      "cik": "0000886158"
+    },
+    {
+      "case": "bankruptcy_exit",
+      "symbols": [
+        "WE",
+        "WEWKQ"
+      ],
+      "cik": "0001813756"
+    },
+    {
+      "case": "bankruptcy_exit",
+      "symbols": [
+        "REV",
+        "REVRQ"
+      ],
+      "cik": "0000887921"
+    }
+  ],
+  "sources": {
+    "sec": "submissions JSON and current ticker/exchange file; no authentication",
+    "openfigi": "unauthenticated mapping API at public rate limits",
+    "finra": "public OTC Daily List API, bounded symbol queries",
+    "nasdaq": "current nasdaqlisted and otherlisted symbol directories",
+    "alpha_vantage": "no new requests; prior snapshots are discovery evidence only"
+  },
+  "request_budget": {
+    "sec_max": 13,
+    "openfigi_max": 5,
+    "finra_max": 12,
+    "nasdaq_max": 2
+  },
+  "mandatory_gates": [
+    "unique stable security-class identity",
+    "historical ticker aliases with effective dates",
+    "listing and exit dates with event classification",
+    "documented terminal value or preregistered conservative treatment",
+    "no unresolved ticker reuse or exact-symbol collision",
+    "source evidence sufficient for independent rerun"
+  ],
+  "terminal_value_policy": {
+    "documented_cash_or_stock_merger": "use filed consideration terms only",
+    "documented_cancelled_bankruptcy_equity": "zero recovery from the last eligible close",
+    "unresolved_exit": "exclude from reconstruction and report; never silently drop or assume survival"
+  },
+  "stop_rule": "Stop before any bulk or 756-date reconstruction if any mandatory gate fails.",
+  "governance": {
+    "paper_only": true,
+    "model_fitting_allowed": false,
+    "price_rows_allowed": false,
+    "trading_allowed": false,
+    "bulk_reconstruction_allowed": false,
+    "consumed_holdout_reuse_allowed": false,
+    "consumed_holdout_dates_prohibited": [
+      "2026-05-29",
+      "2026-08-24"
+    ],
+    "credentials_required": false
+  }
+}

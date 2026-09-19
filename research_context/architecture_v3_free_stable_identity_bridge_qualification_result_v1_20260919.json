@@ -1,0 +1,171 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "architecture_v3_free_stable_identity_bridge_qualification_v1",
+  "design_signature": "architecture-v3-free-stable-identity-bridge-qualification-v1:fixed-12-cases:sec-cik+openfigi+finra+nasdaq:effective-alias+event-reason+terminal-value:no-model:no-holdout:no-bulk-before-pass",
+  "design_fingerprint": "e220bdc1c27004dbce422e26e1bea4543c066f15d754f7e70361f89195a1d218",
+  "completed_at_utc": "2026-09-19T21:31:07.811889+00:00",
+  "decision": "fail_stop_before_full_reconstruction",
+  "status": "completed_source_qualification_failed_do_not_repeat",
+  "full_reconstruction_authorized": false,
+  "architecture_v3_data_port_authorized": false,
+  "qualification_dates": [
+    "2021-08-23",
+    "2024-01-02",
+    "2026-05-28"
+  ],
+  "consumed_holdout": {
+    "start": "2026-05-29",
+    "end": "2026-08-24",
+    "rows_read": 0,
+    "reuse_allowed": false
+  },
+  "safety": {
+    "models_fit": 0,
+    "price_rows_read": 0,
+    "trades_or_orders": 0,
+    "purchases_or_subscriptions": 0,
+    "credentials_persisted": false
+  },
+  "source_coverage": {
+    "SEC": {
+      "requests": 13,
+      "http_200": 13,
+      "coverage": "12 CIK submissions plus current ticker file; stable issuer CIK and filings, but current ticker fields only."
+    },
+    "OpenFIGI": {
+      "requests": 4,
+      "http_200": 4,
+      "coverage": "17 symbol jobs; 8 current matches and 9 zero matches; no effective dates."
+    },
+    "FINRA": {
+      "requests": 10,
+      "http_200": 3,
+      "http_204": 7,
+      "coverage": "Two rows each for BBBYQ, WEWKQ, REVRQ; exchange-listed legacy symbols absent."
+    },
+    "Nasdaq": {
+      "requests": 2,
+      "http_200": 2,
+      "coverage": "Current symbol directories only; not historical membership."
+    }
+  },
+  "gate_results": {
+    "stable_security_class_identity": {
+      "status": "fail",
+      "evidence": "SEC CIK is issuer-level; OpenFIGI returned current identifiers only and zero matches for delisted/legacy symbols."
+    },
+    "historical_ticker_aliases_with_effective_dates": {
+      "status": "fail",
+      "evidence": "SEC and OpenFIGI supplied no effective-dated ticker history; FB currently maps to a different fund."
+    },
+    "listing_and_delisting_events": {
+      "status": "partial",
+      "evidence": "SEC Form 25/15 and FINRA provide some exits, but new-listing dates and exchange-to-OTC continuity are incomplete."
+    },
+    "adjusted_and_unadjusted_prices": {
+      "status": "fail",
+      "evidence": "This bridge supplies metadata, not trustworthy adjusted and unadjusted histories."
+    },
+    "split_and_dividend_handling": {
+      "status": "fail",
+      "evidence": "No endpoint supplied a complete point-in-time corporate-action adjustment chain."
+    },
+    "terminal_or_delisting_values": {
+      "status": "fail",
+      "evidence": "FINRA cancellation rows have blank cash amounts; ATVI and TWTR consideration was not returned."
+    },
+    "ticker_reuse_and_case_collision_resolution": {
+      "status": "fail",
+      "evidence": "Current FB resolves to a ProShares fund while historical FB was Meta; case-normalization history is absent."
+    },
+    "three_anchor_date_point_in_time_membership": {
+      "status": "fail",
+      "evidence": "Nasdaq files are current and the stack cannot reconstruct membership on the three dates."
+    },
+    "deterministic_auditability": {
+      "status": "pass",
+      "evidence": "All 29 responses were hashed and saved with a manifest; no credentials were persisted."
+    }
+  },
+  "case_results": [
+    {
+      "case": "AAPL continuous",
+      "status": "partial",
+      "finding": "SEC CIK and OpenFIGI identify the current security, but do not prove point-in-time membership on all qualification dates."
+    },
+    {
+      "case": "MSFT continuous",
+      "status": "partial",
+      "finding": "SEC CIK and OpenFIGI identify the current security, but do not prove point-in-time membership on all qualification dates."
+    },
+    {
+      "case": "ABNB new listing",
+      "status": "fail",
+      "finding": "Current identifiers found; no authoritative listing-effective date returned."
+    },
+    {
+      "case": "ARM new listing",
+      "status": "fail",
+      "finding": "Current identifiers found; no authoritative listing-effective date returned."
+    },
+    {
+      "case": "CAVA new listing",
+      "status": "fail",
+      "finding": "Current identifiers found; no authoritative listing-effective date returned."
+    },
+    {
+      "case": "FB to META / ticker reuse",
+      "status": "fail",
+      "finding": "SEC shows only current META. Current OpenFIGI maps FB to ProShares S&P Dynamic Buffer (BBG01VRMNFB1), not Meta (BBG000MM2P62); no effective-dated alias bridge exists."
+    },
+    {
+      "case": "SNE to SONY",
+      "status": "fail",
+      "finding": "SEC shows current SONY/SNEJF and OpenFIGI resolves SONY, but SNE is absent and no effective-dated alias bridge exists."
+    },
+    {
+      "case": "ATVI merger exit",
+      "status": "fail",
+      "finding": "SEC current tickers are empty and Form 25/15 evidence exists, but bounded metadata supplies no merger consideration or terminal return."
+    },
+    {
+      "case": "TWTR acquisition exit",
+      "status": "fail",
+      "finding": "SEC current tickers are empty and Form 25/15 evidence exists, but bounded metadata supplies no acquisition consideration or terminal return."
+    },
+    {
+      "case": "BBBY/BBBYQ bankruptcy",
+      "status": "partial",
+      "finding": "FINRA records OTC entry and 2023-10-02 shares-cancelled deletion, but cash is blank and the original-to-Q bridge is not stable/effective-dated."
+    },
+    {
+      "case": "WE/WEWKQ bankruptcy",
+      "status": "partial",
+      "finding": "FINRA records OTC entry and 2024-06-11 shares-cancelled deletion, but cash is blank and the original-to-Q bridge is not stable/effective-dated."
+    },
+    {
+      "case": "REV/REVRQ bankruptcy",
+      "status": "partial",
+      "finding": "FINRA records OTC entry and 2023-05-02 shares-cancelled deletion, but cash is blank and the original-to-Q bridge is not stable/effective-dated."
+    }
+  ],
+  "critical_findings": [
+    "The free stack does not yield one effective-dated security master joining issuer, security class, ticker aliases, membership, and exits.",
+    "FB demonstrates live ticker reuse: current OpenFIGI identifies an unrelated ProShares fund, so symbol-only joins would corrupt Meta history.",
+    "FINRA supplies valuable OTC bankruptcy cancellation events, but not a complete exchange-listed event chain or cash terminal values.",
+    "Current Nasdaq directories cannot establish membership on the three historical qualification dates."
+  ],
+  "allowed_reuse": [
+    "Use SEC CIK as an issuer anchor, not as a security-class identifier.",
+    "Use OpenFIGI only after an effective-dated issuer/security mapping is independently established.",
+    "Use FINRA OTC cancellation rows as event evidence under a prespecified conservative zero-recovery rule when security continuity is independently verified."
+  ],
+  "next_safe_route": "Wait for WRDS/CRSP or another licensed point-in-time security master; meanwhile run only prospective shadow collection from 2026-09-19 onward. Do not backfill 756 dates from these free sources.",
+  "manifest": "warehouse/lineage/architecture_v3_free_stable_identity_bridge_qualification_v1_20260919/collection_manifest.json",
+  "official_source_urls": [
+    "https://www.sec.gov/search-filings/edgar-application-programming-interfaces",
+    "https://www.openfigi.com/api/documentation",
+    "https://developer.finra.org/docs",
+    "https://www.nasdaqtrader.com/Trader.aspx?id=SymbolDirDefs"
+  ]
+}
