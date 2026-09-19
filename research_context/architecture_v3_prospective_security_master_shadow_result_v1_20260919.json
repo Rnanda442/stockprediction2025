@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "architecture_v3_prospective_security_master_shadow_v1",
+  "design_signature": "architecture-v3-prospective-security-master-shadow-v1:sec-current-cik+nasdaq-current-symbols:daily-append-only:sqlite+raw-hashes:event-diff:20260919-forward:no-prices:no-model:no-consumed-holdout",
+  "design_fingerprint": "04bc2c82ae48b5eff7d923ed7f718822a56ea9534852886026feea5d174f6b04",
+  "status": "implementation_complete_active_prospective_collection",
+  "completed_at_utc": "2026-09-19T21:49:55.526187+00:00",
+  "decision": "retain_as_forward_only_data_infrastructure_not_historical_reconstruction",
+  "initial_snapshot": {
+    "date": "2026-09-19",
+    "sec_rows": 10438,
+    "listed_rows": 13258,
+    "source_artifacts": 3,
+    "event_candidates": 0,
+    "database_integrity": "ok",
+    "foreign_key_violations": 0
+  },
+  "storage": {
+    "sqlite": "warehouse/prospective_security_master/prospective_security_master_shadow_v1.sqlite",
+    "raw": "warehouse/prospective_security_master/raw/2026-09-19",
+    "manifest": "warehouse/prospective_security_master/manifests/2026-09-19.json",
+    "location": "OpenScienceLab"
+  },
+  "implementation": {
+    "script": "scripts/collect_prospective_security_master_shadow.py",
+    "script_sha256": "842afa238bb41cc499c3f70b7a36baff70923e15fb40226c26160e68deebedcf",
+    "same_day_rerun_status": "no_op_already_complete",
+    "same_day_rerun_network_requests": 0
+  },
+  "limitations": [
+    "Forward observations begin on 2026-09-19 and cannot repair the missing five-year historical lineage.",
+    "SEC CIK is retained only as a provisional issuer-level anchor, not a security-class identifier.",
+    "Removal and ticker-change rows from later diffs are review candidates, not certified lifecycle events.",
+    "OpenScienceLab may stop when idle, so unattended daily execution is not guaranteed without an external scheduler and securely supplied SEC user-agent."
+  ],
+  "safety": {
+    "holdout_rows_read": 0,
+    "price_rows_read": 0,
+    "models_fit": 0,
+    "predictions_generated": 0,
+    "trades_or_orders": 0,
+    "purchases_or_subscriptions": 0,
+    "credentials_persisted": false,
+    "architecture_v3_unblocked": false
+  }
+}

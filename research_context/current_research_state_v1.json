@@ -265,7 +265,7 @@
     "unblock_condition": "Qualify a historical source and complete a reviewed point-in-time reconstruction with at least 756 trustworthy dates, stable identifiers, dated aliases, entries, exits, and terminal returns."
   },
   "resume_instruction": "Load this file first, then open only the evidence checkpoint needed for the requested decision. Do not repeat completed stages or access the sealed holdout.",
-  "updated_at_utc": "2026-09-19T21:31:07.811889+00:00",
+  "updated_at_utc": "2026-09-19T21:49:55.526187+00:00",
   "design_status": "one_time_holdout_consumed_no_promotion",
   "one_time_sealed_holdout_evaluation": {
     "schema_version": "1.0",
@@ -454,6 +454,15 @@
       "Current Nasdaq directories cannot establish membership on the three historical qualification dates."
     ],
     "full_reconstruction_authorized": false,
+    "consumed_holdout_rows_read": 0
+  },
+  "architecture_v3_prospective_security_master_shadow": {
+    "status": "implementation_complete_active_prospective_collection",
+    "start_date": "2026-09-19",
+    "database": "warehouse/prospective_security_master/prospective_security_master_shadow_v1.sqlite",
+    "result_artifact": "research_context/architecture_v3_prospective_security_master_shadow_result_v1_20260919.json",
+    "daily_runner": "scripts/collect_prospective_security_master_shadow.py",
+    "architecture_v3_unblocked": false,
     "consumed_holdout_rows_read": 0
   }
 }

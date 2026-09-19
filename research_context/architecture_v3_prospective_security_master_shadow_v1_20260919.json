@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "architecture_v3_prospective_security_master_shadow_v1",
+  "design_signature": "architecture-v3-prospective-security-master-shadow-v1:sec-current-cik+nasdaq-current-symbols:daily-append-only:sqlite+raw-hashes:event-diff:20260919-forward:no-prices:no-model:no-consumed-holdout",
+  "created_on": "2026-09-19",
+  "status": "preregistered_approved",
+  "objective": "Append current public security-master observations prospectively so future ticker, listing, removal, exchange, and issuer-mapping changes are captured without projecting today's universe backward.",
+  "sources": [
+    {
+      "name": "SEC company_tickers_exchange",
+      "role": "provisional issuer-level CIK anchor; current snapshot only"
+    },
+    {
+      "name": "Nasdaq Trader nasdaqlisted and otherlisted",
+      "role": "current listed-symbol snapshots and descriptive flags"
+    }
+  ],
+  "storage": {
+    "sqlite": "warehouse/prospective_security_master/prospective_security_master_shadow_v1.sqlite",
+    "raw_root": "warehouse/prospective_security_master/raw",
+    "rule": "Bulk snapshots remain on OpenScienceLab; scripts, schemas, manifests, and compact summaries may be version controlled."
+  },
+  "collection_policy": {
+    "start_date": "2026-09-19",
+    "one_completed_snapshot_per_utc_date": true,
+    "append_only": true,
+    "raw_payload_sha256_required": true,
+    "first_run_has_no_inferred_events": true,
+    "later_runs_diff_only_against_the_previous_completed_snapshot": true,
+    "CIK_is_issuer_level_not_security_class": true,
+    "historical_backfill_claim_allowed": false,
+    "architecture_v3_unblock_claim_allowed": false
+  },
+  "tables": [
+    "snapshot_runs",
+    "source_artifacts",
+    "sec_ticker_snapshot",
+    "listed_symbol_snapshot",
+    "event_candidates"
+  ],
+  "event_candidates": [
+    "listing_candidate",
+    "removal_candidate",
+    "ticker_added_to_cik",
+    "ticker_removed_from_cik",
+    "ticker_reuse_candidate",
+    "exchange_change_candidate"
+  ],
+  "governance": {
+    "paper_only": true,
+    "models_fit": 0,
+    "prices_read": 0,
+    "predictions_generated": 0,
+    "trades_allowed": false,
+    "purchases_allowed": false,
+    "consumed_holdout_reuse_allowed": false,
+    "consumed_holdout_dates_prohibited": [
+      "2026-05-29",
+      "2026-08-24"
+    ],
+    "credentials_may_be_printed_logged_or_committed": false
+  },
+  "success_criteria": [
+    "SQLite schema created",
+    "three raw source snapshots hashed",
+    "current SEC and Nasdaq rows inserted",
+    "first-run event count equals zero",
+    "rerun on the same UTC date is a no-op",
+    "no price or consumed-holdout data read"
+  ],
+  "scheduling_limit": "OpenScienceLab workspaces may stop when idle. The runner is safe for an external daily scheduler, but this preregistration does not claim continuous execution.",
+  "design_fingerprint": "04bc2c82ae48b5eff7d923ed7f718822a56ea9534852886026feea5d174f6b04"
+}

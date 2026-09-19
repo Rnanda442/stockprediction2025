@@ -1,0 +1,12 @@
+{
+  "experiment_id": "architecture_v3_prospective_security_master_shadow_v1",
+  "design_signature": "architecture-v3-prospective-security-master-shadow-v1:sec-current-cik+nasdaq-current-symbols:daily-append-only:sqlite+raw-hashes:event-diff:20260919-forward:no-prices:no-model:no-consumed-holdout",
+  "design_fingerprint": "04bc2c82ae48b5eff7d923ed7f718822a56ea9534852886026feea5d174f6b04",
+  "status": "approved_data_infrastructure_only",
+  "specification": "research_context/architecture_v3_prospective_security_master_shadow_v1_20260919.json",
+  "model_fitting_allowed": false,
+  "price_reads_allowed": false,
+  "historical_backfill_allowed": false,
+  "trading_allowed": false,
+  "consumed_holdout_reuse_allowed": false
+}
