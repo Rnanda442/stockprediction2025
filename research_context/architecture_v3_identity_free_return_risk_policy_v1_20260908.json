@@ -1,0 +1,276 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "architecture_v3_identity_free_return_risk_policy_v1",
+  "design_signature": "architecture-v3-identity-free-return-risk-policy-v1:h5:pit-history-min756:residual-return+downside:ridge-logit+relu48x24:state-policy:trainfit-thresholds:regime-block-mc1000:max5:security20:candidate10:t1:cost10-25-50:nested-walk-forward+future-lock:no-consumed-holdout",
+  "created_on": "2026-09-08",
+  "status": "preregistered_registered_but_blocked_by_lineage",
+  "purpose": "Test whether an identity-free return forecast and a separate downside forecast can be translated by a deterministic state policy and a training-only scenario risk constraint into coherent after-cost paper decisions.",
+  "decision_question": "Do general market-relative patterns improve after-cost return and drawdown when prediction, downside estimation, state transitions, and portfolio constraints are evaluated as separate components?",
+  "governance": {
+    "paper_only": true,
+    "trading_allowed": false,
+    "promotion_allowed": false,
+    "consumed_holdout_reuse_allowed": false,
+    "consumed_holdout": [
+      "2026-05-29",
+      "2026-08-24"
+    ],
+    "historical_evidence_class": "development_and_stress_testing_only",
+    "blind_evidence_source": "Predictions locked prospectively after the complete v3 implementation and readiness audit",
+    "interim_prospective_outcome_review_allowed": false,
+    "stock_identity_features_allowed": false,
+    "hindsight_teacher_labels_allowed": false
+  },
+  "entry_dependencies": {
+    "minimum_trustworthy_training_dates": 756,
+    "point_in_time_universe_required": true,
+    "historical_membership_required": true,
+    "symbol_change_and_ticker_reuse_resolution_required": true,
+    "entries_and_delisted_exits_required": true,
+    "adjustment_policy_consistent_across_securities": true,
+    "unresolved_selected_aliases_allowed": 0,
+    "retroactive_present_day_universe_extension_allowed": false,
+    "if_dependencies_fail": "Stop before model fitting and report a data-lineage failure."
+  },
+  "registry": {
+    "registered_on": "2026-09-09",
+    "approval_status": "blocked_pending_lineage_reconstruction",
+    "upstream_qualification": "architecture_v3_historical_lineage_source_qualification_v1",
+    "model_compute_authorized": false
+  },
+  "information_timing": {
+    "decision_time": "After the adjusted close of decision date t",
+    "execution_time": "Next-session adjusted open when trustworthy; otherwise an explicitly labeled next-session-close proxy",
+    "forecast_horizon_trading_dates": 5,
+    "label_maturity_required": true,
+    "chronological_purge_dates": 5,
+    "all_transforms_fit_on_training_rows_only": true,
+    "predictions_and_portfolios_locked_before_outcomes": true
+  },
+  "universe": {
+    "primary": "Point-in-time source liquidity top 1000",
+    "candidate_overlay": "Validated point-in-time candidates only",
+    "candidate_minimum_observed_panel_tenure_days": 180,
+    "liquidity_selection_scope": 200,
+    "feature_calculation_before_membership_filtering": true
+  },
+  "features": {
+    "control": [
+      "ret_5d",
+      "ret_20d",
+      "ret_60d",
+      "vol_20d",
+      "vol_60d",
+      "drawdown_60d",
+      "dollar_vol_20d_log"
+    ],
+    "derived_identity_free": [
+      "relative_volume_vs_trailing",
+      "dollar_volume_acceleration",
+      "price_volume_confirmation_or_divergence",
+      "volatility_expansion_or_compression",
+      "drawdown_recovery_pressure",
+      "momentum_alignment",
+      "momentum_deterioration",
+      "liquidity_deterioration",
+      "panel_tenure"
+    ],
+    "conditioning_only": [
+      "market_regime",
+      "candidate_membership",
+      "liquidity_rank",
+      "point_in_time_safe_industry_group"
+    ],
+    "excluded": [
+      "ticker_or_security_identity",
+      "present_day_membership",
+      "unrestricted_knn_similarity_adjustment",
+      "unrestricted_latent_motion_block",
+      "cluster_diversification_overlay",
+      "future_or_hindsight_teacher_outputs"
+    ]
+  },
+  "targets": {
+    "return_head": {
+      "name": "future_residual_return_5d",
+      "definition": "Security five-trading-day return minus the same-date eligible-universe equal-weight five-trading-day return",
+      "model_objective": "Predict continuous residual return and preserve cross-sectional ranking",
+      "outlier_policy": "Winsorization bounds, if used, are learned from training rows only"
+    },
+    "downside_head": {
+      "name": "future_residual_bottom_quintile_5d",
+      "definition": "One when the security is in the same-date bottom 20 percent of eligible-universe residual returns",
+      "model_objective": "Calibrated probability of material market-relative downside",
+      "threshold_timing": "The bottom-quintile boundary is calculated within each outcome date and never from future dates"
+    }
+  },
+  "fixed_model_arms": {
+    "linear_control": {
+      "return_model": "Ridge regression",
+      "downside_model": "Class-weighted logistic regression",
+      "role": "Required interpretable benchmark"
+    },
+    "ann_challenger": {
+      "shared_hidden_layers": [
+        48,
+        24
+      ],
+      "activation": "relu",
+      "heads": [
+        "linear residual-return head",
+        "sigmoid downside-probability head"
+      ],
+      "loss": "Training-fold-scaled Huber return loss plus binary cross-entropy downside loss with equal initial head weights",
+      "early_stopping": true,
+      "random_seeds": [
+        20260908,
+        20260909,
+        20260910
+      ],
+      "role": "Nonlinear challenger; it must beat the linear control without worse risk"
+    }
+  },
+  "state_policy": {
+    "principle": "Models estimate return and downside; deterministic rules translate estimates into actions.",
+    "enter": "Eligible non-held security may enter only when predicted residual return exceeds estimated round-trip cost plus the training-fitted entry margin, downside probability is below its training-fitted ceiling, and the scenario gate passes.",
+    "hold": "Existing position remains held when predicted net residual return stays positive, downside probability remains below the exit ceiling, and no confirmed deterioration exit fires.",
+    "exit": "Exit when predicted net residual return is nonpositive, downside probability breaches its training-fitted exit ceiling, eligibility is lost, or confirmed deterioration fires.",
+    "avoid": "Remain in cash for otherwise eligible securities that fail an entry condition.",
+    "confirmed_deterioration": "Observed drawdown pressure must coincide with momentum deterioration or volatility expansion. A price decline alone never forces a sale.",
+    "threshold_policy": "All numeric score, downside, and deterioration thresholds are estimated inside each training fold from prespecified training quantiles, then frozen for its validation period. No validation or prospective outcome may choose a threshold.",
+    "hysteresis": "The training-fitted exit ceiling must be weaker than the entry ceiling so ordinary noise does not create immediate sell-and-rebuy churn."
+  },
+  "scenario_constraint": {
+    "draws": 1000,
+    "method": "Training-only date-block bootstrap preserving common-market shocks, with residuals conditioned on broad market regime and volatility state only when each cell has adequate training support",
+    "fallback": "Use the unconditional training residual distribution when a regime cell lacks support",
+    "uses": [
+      "Reject entries with nonpositive expected net residual return after costs",
+      "Reject entries whose downside tail exceeds the training-fitted risk budget",
+      "Reduce exposure or hold cash when portfolio tail risk exceeds the frozen budget"
+    ],
+    "prohibited_uses": [
+      "Generating the alpha prediction",
+      "Using security identity",
+      "Choosing thresholds from validation outcomes",
+      "Creating zero-trade behavior without reporting feasibility failure"
+    ],
+    "feasibility_gate": "On training-only simulation, the frozen constraint must admit at least 5 percent and no more than 40 percent of otherwise eligible entry dates; otherwise stop and label the scenario policy infeasible before validation."
+  },
+  "portfolio": {
+    "initial_cash": 1000.0,
+    "account_type": "long-only settled-cash paper account",
+    "maximum_positions": 5,
+    "maximum_security_weight": 0.2,
+    "maximum_candidate_weight": 0.1,
+    "minimum_order_dollars": 1.0,
+    "fractional_positions": true,
+    "sale_settlement": "T+1",
+    "leverage_allowed": false,
+    "shorting_allowed": false,
+    "options_allowed": false,
+    "transaction_cost_bps": [
+      10,
+      25,
+      50
+    ],
+    "primary_cost_bps": 25,
+    "position_priority": "Highest predicted net residual return among securities passing every entry constraint",
+    "cash_is_valid_position": true
+  },
+  "historical_validation": {
+    "status": "development_evidence_only_not_blind",
+    "method": "Nested expanding-window walk-forward",
+    "minimum_outer_folds": 6,
+    "minimum_test_dates_per_fold": 50,
+    "purge_dates": 5,
+    "inner_loop_scope": "Fit preprocessing, loss scaling, calibration, and prespecified quantile thresholds using training dates only",
+    "outer_loop_scope": "Evaluate the completely frozen fold policy",
+    "effective_sample_unit": "trading date",
+    "overlapping_label_control": "Primary economic inference uses non-overlapping five-day cohorts; daily overlapping results are descriptive",
+    "placebos": [
+      "within-date shuffled security labels",
+      "lag-destroyed feature timing control",
+      "random eligible portfolio with identical position and turnover constraints"
+    ],
+    "multiple_testing_policy": "Only the fixed linear control and fixed ANN challenger are compared; no replacement arm may be selected from outer-fold results."
+  },
+  "prospective_confirmation": {
+    "start": "First trading date after implementation, lineage audit, model freeze, and readiness hash",
+    "retroactive_locks_allowed": false,
+    "minimum_new_trading_dates": 60,
+    "minimum_nonoverlapping_five_day_cohorts": 11,
+    "interim_outcome_evaluation_allowed": false,
+    "model_refit_allowed": false,
+    "feature_change_allowed": false,
+    "threshold_change_allowed": false,
+    "portfolio_rule_change_allowed": false,
+    "required_benchmarks": [
+      "cash",
+      "same-date eligible-universe equal-weight return",
+      "linear-control policy"
+    ]
+  },
+  "required_metrics": {
+    "prediction": [
+      "residual-return rank IC",
+      "residual-return MAE",
+      "downside ROC AUC",
+      "downside Brier score and base-rate Brier",
+      "expected calibration error",
+      "calibration slope"
+    ],
+    "portfolio": [
+      "net total return at 10, 25, and 50 bps",
+      "net excess return",
+      "maximum drawdown",
+      "mean one-way turnover",
+      "trade count",
+      "mean cash weight",
+      "candidate exposure",
+      "worst temporal fold or cohort"
+    ],
+    "policy_diagnostics": [
+      "entry acceptance rate",
+      "exit reason counts",
+      "holding duration",
+      "sell-and-rebuy rate",
+      "scenario rejection rate",
+      "constraint violations"
+    ]
+  },
+  "pass_fail": {
+    "all_quality_gates_required": true,
+    "residual_rank_ic_strictly_greater_than": 0.0,
+    "downside_brier_skill_strictly_greater_than": 0.0,
+    "net_total_return_at_25bps_strictly_greater_than": 0.0,
+    "net_excess_return_at_25bps_strictly_greater_than": 0.0,
+    "maximum_drawdown_at_25bps_greater_than_or_equal_to": -0.15,
+    "mean_one_way_turnover_less_than_or_equal_to": 0.35,
+    "maximum_negative_temporal_folds": 1,
+    "ann_must_beat_linear_net_return_at_25bps": true,
+    "ann_maximum_drawdown_deterioration_vs_linear": 0.02,
+    "placebo_must_not_match_or_beat_candidate": true,
+    "failure_action": "Record the failure. Do not retune on outer folds or prospective outcomes and do not search for a replacement using the same confirmation data.",
+    "passing_action": "Record research evidence only. No trading or automatic promotion."
+  },
+  "implementation_sequence": [
+    "Complete and audit point-in-time historical-universe reconstruction.",
+    "Materialize feature and globally defined target panels before universe filtering.",
+    "Implement the linear control, fixed ANN challenger, state engine, T+1 ledger, and scenario constraint.",
+    "Run leakage, identity, duplicate, alias, stale-price, delisting, settlement, and cost unit tests.",
+    "Register the exact design in context_gate.json and pass the duplicate/design-signature gate.",
+    "Run nested historical walk-forward once and report all arms and failures.",
+    "Freeze one unchanged prospective policy only if historical quality gates pass.",
+    "Hash predictions and portfolios before attaching every prospective outcome.",
+    "Evaluate prospectively only after the minimum sample is complete."
+  ],
+  "explicit_non_goals": [
+    "Recovering losses by selling every falling security",
+    "Learning ticker-specific rules",
+    "Mining the consumed holdout",
+    "Selecting rules from explanatory 3D or 4D diagrams",
+    "Treating Monte Carlo paths as forecasts",
+    "Placing or recommending live trades"
+  ]
+}

@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "architecture_v3_public_evidence_reconstruction_v1",
+  "design_signature": "architecture-v3-public-evidence-reconstruction-v1:three-date-bounded:av-listing+sec-filings+finra-events+manual-terminal-review:no-model:no-holdout:no-bulk-before-pass",
+  "created_on": "2026-09-19",
+  "status": "preregistered_approved_after_dependency",
+  "objective": "Test whether filing-level public evidence can resolve security identity, lifecycle events, and terminal outcomes for the frozen bounded sample before any 756-date reconstruction.",
+  "governance": {
+    "paper_only": true,
+    "models_allowed": false,
+    "trades_or_orders_allowed": false,
+    "purchases_allowed": false,
+    "bulk_reconstruction_before_pass": false,
+    "consumed_holdout_reuse_allowed": false,
+    "credentials_logged_or_committed": false,
+    "consumed_holdout_dates_prohibited": [
+      "2026-05-29",
+      "2026-08-24"
+    ]
+  },
+  "qualification_dates": [
+    "2021-08-23",
+    "2024-01-02",
+    "2026-05-28"
+  ],
+  "prohibited_dates": [
+    "2026-05-29",
+    "2026-08-24"
+  ],
+  "sources": {
+    "alpha_vantage": "Dated LISTING_STATUS snapshots only",
+    "sec_edgar": "CIK, submissions, Form 25, 8-K, merger and bankruptcy evidence",
+    "finra_daily_list": "OTC additions, deletions, ticker changes, bankruptcy and corporate actions",
+    "nasdaq_symbol_directory": "Current exchange/security-type corroboration only",
+    "existing_prices": "Read-only, pre-2026-05-29 rows only"
+  },
+  "lifecycle_strata": [
+    "continuously listed controls",
+    "new listings",
+    "symbol changes",
+    "mergers or acquisitions",
+    "bankruptcies or exchange delistings",
+    "ticker reuse",
+    "case-normalization collisions"
+  ],
+  "minimum_entities_per_nonempty_stratum": 5,
+  "identity_policy": {
+    "entity_key": "internal immutable entity_id",
+    "issuer_identifier": "SEC CIK when uniquely corroborated",
+    "security_disambiguation": "exchange + share class + dated aliases + filings",
+    "unresolved_policy": "quarantine; never join by normalized ticker alone"
+  },
+  "terminal_policy": {
+    "authoritative_first": "Use documented cash/stock consideration or final distribution",
+    "missing_confirmed_terminal": "Assign -100% from last eligible close",
+    "otc_continuation": "Not terminal; follow only with verified identity and tradable prices",
+    "ticker_reuse": "Never infer continuation from a later user of the symbol"
+  },
+  "pass_fail": {
+    "stable_security_identity_coverage_minimum": 0.995,
+    "unresolved_ticker_reuse_allowed": 0,
+    "unresolved_selected_aliases_allowed": 0,
+    "event_date_agreement_minimum": 0.98,
+    "terminal_outcome_coverage_minimum": 0.95,
+    "adjustment_reconciliation_maximum_absolute_error": 1e-06,
+    "failure_action": "Stop before bulk reconstruction and Architecture v3 fitting"
+  }
+}

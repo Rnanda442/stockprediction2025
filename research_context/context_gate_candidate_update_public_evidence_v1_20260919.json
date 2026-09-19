@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "created_at_utc": "2026-09-19T20:16:47.855331+00:00",
+  "status": "reviewed_and_merged",
+  "proposed_next_experiment": {
+    "experiment_id": "architecture_v3_public_evidence_reconstruction_v1",
+    "design_signature": "architecture-v3-public-evidence-reconstruction-v1:three-date-bounded:av-listing+sec-filings+finra-events+manual-terminal-review:no-model:no-holdout:no-bulk-before-pass",
+    "specification": "research_context/architecture_v3_public_evidence_reconstruction_v1_20260919.json",
+    "dependency": "Private ALPHA_VANTAGE_API_KEY and SEC_USER_AGENT configured in OSL",
+    "compute_scope": "Three frozen dates and bounded lifecycle sample only",
+    "model_fitting_allowed": false
+  },
+  "holdout_policy": "Never read or use 2026-05-29 through 2026-08-24",
+  "merged_at_utc": "2026-09-19T20:17:27.339248+00:00"
+}

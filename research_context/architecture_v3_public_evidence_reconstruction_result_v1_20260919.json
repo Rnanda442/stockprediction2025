@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "experiment_id": "architecture_v3_public_evidence_reconstruction_v1",
+  "design_signature": "architecture-v3-public-evidence-reconstruction-v1:three-date-bounded:av-listing+sec-filings+finra-events+manual-terminal-review:no-model:no-holdout:no-bulk-before-pass",
+  "design_fingerprint": "a9dabb6558142e4b8a3c1e3b876f28e8e6492b64aaadcafa6d09ad7b632bae7e",
+  "completed_at_utc": "2026-09-19T20:47:31.229789+00:00",
+  "qualification_dates": [
+    "2021-08-23",
+    "2024-01-02",
+    "2026-05-28"
+  ],
+  "decision": "fail_stop_before_full_reconstruction",
+  "architecture_v3_status": "blocked_by_historical_lineage",
+  "consumed_holdout_rows_read": 0,
+  "models_fit": 0,
+  "trades_or_orders": 0,
+  "credentials_stored": false,
+  "evidence": {
+    "files_collected": 7,
+    "alpha_vantage_snapshot_rows": {
+      "2021-08-23_active": 10526,
+      "2021-08-23_delisted": 5130,
+      "2024-01-02_active": 10591,
+      "2024-01-02_delisted": 8091,
+      "2026-05-28_active": 13285,
+      "2026-05-28_delisted": 9746
+    },
+    "alpha_vantage_exact_symbol_duplicates": {
+      "2021-08-23_active": 85,
+      "2021-08-23_delisted": 23,
+      "2024-01-02_active": 58,
+      "2024-01-02_delisted": 148,
+      "2026-05-28_active": 64,
+      "2026-05-28_delisted": 239
+    },
+    "case_normalization_collisions": {
+      "2021-08-23_active": 0,
+      "2021-08-23_delisted": 0,
+      "2024-01-02_active": 0,
+      "2024-01-02_delisted": 0,
+      "2026-05-28_active": 0,
+      "2026-05-28_delisted": 0
+    },
+    "sec_current_rows": 10438,
+    "sec_fields": [
+      "cik",
+      "name",
+      "ticker",
+      "exchange"
+    ],
+    "continuous_listing_examples": [
+      "AAPL",
+      "MSFT"
+    ],
+    "new_listing_examples": {
+      "ABNB": "2020-12-10",
+      "ARM": "2023-09-14",
+      "CAVA": "2023-06-15"
+    },
+    "acquisition_delisting_examples": {
+      "ATVI": "2023-10-13",
+      "TWTR": "2022-10-28"
+    },
+    "historical_mapping_failure": "The 2021-08-23 active snapshot uses META for Meta Platforms even though the issuer traded as FB on that date; the file backfills a later ticker rather than preserving the historical ticker.",
+    "ticker_reuse_failure": "The 2026-05-28 active snapshot assigns FB to a ProShares ETF with IPO date 2025-06-26, while the 2021 Meta issuer is retroactively labeled META. Symbol alone cannot distinguish the two securities.",
+    "duplicate_identity_failure": "Within-date exact symbols map to different names/entities (for example ARIS, B, BEST, CADE and CNR), so symbol plus date is not a unique security key.",
+    "bankruptcy_event_limit": "Name searches found records such as WeWork-related instruments, but the files provide no bankruptcy/event reason or cash/terminal-value field; Bed Bath naming also reflects later issuer/name reuse and is not a trustworthy bankruptcy lineage."
+  },
+  "capability_gates": {
+    "historical_membership": "fail_not_point_in_time_trustworthy",
+    "stable_security_identity": "fail_no_identifier_in_alpha_vantage_and_current_only_sec_snapshot",
+    "historical_ticker_mappings": "fail_retroactive_symbol_backfill_observed",
+    "listing_dates": "partial_ipoDate_present_but_identity_ambiguous",
+    "delisting_events": "partial_date_and_status_present_but_no_event_reason",
+    "adjusted_and_unadjusted_prices": "not_qualified_by_these_sources",
+    "split_and_dividend_handling": "not_qualified_by_these_sources",
+    "terminal_or_delisting_values": "fail_absent",
+    "merger_acquisition_classification": "partial_delisting_date_only",
+    "bankruptcy_classification": "fail_absent",
+    "ticker_reuse": "fail_explicit_FB_reuse_observed_without_stable_identity",
+    "case_normalization_collisions": "pass_none_observed_but_does_not_resolve_exact_symbol_collisions"
+  },
+  "stop_reason": "At least one mandatory qualification gate failed; full 756-date reconstruction is prohibited.",
+  "permitted_future_use": "Discovery/candidate-event evidence only. Do not use these snapshots as the canonical point-in-time universe or identity map."
+}

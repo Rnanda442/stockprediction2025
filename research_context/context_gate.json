@@ -1,7 +1,127 @@
 {
+  "massive_persistent_candidate_backfill_v1_20260901": {
+    "review_status": "complete_with_quality_warnings",
+    "reviewed_at": "2026-09-06",
+    "implementation_commit": "0009fdb",
+    "artifact_path": "warehouse/lineage/massive_persistent_candidate_backfill_v1_20260901",
+    "run_log": "warehouse/lineage/massive_persistent_candidate_backfill_v1_20260901.run.log",
+    "run": {
+      "status": "complete",
+      "completed_entities": 59,
+      "requested_entities": 59,
+      "entities_with_adjusted_bars": 59,
+      "entities_without_bars": 0,
+      "api_requests_recorded": 127,
+      "ticker_event_request_errors": 1,
+      "completed_at_utc": "2026-09-01T20:54:11.484257+00:00",
+      "source_database_modified": false,
+      "sealed_holdout_read": false
+    },
+    "coverage": {
+      "price_rows": 25077,
+      "adjusted_price_rows": 25077,
+      "first_price_date": "2024-09-03",
+      "last_price_date": "2026-05-28",
+      "distinct_price_dates": 435,
+      "ticker_aliases": 68,
+      "alias_entities": 59,
+      "ticker_events": 67,
+      "ticker_event_entities": 58,
+      "membership_rows": 25077,
+      "eligible_membership_rows": 22334,
+      "eligible_entities": 59,
+      "eligible_combined_rank_min": 4,
+      "eligible_combined_rank_max": 1000,
+      "daily_eligible_candidate_min": 0,
+      "daily_eligible_candidate_max": 59,
+      "daily_eligible_candidate_mean": 51.34,
+      "outside_top_1000_rows": 1622,
+      "insufficient_20_date_history_rows": 1121,
+      "source_conflict_rows": 0,
+      "rows_on_or_after_sealed_cutoff": 0
+    },
+    "quality_warnings": [
+      {
+        "kind": "point_in_time_alias_validity",
+        "rows": 514,
+        "entities": 4,
+        "details": [
+          "BMNR: 130 rows from 2024-09-05 through 2025-05-15 precede the 2025-05-16 alias validity date",
+          "SMCI: 20 rows from 2024-09-03 through 2024-09-30 precede the 2024-10-01 alias validity date",
+          "FIG: 182 rows from 2024-09-03 through 2025-05-23 precede the 2025-07-30 alias validity date and are likely ticker-reuse contamination before Figma's listing",
+          "RKLB: 182 rows from 2024-09-03 through 2025-05-23 precede the 2025-05-27 alias validity date"
+        ],
+        "required_action": "Quarantine these rows by default; reconstruct only from independently validated entity-level history and effective dates."
+      },
+      {
+        "kind": "internal_entity_date_gaps",
+        "rows": 103,
+        "entities": 3,
+        "details": [
+          "CLSK: one internal calendar gap on 2024-11-08",
+          "BMNR: 57 scattered internal calendar gaps from 2024-09-09 through 2025-06-04",
+          "FIG: 45 consecutive candidate-calendar gaps from 2025-05-27 through 2025-07-30, consistent with a reused ticker discontinuity"
+        ]
+      },
+      {
+        "kind": "ticker_event_request_error",
+        "count": 1,
+        "entity_id": "BBG001S7J2H8",
+        "ticker": "AVB",
+        "note": "AvalonBay Communities has an alias record but no ticker-event row in this backfill."
+      }
+    ],
+    "interpretation": "This is completed staged evidence, not a certified historical security master. The candidate slice can enter model work only after the identifier and return-label gate excludes or repairs contaminated rows.",
+    "approved_next_experiment": {
+      "id": "historical_universe_three_arm_walk_forward_v1",
+      "design_signature": "historical-universe-three-arm-v1:h5:source-top1000+additive59+combined-top1000:common20240903:3x50d:purge5:ridge+relu+cluster-consensus:cost10:holdout60",
+      "specification": "research_context/historical_universe_three_arm_walk_forward_v1.json",
+      "status": "approved_after_dependency",
+      "common_window": [
+        "2024-09-03",
+        "2026-05-28"
+      ],
+      "arms": [
+        "existing_source_universe",
+        "source_plus_validated_persistent_candidates",
+        "observed_point_in_time_liquidity_ranked_universe"
+      ],
+      "required_models": [
+        "ANN",
+        "ridge",
+        "similarity_graph"
+      ],
+      "required_metrics": [
+        "discrimination",
+        "calibration",
+        "drawdown",
+        "turnover",
+        "coverage",
+        "realistic_blind_portfolio_after_costs"
+      ],
+      "fixed_across_arms": [
+        "walk_forward_folds",
+        "purge_and_embargo",
+        "feature_availability",
+        "label_maturity",
+        "training_only_transforms",
+        "model_hyperparameters",
+        "random_seeds",
+        "portfolio_rules",
+        "transaction_costs"
+      ],
+      "entry_gates": [
+        "Quarantine or independently repair all 514 alias-invalid rows",
+        "Classify the 103 internal gaps without forward-filling returns across identity discontinuities",
+        "Pass a bounded staged-loader check with features computed before membership filtering",
+        "Pin all three universe definitions and identical folds in the experiment registry"
+      ],
+      "holdout_policy": "Do not access 2026-05-29 through 2026-08-24 until the design and one candidate are frozen."
+    }
+  },
   "schema_version": 1,
   "context_id": "stockprediction2025-research-gate",
-  "updated_at": "2026-08-30T20:13:28.7560092Z",
+  "updated_at": "2026-09-19T20:17:27.339248+00:00",
   "purpose": "Accumulate reviewed research evidence, prevent duplicate experiments, and provide canonical context for future analysis.",
   "project": {
     "repository": "https://github.com/Rnanda442/stockprediction2025",
@@ -20,12 +140,12 @@
     "brokerage_orders_allowed": false,
     "live_probability_display_allowed": false,
     "sealed_holdout": {
-      "status": "sealed",
+      "status": "consumed_once",
       "date_start": "2026-05-29",
       "date_end": "2026-08-24",
       "trading_dates": 60,
-      "opened_for_evaluation": false,
-      "rule": "Do not train, fit graphs or PCA, select features, tune models, score, or calculate metrics on these dates until an explicit final promotion review."
+      "opened_for_evaluation": true,
+      "rule": "These dates were evaluated exactly once under the frozen design and must never be reused for training, feature selection, threshold tuning, model comparison, confirmation, or visualization-driven decisions."
     },
     "leakage_rules": [
       "Use chronological splits and a horizon-sized embargo.",
@@ -56,6 +176,61 @@
     "drop_importance": "Performance change after removal and retraining; positive removal delta means removal helped."
   },
   "completed_experiments": [
+    {
+      "experiment_id": "market_pattern_group_generalization_walk_forward_v1",
+      "design_signature": "market-pattern-group-generalization-walk-forward-v1:h5:source-top1000:rank7+marketstate3:identity-free:5x50d:purge5:logit+relu48x24+downside+groupmc500:volxmom9:top5:cost25:preholdout-only:no-consumed-holdout:no-retune",
+      "status": "complete_reviewed_historical_validation_no_promotion",
+      "source": "warehouse/lineage/market_pattern_group_generalization_walk_forward_v1_20260908",
+      "reviewed_summary": "Across 250 pre-holdout dates, identity-free ANN and logistic rankers discriminated well but had 31.66% and 28.63% worst-fold drawdowns. The training-only group bootstrap reduced drawdown to 4.60% and turnover to 0.166 by holding 73.68% cash, while mean net excess return remained negative.",
+      "decision": "No promotion. Retain the group bootstrap only as a future-test risk-control hypothesis; reject the direct pattern score and do not retune from this historical validation.",
+      "evidence": "research_context/market_pattern_group_generalization_walk_forward_result_v1_20260908.json"
+    },
+    {
+      "experiment_id": "architecture_v2_state_aware_pattern_gate_ann_mc_v1",
+      "design_signature": "architecture-v2-state-aware-pattern-gate-ann-mc-v1:identity-free:teacher-labels-fixed:tree-depth5-leaf80+relu48x24:buy-only-opens:hold-only-retains:sell-exits:avoid-cash:entry-margin005:mc1000-leaf-bootstrap:top200:max5:security20:candidate10:t1:cost25:debug-replay20250902-20260518:prospective-lock-after20260824:no-consumed-holdout",
+      "status": "complete_diagnostic_only_not_blind_not_promotable",
+      "source": "warehouse/lineage/architecture_v2_state_aware_pattern_gate_ann_mc_v1_20260908",
+      "reviewed_summary": "The corrected state semantics passed with zero identity features, zero consumed-holdout rows, zero non-buy entries, and zero hold/avoid openings. On 179 already-viewed diagnostic dates, the direct tree returned 7.06% with -20.10% drawdown and 123.52x turnover; the ANN returned 4.93% with -34.39% drawdown and 69.81x turnover; the Monte Carlo gate made no trades.",
+      "decision": "Diagnostic mechanics validated, but no blind evidence exists and no arm is promotable. Freeze for prospective shadow scoring strictly after 2026-08-24; never reuse the consumed holdout or tune thresholds on the replay.",
+      "evidence": "research_context/architecture_v2_state_aware_pattern_gate_ann_mc_result_v1_20260908.json"
+    },
+    {
+      "experiment_id": "architecture_v2_oracle_pattern_library_mc_1000_v1",
+      "design_signature": "architecture-v2-oracle-pattern-library-mc1000-v1:teacher100:student-tree-depth5-leaf80:seed20260908:pit-source:top200:max5:security20:candidate10:t1:fractional-min1:cost10-25-50:open-or-labeled-close-proxy:teacher-through20250829:unseen20250902-20260526:preholdout-only",
+      "status": "complete_feasibility_only_no_promotion",
+      "source": "warehouse/lineage/architecture_v2_oracle_pattern_library_mc_1000_v1_20260908",
+      "reviewed_summary": "All 100 hindsight paths completed, but only 190 trustworthy teacher dates were available. The frozen student finished at $883.70 from $1,000 (-11.63%), with -22.27% maximum drawdown, 122.96x turnover, and 792 trades. The aggregate unseen pre-holdout transfer test failed.",
+      "quality": {
+        "teacher_dates": 190,
+        "unseen_dates": 179,
+        "teacher_paths_completed": 100,
+        "teacher_path_errors": 0,
+        "duplicate_feature_rows_removed": 0,
+        "consumed_holdout_rows_loaded": 0,
+        "execution_label": "next_session_close_proxy",
+        "stale_selection_dropout_fix_validated": true,
+        "student_sells_outside_top_200": 8,
+        "unresolved_alias_count": "not_instrumented"
+      },
+      "decision": "Stop further testing of this architecture on the current short panel. Reconstruct trustworthy historical universe membership and delisted exits before any robust rerun; do not use rolling folds on the same panel and do not access the consumed holdout.",
+      "evidence": "research_context/architecture_v2_oracle_pattern_library_mc_1000_result_v1_20260908.json"
+    },
+    {
+      "experiment_id": "architecture_v2_volatility_conditioned_dual_head_mc_v1",
+      "design_signature": "architecture-v2-vol-conditioned-dual-head-mc-v1:identity-free:teacher-fixed:direct-rules+relu48x24+logistic-downside:vol055-085:pvmom055:downside040:entrymargin010:mc1000-regimecells:pgt055:top200:max5:t1:cost25:diagnostic20250902-20260518:no-holdout:no-retune",
+      "status": "diagnostic_complete_not_blind_not_promotable",
+      "source": "warehouse/lineage/architecture_v2_volatility_conditioned_dual_head_mc_v1_20260908",
+      "reviewed_summary": "On 179 already-viewed diagnostic dates, the direct rules returned 2.13% with -15.93% drawdown and 123.31x turnover; the dual-head ANN returned 7.68% with -2.63% drawdown and 17.51x turnover; the Monte Carlo gate admitted 0 of 64 cells and made no trades.",
+      "quality": {
+        "teacher_dates": 190,
+        "diagnostic_dates": 179,
+        "consumed_holdout_rows": 0,
+        "identity_features_used": false,
+        "duplicate_feature_rows_removed": 0
+      },
+      "decision": "Keep the dual-head ANN as a future-test hypothesis only. Do not promote, trade, retune from this replay, reuse the consumed holdout, or alter the independently frozen prospective shadow.",
+      "evidence": "research_context/architecture_v2_volatility_conditioned_dual_head_mc_result_v1_20260908.json"
+    },
     {
       "experiment_id": "graph_scenario_32683358084",
       "design_signature": "graph-scenario-v1:h5,h20,h60:ann+ridge+random+universe:blind-paper",
@@ -227,7 +402,7 @@
         "lean_volatility_vs_logistic_rank_ic_ci_lower": 0.00263339,
         "trend_down_cash_mean_daily_net_10bps": 0.00118735,
         "trend_down_cash_delta_ci": [
-          -8.466E-05,
+          -8.466e-05,
           0.00042649
         ],
         "stress_only_worst_maximum_drawdown": -0.05539178,
@@ -263,6 +438,13 @@
         "model_training_or_scoring_performed": false
       },
       "conclusion": "The immutable staged price database is complete and safe for bounded pre-holdout loader validation; it does not resolve historical security-master or survivorship concerns."
+    },
+    {
+      "experiment_id": "one_time_sealed_holdout_evaluation_v1",
+      "status": "complete_post_lock_recovery",
+      "completed_on": "2026-09-07",
+      "result_path": "research_context/one_time_sealed_holdout_evaluation_result_v1.json",
+      "conclusion": "The mature-candidate sleeve improved AUC and relative after-cost performance, but neither frozen policy demonstrated usable economic or residual-ranking performance on the one-time blind holdout. No model is promoted."
     }
   ],
   "promising_hypotheses": [
@@ -301,10 +483,128 @@
   ],
   "next_experiments": [
     {
+      "experiment_id": "market_pattern_group_generalization_walk_forward_v1",
+      "design_signature": "market-pattern-group-generalization-walk-forward-v1:h5:source-top1000:rank7+marketstate3:identity-free:5x50d:purge5:logit+relu48x24+downside+groupmc500:volxmom9:top5:cost25:preholdout-only:no-consumed-holdout:no-retune",
+      "question": "Do identity-free market patterns repeat across chronological periods and volatility-momentum groups without stock-specific rules?",
+      "spec_path": "research_context/market_pattern_group_generalization_walk_forward_v1_20260908.json",
+      "status": "complete_reviewed_historical_validation_no_promotion",
+      "completed_on": "2026-09-08",
+      "result_path": "research_context/market_pattern_group_generalization_walk_forward_result_v1_20260908.json",
+      "evidence_class": "historical_validation_not_blind_confirmation",
+      "evaluation_start": "2025-05-21",
+      "evaluation_end": "2026-05-20",
+      "walk_forward_folds": 5,
+      "test_dates_per_fold": 50,
+      "purge_dates": 5,
+      "paper_only": true,
+      "promotion_allowed": false,
+      "trading_allowed": false,
+      "consumed_holdout_reuse_allowed": false
+    },
+    {
+      "experiment_id": "architecture_v2_dual_head_prospective_shadow_v1",
+      "design_signature": "architecture-v2-dual-head-prospective-shadow-v1:frozen-ann48x24+logistic-downside:identity-free:universe-snapshot20260520:grouped-adjusted-bars:score-after-close:lock-before-next-session:firstlock20260908:min60dates:min11nonoverlap5d:top200:max5:security20:candidate10:t1:cost25:paper-only:no-retune:no-consumed-holdout",
+      "question": "Does the separately frozen identity-free dual-head ANN retain coherent after-cost behavior on predictions locked before genuinely new outcomes?",
+      "spec_path": "research_context/architecture_v2_dual_head_prospective_shadow_v1_20260908.json",
+      "status": "frozen_waiting_for_asof_grouped_bar",
+      "latest_readiness_result": "research_context/architecture_v2_dual_head_prospective_shadow_readiness_v1_20260908.json",
+      "approved_on": "2026-09-08",
+      "first_lock_date": "2026-09-08",
+      "minimum_new_trading_dates": 60,
+      "minimum_nonoverlapping_five_day_cohorts": 11,
+      "interim_outcome_evaluation_allowed": false,
+      "paper_only": true,
+      "promotion_allowed": false,
+      "trading_allowed": false,
+      "consumed_holdout_reuse_allowed": false,
+      "existing_frozen_shadow_changed": false
+    },
+    {
+      "experiment_id": "architecture_v2_volatility_conditioned_dual_head_mc_v1",
+      "design_signature": "architecture-v2-vol-conditioned-dual-head-mc-v1:identity-free:teacher-fixed:direct-rules+relu48x24+logistic-downside:vol055-085:pvmom055:downside040:entrymargin010:mc1000-regimecells:pgt055:top200:max5:t1:cost25:diagnostic20250902-20260518:no-holdout:no-retune",
+      "question": "Do volatility-conditioned momentum and price-volume confirmation become more coherent when an explicit downside head and training-only Monte Carlo regime constraint govern state-aware actions?",
+      "spec_path": "research_context/architecture_v2_volatility_conditioned_dual_head_mc_v1_20260908.json",
+      "status": "diagnostic_complete_not_blind_not_promotable",
+      "approved_on": "2026-09-08",
+      "diagnostic_replay_is_blind": false,
+      "threshold_retuning_allowed": false,
+      "paper_only": true,
+      "promotion_allowed": false,
+      "trading_allowed": false,
+      "consumed_holdout_reuse_allowed": false,
+      "completed_on": "2026-09-08",
+      "result_path": "research_context/architecture_v2_volatility_conditioned_dual_head_mc_result_v1_20260908.json",
+      "decision": "Preserve the dual-head ANN only as a future-test hypothesis; reject the direct rules as a standalone policy and record the frozen Monte Carlo gate as infeasible."
+    },
+    {
+      "experiment_id": "architecture_v2_state_aware_pattern_gate_prospective_shadow_v1",
+      "design_signature": "architecture-v2-state-aware-pattern-gate-prospective-shadow-v1:unchanged-tree+ann+mc:identity-free:lock-before-outcomes:start-after20260824:min60dates:min11nonoverlap5d:paper-only:no-consumed-holdout:no-retuning",
+      "question": "Do the unchanged identity-free state-aware direct-tree, ANN, and Monte Carlo policies retain useful after-cost behavior on genuinely new dates?",
+      "spec_path": "research_context/architecture_v2_state_aware_pattern_gate_prospective_shadow_v1_20260908.json",
+      "status": "approved_after_new_data",
+      "approved_on": "2026-09-08",
+      "first_eligible_date": "2026-08-25",
+      "minimum_new_trading_dates": 60,
+      "minimum_nonoverlapping_five_day_cohorts": 11,
+      "predictions_must_be_locked_before_outcomes": true,
+      "paper_only": true,
+      "promotion_allowed": false,
+      "trading_allowed": false,
+      "consumed_holdout_reuse_allowed": false
+    },
+    {
+      "experiment_id": "architecture_v2_state_aware_pattern_gate_ann_mc_v1",
+      "design_signature": "architecture-v2-state-aware-pattern-gate-ann-mc-v1:identity-free:teacher-labels-fixed:tree-depth5-leaf80+relu48x24:buy-only-opens:hold-only-retains:sell-exits:avoid-cash:entry-margin005:mc1000-leaf-bootstrap:top200:max5:security20:candidate10:t1:cost25:debug-replay20250902-20260518:prospective-lock-after20260824:no-consumed-holdout",
+      "question": "Do corrected state semantics and identity-free variable gates produce coherent direct-tree, ANN, and training-only Monte Carlo paper policies without the prior hold/avoid translation defect?",
+      "spec_path": "research_context/architecture_v2_state_aware_pattern_gate_ann_mc_v1_20260908.json",
+      "status": "completed_diagnostic_only_not_blind_not_promotable",
+      "evidence_class": "development_diagnostic_and_prospective_freeze",
+      "approved_on": "2026-09-08",
+      "completed_on": "2026-09-08",
+      "result_path": "research_context/architecture_v2_state_aware_pattern_gate_ann_mc_result_v1_20260908.json",
+      "diagnostic_replay_is_blind": false,
+      "true_blind_evidence": "prospectively_locked_rows_strictly_after_2026-08-24_only",
+      "paper_only": true,
+      "promotion_allowed": false,
+      "trading_allowed": false,
+      "consumed_holdout_reuse_allowed": false
+    },
+    {
+      "experiment_id": "architecture_v2_oracle_pattern_library_mc_1000_v1",
+      "design_signature": "architecture-v2-oracle-pattern-library-mc1000-v1:teacher100:student-tree-depth5-leaf80:seed20260908:pit-source:top200:max5:security20:candidate10:t1:fractional-min1:cost10-25-50:open-or-labeled-close-proxy:teacher-through20250829:unseen20250902-20260526:preholdout-only",
+      "question": "Do interpretable action patterns learned from 100 constrained hindsight teacher paths transfer to a later unseen pre-holdout period under realistic cash-account constraints?",
+      "spec_path": "research_context/architecture_v2_oracle_pattern_library_mc_1000_v1_20260908.json",
+      "status": "completed_feasibility_only_no_promotion",
+      "approved_on": "2026-09-08",
+      "completed_on": "2026-09-08",
+      "result_path": "research_context/architecture_v2_oracle_pattern_library_mc_1000_result_v1_20260908.json",
+      "next_step": "historical_universe_reconstruction",
+      "paper_only": true,
+      "promotion_allowed": false,
+      "trading_allowed": false,
+      "consumed_holdout_reuse_allowed": false
+    },
+    {
+      "experiment_id": "one_time_sealed_holdout_evaluation_v1",
+      "design_signature": "one-time-sealed-holdout-evaluation-v1:h5:source-ann-primary+additive-ann-mature180-cap10:relu48x24:platt20:purge5:top50:cost10-25-50:holdout20260529-20260824:locked-before-labels",
+      "question": "Do the frozen source ANN primary and mature-candidate 10 percent challenger generalize once on the sealed 2026-05-29 through 2026-08-24 holdout?",
+      "depends_on": "formal_preholdout_design_freeze_v1",
+      "spec_path": "research_context/one_time_sealed_holdout_evaluation_v1.json",
+      "status": "completed_no_promotion",
+      "user_authorized_on": "2026-09-07",
+      "promotion_allowed": false,
+      "trades_allowed": false,
+      "completed_on": "2026-09-07",
+      "sealed_holdout_read": true,
+      "result_path": "research_context/one_time_sealed_holdout_evaluation_result_v1.json",
+      "reuse_prohibited": true
+    },
+    {
       "experiment_id": "compact_consensus_cost_5d_v1",
       "design_signature": "compact-consensus-cost-v1:h5:novel-pruned-groups:ridge+relu:3splits:holdout60",
       "question": "Can a compact feature set and consensus gate improve pre-holdout performance after turnover and transaction costs?",
-      "status": "approved_next"
+      "status": "superseded_completed_do_not_repeat",
+      "decision": "The later robustness and similarity confirmations supersede this approval; do not rerun the compact consensus lab."
     },
     {
       "experiment_id": "robustness_battery_5d_v1",
@@ -419,7 +719,7 @@
       "question": "Does a fixed training-only similarity adjustment improve a compact elastic linear portfolio over plain model ranking on the 400-date panel?",
       "depends_on": "graph_signal_history400_v1",
       "spec_path": "research_context/similarity_weighted_linear_400d_v1.json",
-      "status": "approved_next"
+      "status": "completed_not_promoted_do_not_repeat"
     },
     {
       "experiment_id": "point_in_time_residual_panel_5y_v1",
@@ -551,7 +851,7 @@
     {
       "experiment_id": "polygon_lineage_coverage_probe_v1",
       "design_signature": "polygon-lineage-coverage-probe-v1:3dates:grouped-daily+dated-tickers:source-comparison:preholdout-only:no-model",
-      "status": "approved_next",
+      "status": "completed_recent_coverage_historical_entitlement_failed",
       "stage": "external_lineage_coverage_validation",
       "spec": "research_context/polygon_lineage_coverage_probe_v1.json",
       "compute_location": "OpenScienceLab",
@@ -559,11 +859,85 @@
         "point_in_time_universe_audit_v1",
         "dated_security_master_v1"
       ],
-      "objective": "Quantify missing historical symbols and validate Polygon entitlements before any five-year lineage backfill; no model training or scoring."
+      "objective": "Quantify missing historical symbols and validate Polygon entitlements before any five-year lineage backfill; no model training or scoring.",
+      "completed_on": "2026-09-09",
+      "recent_artifact": "warehouse/lineage/polygon_lineage_coverage_probe_recent_quarantine_20260909",
+      "recent_usable_daily_bars": 12284,
+      "recent_ticker_snapshot_rows": 12663,
+      "provider_bars_missing_from_source": 9742,
+      "source_tickers_missing_provider_bars": 55,
+      "quarantined_bar_case_collisions": 2,
+      "decision": "Recent ingestion works after ambiguous normalized-symbol collisions are quarantined, but the current plan cannot access 2021-08-23 or 2024-01-02. Do not bulk-backfill or fit Architecture v3."
+    },
+    {
+      "experiment_id": "architecture_v3_historical_lineage_source_qualification_v1",
+      "design_signature": "architecture-v3-historical-lineage-source-qualification-v1:bounded-early-middle-recent:stable-id+aliases+listings+exits+delisting-return+adjustment-parity:source-comparison:no-model:no-consumed-holdout:no-bulk-before-pass",
+      "question": "Can one licensed source provide trustworthy stable identities, lifecycle events, adjustments, and terminal returns across early, middle, and recent pre-consumed-holdout dates?",
+      "spec_path": "research_context/architecture_v3_historical_lineage_source_qualification_v1_20260909.json",
+      "status": "approved_after_dependency",
+      "dependency": "Existing CRSP/WRDS access or an explicit user choice of a retail historical-data entitlement",
+      "compute_location": "OpenScienceLab",
+      "paper_only": true,
+      "model_training_or_scoring_allowed": false,
+      "bulk_download_before_qualification_allowed": false,
+      "purchase_or_subscription_authorized": false,
+      "consumed_holdout_reuse_allowed": false
+    },
+    {
+      "experiment_id": "architecture_v3_identity_free_return_risk_policy_v1",
+      "design_signature": "architecture-v3-identity-free-return-risk-policy-v1:h5:pit-history-min756:residual-return+downside:ridge-logit+relu48x24:state-policy:trainfit-thresholds:regime-block-mc1000:max5:security20:candidate10:t1:cost10-25-50:nested-walk-forward+future-lock:no-consumed-holdout",
+      "question": "Can a compact identity-free return and downside model produce stable after-cost decisions once the historical lineage foundation is trustworthy?",
+      "spec_path": "research_context/architecture_v3_identity_free_return_risk_policy_v1_20260908.json",
+      "status": "preregistered_blocked_by_lineage",
+      "depends_on": "architecture_v3_historical_lineage_source_qualification_v1 followed by a passing 756-date point-in-time reconstruction",
+      "fixed_models": [
+        "ridge return plus logistic downside control",
+        "one ReLU 48x24 dual-head challenger"
+      ],
+      "stock_identity_features_allowed": false,
+      "model_training_or_scoring_allowed": false,
+      "paper_only": true,
+      "promotion_allowed": false,
+      "trading_allowed": false,
+      "consumed_holdout_reuse_allowed": false
+    },
+    {
+      "experiment_id": "prospective_post_holdout_shadow_confirmation_v1",
+      "start_exclusive": "2026-08-24",
+      "minimum_trading_dates": 60,
+      "minimum_nonoverlap_5d_cohorts": 11,
+      "policy": "Score the unchanged frozen policies prospectively, lock predictions before outcomes, and do not retune on the consumed holdout.",
+      "promotion_allowed": false,
+      "trading_allowed": false
+    },
+    {
+      "experiment_id": "architecture_v3_public_evidence_reconstruction_v1",
+      "design_signature": "architecture-v3-public-evidence-reconstruction-v1:three-date-bounded:av-listing+sec-filings+finra-events+manual-terminal-review:no-model:no-holdout:no-bulk-before-pass",
+      "question": "Can filing-level public evidence resolve stable identity, lifecycle events, and terminal outcomes on the bounded sample without a commercial security master?",
+      "spec_path": "research_context/architecture_v3_public_evidence_reconstruction_v1_20260919.json",
+      "status": "completed_source_qualification_failed_do_not_repeat",
+      "dependency": "Private ALPHA_VANTAGE_API_KEY and SEC_USER_AGENT configured in OpenScienceLab",
+      "compute_location": "OpenScienceLab",
+      "qualification_dates": [
+        "2021-08-23",
+        "2024-01-02",
+        "2026-05-28"
+      ],
+      "paper_only": true,
+      "model_training_or_scoring_allowed": false,
+      "bulk_reconstruction_before_qualification_allowed": false,
+      "purchase_or_subscription_authorized": false,
+      "consumed_holdout_reuse_allowed": false,
+      "decision": "fail_stop_before_full_reconstruction",
+      "result_artifact": "research_context/architecture_v3_public_evidence_reconstruction_result_v1_20260919.json",
+      "holdout_rows_read": 0,
+      "full_reconstruction_authorized": false
     }
   ],
   "known_biases_and_limits": [
     "Survivorship and current-universe selection may remain.",
+    "All 2,597 securities in the existing source survive to the same terminal date, so the historical panel cannot establish point-in-time market membership or delisted exits.",
+    "The current Massive Basic entitlement reaches recent full-market data but not the early and middle dates required for a five-year lineage reconstruction.",
     "Liquidity top-k selection changes the eligible universe over time.",
     "Forward-return labels overlap across adjacent dates.",
     "Stocks on the same date are dependent through the common market regime.",
@@ -578,6 +952,16 @@
     }
   ],
   "key_insights": [
+    {
+      "insight_id": "recent_lineage_probe_completed_20260909",
+      "finding": "The corrected recent-date provider probe completed with 12,284 usable bars and 12,663 dated references. It found 9,742 provider bar symbols absent from the old source and quarantined two ambiguous case-normalized bar symbols rather than forcing an entity match.",
+      "implication": "Recent data access is functional, but stable identifiers, dated aliases, delisted exits, and deeper entitlement remain prerequisites for Architecture v3."
+    },
+    {
+      "experiment_id": "architecture_v2_oracle_pattern_library_mc_1000_v1",
+      "finding": "The interpretable oracle-pattern architecture did not transfer economically: the frozen pre-holdout student lost 11.63%, drew down 22.27%, and turned capital over 122.96 times. Only 190 teacher dates were trustworthy, so the result is feasibility-only.",
+      "implication": "Stop this architecture on the current panel. Historical-universe reconstruction, including delisted exits and dated identity changes, is required before a robust 756+ teacher-date rerun could be justified."
+    },
     {
       "experiment_id": "similarity_weighted_linear_400d_v1",
       "finding": "On 395 pre-holdout dates, fixed similarity weighting degraded the compact linear ranker. Keep similarity for visualization and diagnostics, not as a probability or portfolio-ranking adjustment."
@@ -607,5 +991,109 @@
       "finding": "Stress-only exposure reduces drawdown and trend-down cash improves the point estimate, but both paired intervals cross zero.",
       "implication": "Use the policies as future-test hypotheses only; do not tune or trade them from these results."
     }
-  ]
+  ],
+  "updated_at_utc": "2026-09-19T20:17:27.339248+00:00",
+  "one_time_sealed_holdout_evaluation": {
+    "schema_version": "1.0",
+    "experiment_id": "one_time_sealed_holdout_evaluation_v1",
+    "design_signature": "one-time-sealed-holdout-evaluation-v1:h5:source-ann-primary+additive-ann-mature180-cap10:relu48x24:platt20:purge5:top50:cost10-25-50:holdout20260529-20260824:locked-before-labels",
+    "status": "complete_post_lock_recovery",
+    "holdout": {
+      "start": "2026-05-29",
+      "end": "2026-08-24",
+      "trading_dates": 60,
+      "decision_dates": 55,
+      "consumed": true,
+      "reuse_for_selection_prohibited": true
+    },
+    "input_audit": {
+      "adjusted": true,
+      "include_otc": false,
+      "weekday_requests_succeeded": 62,
+      "holdout_rows": 156256,
+      "source_rows": 152722,
+      "candidate_rows": 3534,
+      "missing_candidate_alias_bars": 0
+    },
+    "lock_audit": {
+      "prediction_rows": 113244,
+      "portfolio_rows": 5500,
+      "models_hashed": 2,
+      "outcome_columns_in_locked_artifacts": false,
+      "holdout_labels_used_for_training": false,
+      "holdout_labels_used_for_calibration": false,
+      "models_refit_during_recovery": false,
+      "predictions_regenerated_during_recovery": false,
+      "portfolios_regenerated_during_recovery": false,
+      "market_data_refetched_during_recovery": false
+    },
+    "quality": {
+      "minimum_target_coverage": 0.9990728658745965,
+      "duplicate_prediction_rows_within_arm": 0,
+      "duplicate_holding_rows_within_arm": 0,
+      "cross_arm_overlapping_prediction_rows": 110000,
+      "outcome_join_cardinality": "many_to_one",
+      "unresolved_selected_aliases": 0,
+      "candidate_cap_violations": 0,
+      "security_cap_violations": 0,
+      "source_daily_membership_min": 1000,
+      "source_daily_membership_max": 1000
+    },
+    "results": {
+      "source_ann_primary": {
+        "auc": 0.662,
+        "rank_ic": -0.058026,
+        "brier": 0.078217,
+        "brier_skill": -0.005069,
+        "ece": 0.018347,
+        "calibration_slope": 0.712948,
+        "target_coverage": 0.999109,
+        "net_nonoverlap_total_return_10bps": -0.052921,
+        "net_nonoverlap_total_return_25bps": -0.057358,
+        "net_nonoverlap_total_return_50bps": -0.064712,
+        "maximum_drawdown_25bps": -0.211137,
+        "mean_turnover": 0.204727,
+        "mean_daily_net_excess_return_25bps": -0.013462,
+        "absolute_gate_pass": false
+      },
+      "additive_ann_mature_candidate_10pct": {
+        "auc": 0.68008,
+        "rank_ic": -0.066894,
+        "brier": 0.08067,
+        "brier_skill": -0.01515,
+        "ece": 0.027204,
+        "calibration_slope": 0.675531,
+        "target_coverage": 0.999073,
+        "net_nonoverlap_total_return_10bps": -0.026222,
+        "net_nonoverlap_total_return_25bps": -0.030453,
+        "net_nonoverlap_total_return_50bps": -0.03747,
+        "maximum_drawdown_25bps": -0.211243,
+        "mean_turnover": 0.184,
+        "mean_daily_net_excess_return_25bps": -0.00969,
+        "maximum_candidate_weight": 0.1,
+        "mean_candidate_positions": 5,
+        "candidate_sleeve_net_contribution_25bps": 0.000661,
+        "absolute_gate_pass": false,
+        "relative_comparison_gates_pass": true
+      }
+    },
+    "failed_absolute_gates": [
+      "rank_ic_greater_than_0",
+      "brier_skill_at_least_0",
+      "net_nonoverlap_total_return_25bps_greater_than_0",
+      "net_excess_return_25bps_greater_than_0",
+      "maximum_drawdown_25bps_at_least_minus_0_15"
+    ],
+    "interpretation": "The mature-candidate sleeve improved AUC and relative after-cost performance, but neither frozen policy demonstrated usable economic or residual-ranking performance on the one-time blind holdout. No model is promoted.",
+    "next_experiment": {
+      "experiment_id": "prospective_post_holdout_shadow_confirmation_v1",
+      "start_exclusive": "2026-08-24",
+      "minimum_trading_dates": 60,
+      "minimum_nonoverlap_5d_cohorts": 11,
+      "policy": "Score the unchanged frozen policies prospectively, lock predictions before outcomes, and do not retune on the consumed holdout.",
+      "promotion_allowed": false,
+      "trading_allowed": false
+    },
+    "artifact": "warehouse/lineage/one_time_sealed_holdout_evaluation_v1_20260907/manifest.json"
+  }
 }

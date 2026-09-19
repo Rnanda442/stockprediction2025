@@ -1,0 +1,117 @@
+{
+  "schema_version": "1.0",
+  "audit_id": "architecture_v3_historical_lineage_readiness_v1",
+  "created_on": "2026-09-08",
+  "updated_on": "2026-09-09",
+  "status": "blocked_historical_entitlement_and_point_in_time_lineage_failed",
+  "purpose": "Determine whether existing OpenScienceLab data can satisfy the Architecture v3 requirement for at least 756 trustworthy point-in-time historical trading dates with entries, exits, symbol changes, and delisted securities.",
+  "governance": {
+    "paper_only": true,
+    "source_database_modified": false,
+    "models_fit": 0,
+    "predictions_generated": 0,
+    "consumed_holdout_used_for_training_or_selection": false,
+    "api_key_printed_or_stored": false
+  },
+  "osl_responsiveness": {
+    "verified": true,
+    "repository": "~/stockprediction2025"
+  },
+  "existing_source_audit": {
+    "database": "warehouse/model_runs/runs/32915939359/artifact/research_history.db",
+    "tables": [
+      "ResearchMetadata",
+      "ResearchPrices"
+    ],
+    "research_prices_fields": [
+      "ticker",
+      "begins_at",
+      "close_price",
+      "volume"
+    ],
+    "preholdout_rows": 3104633,
+    "tickers": 2597,
+    "trading_dates": 1196,
+    "date_start": "2021-08-23",
+    "date_end": "2026-05-28",
+    "duplicate_ticker_date_groups": 0,
+    "missing_close_rows": 0,
+    "missing_volume_rows": 0,
+    "ticker_first_observation_year_counts": {
+      "2021": 2593,
+      "2022": 3,
+      "2023": 1
+    },
+    "tickers_with_last_observation_2026_05_28": 2597,
+    "tickers_with_earlier_last_observation": 0,
+    "interpretation": "The source has sufficient calendar length and clean price-row structure, but every security survives to the same terminal cutoff. Together with the absent membership and lifecycle fields, this is consistent with a survivor-selected symbol export rather than a certified historical universe."
+  },
+  "existing_security_master_audit": {
+    "artifact": "warehouse/security_master/dated_security_master_v1_20260830",
+    "observed_tickers": 2597,
+    "current_descriptive_classifications": 120,
+    "authoritative_dated_confirmed_events_ingested": 0,
+    "tickers_matched_to_authoritative_dated_events": 0,
+    "fully_point_in_time_ready": false,
+    "historical_sector_features_ready": false,
+    "interpretation": "Observed first and last price dates are coverage dates, not listing or delisting facts."
+  },
+  "provider_probe_audit": {
+    "historical_probe_artifact": "warehouse/lineage/polygon_lineage_coverage_probe_v1_20260901",
+    "historical_probe_date": "2021-08-23",
+    "historical_probe_status": "failed_http_403_not_authorized_for_requested_history",
+    "recent_probe_artifact": "warehouse/lineage/polygon_lineage_coverage_probe_recent_quarantine_20260909",
+    "recent_probe_date": "2026-05-28",
+    "recent_probe_status": "failed_http_429_rate_limit",
+    "current_terminal_credential_present": true,
+    "credential_value_inspected": false,
+    "credential_value_printed_or_stored": false,
+    "probe_run_on": "2026-09-09",
+    "probe_results": {
+      "early_2021_08_23": "failed_http_403_not_authorized_past_historical_entitlements",
+      "middle_2024_01_02": "failed_http_403_not_authorized_past_historical_entitlements",
+      "recent_2026_05_28": "completed_after_quarantining_ambiguous_case_collisions",
+      "recent_completed_artifact": "warehouse/lineage/polygon_lineage_coverage_probe_recent_quarantine_20260909",
+      "recent_usable_daily_bars": 12284,
+      "recent_ticker_snapshot_rows": 12663,
+      "recent_source_tickers": 2597,
+      "recent_provider_bars_missing_from_source": 9742,
+      "recent_source_tickers_missing_provider_bars": 55,
+      "recent_bar_case_collisions_quarantined": [
+        "BPCP",
+        "TPC"
+      ],
+      "recent_reference_case_collision_count": 2,
+      "recent_ingestion_status": "coverage_probe_complete",
+      "sealed_holdout_read": false,
+      "model_training_or_scoring_performed": false
+    },
+    "interpretation": "The current key and corrected ingestion path can retrieve recent full-market bars and dated references. The old source omits thousands of recent provider symbols, and ambiguous case-only symbol collisions must be resolved through stable entity identifiers rather than ticker normalization. The current plan still cannot access the early or middle history required for a five-year point-in-time reconstruction."
+  },
+  "architecture_v3_entry_gate_results": {
+    "minimum_756_trading_dates": "pass_calendar_count_only",
+    "point_in_time_historical_membership": "fail",
+    "symbol_changes_and_ticker_reuse_resolved": "fail",
+    "entries_resolved": "fail",
+    "delisted_exits_resolved": "fail",
+    "consistent_adjustment_policy": "not_yet_certified",
+    "unresolved_selected_aliases_zero": "not_yet_certified",
+    "overall": "fail_stop_before_model_fitting"
+  },
+  "required_remediation": [
+    "Qualify a licensed historical source on bounded early, middle, and recent pre-consumed-holdout dates before any bulk request.",
+    "Prefer CRSP daily stock data when institutional access is available because it supplies stable identifiers and delisting returns; otherwise qualify a five-year Massive plan plus an independent delisted-security source.",
+    "Acquire dated symbol-change, listing, and delisting events from the selected provider and corroborate ambiguous events against SEC, FINRA, or Nasdaq records.",
+    "Build stable entity identifiers and alias-validity intervals; quarantine unresolved ticker reuse.",
+    "Add delisted securities and terminal return handling rather than projecting the current universe backward.",
+    "Re-run the lineage audit and certify at least 756 dates before registering or fitting Architecture v3."
+  ],
+  "source_selection": {
+    "preferred": "CRSP US Daily Stock Database through an existing institutional or WRDS license",
+    "preferred_reason": "Stable security identifiers, name and identifier histories, delisting codes, delisting amounts, and delisting returns directly address the failed lineage gates.",
+    "operational_fallback": "Massive Stocks Starter-or-better five-year bars and reference events, supplemented by an independently qualified delisted-security history such as EODHD and authoritative event corroboration",
+    "fallback_limit": "Massive ticker events are experimental and current Basic entitlement is too shallow; EODHD is a vendor source and must pass bounded entity, event-date, adjustment, and terminal-return checks before use.",
+    "purchase_or_subscription_authorized": false
+  },
+  "next_permitted_action": "Run the preregistered architecture_v3_historical_lineage_source_qualification_v1 only after an existing CRSP/WRDS entitlement or an explicitly chosen retail data entitlement is available. Do not purchase access automatically, bulk-backfill with the current Massive Basic entitlement, or fit Architecture v3."
+}

@@ -1,0 +1,103 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "architecture_v3_historical_lineage_source_qualification_v1",
+  "design_signature": "architecture-v3-historical-lineage-source-qualification-v1:bounded-early-middle-recent:stable-id+aliases+listings+exits+delisting-return+adjustment-parity:source-comparison:no-model:no-consumed-holdout:no-bulk-before-pass",
+  "created_on": "2026-09-09",
+  "status": "preregistered_approved_after_data_access_dependency",
+  "objective": "Select and qualify one historical security-master and delisted-price source before any Architecture v3 model fitting or bulk backfill.",
+  "governance": {
+    "paper_only": true,
+    "models_fit": 0,
+    "predictions_generated": 0,
+    "trades_allowed": false,
+    "promotion_allowed": false,
+    "consumed_holdout_reuse_allowed": false,
+    "consumed_holdout_dates_prohibited": [
+      "2026-05-29",
+      "2026-08-24"
+    ],
+    "bulk_download_before_qualification_allowed": false,
+    "purchase_or_subscription_authorized": false,
+    "credentials_may_be_printed_logged_or_committed": false
+  },
+  "candidate_sources": {
+    "preferred": {
+      "name": "CRSP US Daily Stock Database",
+      "access_condition": "Use only if an existing institutional or WRDS entitlement is available.",
+      "required_fields": [
+        "stable security identifier",
+        "effective-dated name and identifier history",
+        "daily prices and returns",
+        "exchange and share-class history",
+        "delisting code",
+        "delisting amount or return"
+      ]
+    },
+    "operational_fallback": {
+      "name": "Massive five-year plan plus independently qualified delisted-security history",
+      "components": [
+        "Massive grouped or flat-file historical bars",
+        "Massive all-tickers active=false reference data",
+        "Massive ticker events and corporate actions",
+        "EODHD delisted-symbol list, historical bars, and symbol-change history as an independent supplement",
+        "SEC, FINRA, or Nasdaq corroboration for ambiguous lifecycle events"
+      ],
+      "limitations": [
+        "The current Massive Basic entitlement is too shallow.",
+        "Massive ticker events are experimental.",
+        "EODHD must be treated as a vendor source until bounded checks pass."
+      ]
+    }
+  },
+  "bounded_sample": {
+    "calendar_dates": [
+      "2021-08-23",
+      "2024-01-02",
+      "2026-05-28"
+    ],
+    "lifecycle_strata": [
+      "continuously listed controls",
+      "new listings",
+      "symbol changes",
+      "mergers or acquisitions",
+      "bankruptcies or exchange delistings",
+      "ticker reuse",
+      "case-normalization collisions"
+    ],
+    "minimum_entities_per_nonempty_stratum": 5
+  },
+  "required_checks": [
+    "Early, middle, and recent pre-consumed-holdout dates are accessible.",
+    "Stable identifiers distinguish ticker reuse and case-only symbol collisions.",
+    "Alias intervals do not overlap for one normalized symbol unless distinct entities are explicit.",
+    "Listing, symbol-change, acquisition, and delisting effective dates reconcile across sources.",
+    "Prices are absent before listing and after terminal exit except for explicitly documented when-issued or OTC transitions.",
+    "Adjusted and unadjusted bars reconcile to split and dividend events under one documented policy.",
+    "Delisting returns or terminal amounts are available, or a prespecified conservative missing-delisting policy can be applied without future information.",
+    "No row from the consumed 2026-05-29 through 2026-08-24 holdout is used for source selection."
+  ],
+  "pass_fail": {
+    "all_three_calendar_dates_accessible": true,
+    "stable_identifier_coverage_minimum": 0.995,
+    "unresolved_sample_ticker_reuse_allowed": 0,
+    "unresolved_selected_aliases_allowed": 0,
+    "event_date_agreement_minimum": 0.98,
+    "terminal_return_coverage_minimum": 0.95,
+    "adjustment_reconciliation_maximum_absolute_error": 1e-06,
+    "failure_action": "Record the source failure and do not bulk-backfill or fit Architecture v3.",
+    "passing_action": "Freeze the source contract, hashes, entity schema, adjustment policy, and missing-delisting policy before a resumable bulk reconstruction."
+  },
+  "expected_outputs": [
+    "source_contract.json",
+    "qualification_manifest.json",
+    "entity_crosswalk_sample.csv",
+    "lifecycle_event_reconciliation.csv",
+    "adjustment_reconciliation.csv",
+    "terminal_return_audit.csv",
+    "context_gate_candidate_update.json",
+    "readout.md"
+  ],
+  "compute_location": "OpenScienceLab",
+  "model_fitting_allowed_after_this_spec_alone": false,
+  "architecture_v3_unblock_condition": "A reviewed passing qualification followed by a completed point-in-time bulk reconstruction covering at least 756 trustworthy trading dates."
+}

@@ -49,7 +49,22 @@ def assert_experiment_allowed(
 
     holdout = gate["guardrails"]["sealed_holdout"]
     if holdout.get("opened_for_evaluation"):
-        raise RuntimeError("Context gate reports the sealed holdout was already opened")
+        governance = design.get("governance", {})
+        prohibited_dates = governance.get("consumed_holdout_dates_prohibited", [])
+        expected_dates = [holdout.get("date_start"), holdout.get("date_end")]
+        approved_blocks_reuse = approved[experiment_id].get(
+            "consumed_holdout_reuse_allowed"
+        ) is False
+        design_blocks_reuse = (
+            governance.get("consumed_holdout_reuse_allowed") is False
+            and prohibited_dates == expected_dates
+        )
+        if not (approved_blocks_reuse and design_blocks_reuse):
+            raise RuntimeError(
+                "Context gate reports the sealed holdout was already opened; "
+                "future work must explicitly prohibit reuse in both the registry "
+                "and design governance"
+            )
     return design_fingerprint(design)
 
 
