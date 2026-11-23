@@ -1,0 +1,1659 @@
+{
+  "as_of": "2026-11-22",
+  "clock_status": {
+    "data_as_of": "Last complete closed exchange session; do not infer from newest partial row or wall clock.",
+    "exact_run_time": "Not chosen or verified in this design. A proposed after-close schedule is not provider availability proof.",
+    "input_complete_at": "Must be separately attested; collection configuration or partial receipt is insufficient.",
+    "intended_execution_session": "Explicit next eligible session for an end-of-day workflow, not automatically the same calendar date.",
+    "missed_or_incomplete_input": "Report blocked/WAIT; never backdate, force picks or fabricate a lock.",
+    "provider_published_at": "Unverified until a source supplies/establishes it.",
+    "report_locked_at": "After valid inputs and before intended execution/outcome; deadline anchored to reviewed session calendar."
+  },
+  "constraints": {
+    "backtests": false,
+    "broker_authentication": false,
+    "consumed_holdout_reuse": false,
+    "existing_model_promotion": false,
+    "market_data_collection": false,
+    "mode": "workflow_design_only",
+    "model_fitting": false,
+    "new_tests": false,
+    "paper_only": true,
+    "personal_stock_picks": false
+  },
+  "content_sha256": "b5466757f126d5b091f79f422c993e317ad86eeefe5a16a03d2e8c4dc0df2880",
+  "counts": {
+    "pipeline_edges": 15,
+    "pipeline_stages": 12,
+    "variable_definitions": 59,
+    "variable_stages": 7,
+    "workflow_records": 42
+  },
+  "document_kind": "documentary_decision_workflow_and_variable_index",
+  "next_design_decision": "Define the executable forecast target and horizon(s), including absolute versus market-relative return and downside, before choosing model details or entry/exit thresholds.",
+  "pipeline_edges": [
+    {
+      "relation": "attested_as_of",
+      "source": "market_data",
+      "target": "availability_clock"
+    },
+    {
+      "relation": "constrains_timing",
+      "source": "availability_clock",
+      "target": "forecast_contract"
+    },
+    {
+      "relation": "defines_requirements",
+      "source": "forecast_contract",
+      "target": "features_universe"
+    },
+    {
+      "relation": "supplies_features",
+      "source": "features_universe",
+      "target": "model"
+    },
+    {
+      "relation": "defines_target",
+      "source": "forecast_contract",
+      "target": "model"
+    },
+    {
+      "relation": "supplies_estimates",
+      "source": "model",
+      "target": "entry_review"
+    },
+    {
+      "relation": "supplies_estimates",
+      "source": "model",
+      "target": "holding_review"
+    },
+    {
+      "relation": "identifies_held_positions",
+      "source": "portfolio_state",
+      "target": "holding_review"
+    },
+    {
+      "relation": "proposes_entry",
+      "source": "entry_review",
+      "target": "constraints"
+    },
+    {
+      "relation": "proposes_continuation_or_exit",
+      "source": "holding_review",
+      "target": "constraints"
+    },
+    {
+      "relation": "constrains_cash_and_positions",
+      "source": "portfolio_state",
+      "target": "constraints"
+    },
+    {
+      "relation": "accepts_or_blocks",
+      "source": "constraints",
+      "target": "paper_report"
+    },
+    {
+      "relation": "supplies_immutable_valid_intents",
+      "source": "paper_report",
+      "target": "paper_ledger"
+    },
+    {
+      "relation": "records_outcome_accounting",
+      "source": "paper_ledger",
+      "target": "mature_outcomes"
+    },
+    {
+      "relation": "preserves_prior_decisions",
+      "source": "paper_report",
+      "target": "mature_outcomes"
+    }
+  ],
+  "pipeline_stages": [
+    {
+      "canonical_node_ids": [
+        "collection:public_daily",
+        "data:history",
+        "data:security_master"
+      ],
+      "evidence_ids": [
+        "provider_identity_review",
+        "workflow_repair_execution"
+      ],
+      "id": "market_data",
+      "known": "Historical daily prices/volume and derived measurements;2,597storedlabels in a survivor-selected archive.",
+      "label": "Market data we have",
+      "question": "What observations, dates and fields actually exist?",
+      "remaining": "A complete current input date, required raw field/adjustment coverage and lifecycle-aware actual-use eligibility remain unqualified.",
+      "status": "historical_archive_exists_current_feed_unqualified"
+    },
+    {
+      "canonical_node_ids": [
+        "collection:legacy_pipeline",
+        "collection:public_daily",
+        "component:future_preflight"
+      ],
+      "evidence_ids": [
+        "future_preflight_contract",
+        "public_collector_contract",
+        "workflow_first_checkpoint"
+      ],
+      "id": "availability_clock",
+      "known": "Collector uses pinned session closes; old22:00UTC weekdayGitHubcron is a different configured route with unverified recent success.",
+      "label": "Daily availability and as-of clock",
+      "question": "When is the last closed session complete, and which later session may the report address?",
+      "remaining": "No proven fixed provider publication/collection time or continuous service. Choose proposed scheduling and deadline rules separately; missed inputs produce blocked status.",
+      "status": "design_needed_exact_reliable_time_unverified"
+    },
+    {
+      "canonical_node_ids": [
+        "gap:cash_timing_design",
+        "target:next_open_excess_5d"
+      ],
+      "evidence_ids": [
+        "full_project_history_diagnostic",
+        "test_explanation_index"
+      ],
+      "id": "forecast_contract",
+      "known": "Prior studies have different targets: rolling-variable motion versus five-session market-relative return. Their scores are not interchangeable.",
+      "label": "Define the forecast question and horizon",
+      "question": "What executable future outcome would help decide whether to enter or keep a holding?",
+      "remaining": "Choose absolute versus market-relative return, horizon(s), downside measure, required history, universe, missing-data semantics and decision/execution times before selecting model details.",
+      "status": "next_design_decision_not_frozen"
+    },
+    {
+      "canonical_node_ids": [
+        "data:history",
+        "gap:lineage",
+        "transform:fixed_features"
+      ],
+      "evidence_ids": [
+        "hold_sell_background",
+        "variable_catalog_index"
+      ],
+      "id": "features_universe",
+      "known": "Return/slope, volatility/drawdown, trading activity and earlier filtering code exist. Stock3D is optional and currently paused.",
+      "label": "Comparable features and entry universe",
+      "question": "Which past-only measurements and eligible securities support that target?",
+      "remaining": "Freeze actual predictive features and preprocessing with their causal time/history/identity rules; do not adopt legacy heuristic thresholds or failed geometry by default.",
+      "status": "measurements_exist_predictive_schema_not_frozen"
+    },
+    {
+      "canonical_node_ids": [
+        "decision:no_promotion",
+        "gap:cash_timing_design"
+      ],
+      "evidence_ids": [
+        "gate",
+        "test_explanation_index"
+      ],
+      "id": "model",
+      "known": "Linear, ANN and geometric approaches have saved research. No promoted or currently qualified daily predictor is established.",
+      "label": "Model estimates return and downside",
+      "question": "Which explainable model or scoring rule turns those features into the required estimates?",
+      "remaining": "Specify versioned scoring, risk/uncertainty output, training scope and update/freeze policy. One model can feed both branches; separate heads/models are optional design choices. No fitting or model comparison is authorized now.",
+      "status": "model_choice_pending_none_promoted"
+    },
+    {
+      "canonical_node_ids": [
+        "component:buy_ticket_formatter",
+        "component:legacy_proposal_board",
+        "gap:paper_workflow_integration"
+      ],
+      "evidence_ids": [
+        "cash_contract"
+      ],
+      "id": "entry_review",
+      "known": "Legacy proposal/BUY-ticket components exist.",
+      "label": "New-stock consideration",
+      "question": "Which unheld stocks qualify as paper entry candidates after expected costs and risk?",
+      "remaining": "An approved entry policy and ranking objective, cash/size limits and one consistent output; no requirement to select five or buy daily.",
+      "status": "policy_not_connected_or_approved"
+    },
+    {
+      "canonical_node_ids": [
+        "component:cash_ledger_v1"
+      ],
+      "evidence_ids": [
+        "cash_contract"
+      ],
+      "id": "portfolio_state",
+      "known": "The paper-account input contract requires supplied holdings and settled funds; no personal portfolio data is included.",
+      "label": "Supplied holdings and settled cash",
+      "question": "What is already held, what is fully paid, and what funds are actually available?",
+      "remaining": "Explicit qualified position/cash state, durable import and dated marks. No broker login or portfolio read is authorized by this diagram.",
+      "status": "reported_account_type_known_positions_cash_unconfirmed"
+    },
+    {
+      "canonical_node_ids": [
+        "component:cash_ledger_v1",
+        "gap:paper_workflow_integration",
+        "question:hold_sell"
+      ],
+      "evidence_ids": [
+        "cash_contract",
+        "hold_sell_background"
+      ],
+      "id": "holding_review",
+      "known": "HOLDretains and explicit validSELLcan reduce/exit. Entry-list removal and elapsed five days do not automatically liquidate a holding.",
+      "label": "Existing holding continuation or exit review",
+      "question": "Does each existing holding still justify continuation, or has its explicit exit condition fired?",
+      "remaining": "Connect the model estimates and a separately defined continuation/exit policy to every held security, including held names outside the entry universe.",
+      "status": "mechanics_exist_predictive_policy_pending"
+    },
+    {
+      "canonical_node_ids": [
+        "component:cash_ledger_v1",
+        "gap:cash_replay_adapters"
+      ],
+      "evidence_ids": [
+        "cash_contract",
+        "cash_module"
+      ],
+      "id": "constraints",
+      "known": "Settled cash, sale receivables, fees, no leverage/shorts and explicit action validation are implemented mechanically.",
+      "label": "Cash, position risk, costs and validity",
+      "question": "Is a proposed paper action allowed by actual cash, holdings, risk and execution facts?",
+      "remaining": "Actual state/configuration, corporate actions, verified calendar/execution prices and deterministic intent adapter. A sell does not make its proceeds immediately spendable.",
+      "status": "cash_mechanics_built_configuration_adapters_pending"
+    },
+    {
+      "canonical_node_ids": [
+        "collection:shadow_lock",
+        "component:buy_ticket_formatter",
+        "component:future_preflight",
+        "gap:paper_workflow_integration"
+      ],
+      "evidence_ids": [
+        "future_preflight_implementation"
+      ],
+      "id": "paper_report",
+      "known": "BUY-only formatter and future metadata guard exist separately. Readiness receipts are not predictions.",
+      "label": "Timestamped daily paper review",
+      "question": "What candidates, holdings reviews and blocked decisions can be explained before their outcomes?",
+      "remaining": "One consistent report/intents withBUY,HOLD,SELL_REVIEW,WAIT; model/data versions, as-of/lock times, horizon, reasons, expiry and constraint outcomes. No stock actions are generated here.",
+      "status": "schema_and_runtime_integration_pending"
+    },
+    {
+      "canonical_node_ids": [
+        "component:cash_ledger_v1",
+        "gap:cash_replay_adapters"
+      ],
+      "evidence_ids": [
+        "cash_contract",
+        "cash_module"
+      ],
+      "id": "paper_ledger",
+      "known": "Existing state engine covers explicit actions and preserves holdings through retries.",
+      "label": "Record separately valid simulated fills and cash state",
+      "question": "If an authorized paper fill becomes valid, how do quantities, cash, costs and receivables change?",
+      "remaining": "No simulated execution now; future runner needs valid time/price/identity/quantity and corporate-action state. No stale-price fills or erased positions.",
+      "status": "state_engine_built_runner_not_connected"
+    },
+    {
+      "canonical_node_ids": [
+        "collection:shadow_lock",
+        "decision:no_promotion",
+        "policy:task_start_evidence"
+      ],
+      "evidence_ids": [
+        "gate",
+        "test_explanation_index"
+      ],
+      "id": "mature_outcomes",
+      "known": "Saved research and explanation/index infrastructure exist.",
+      "label": "Later outcomes and reviewed learning",
+      "question": "After the forecast horizon matures, did saved advance decisions answer their registered question?",
+      "remaining": "Attach future outcomes only after maturity under approved evaluation; no automatic retuning, interim winner selection, old-lock fabrication or consumed-holdout reuse.",
+      "status": "future_process_not_active_by_this_design"
+    }
+  ],
+  "schema_version": "public_workflow_view_v1",
+  "scope_note": "The pipeline is a reviewed design view, not a running service. Variable definitions describe historical project components; inclusion is not evidence of predictive power or current production use.",
+  "source_snapshot": {
+    "graph": "cc84e6576cd082f9ab53253c8ad3860f9babac58a012aea77f7189de7b0390f3",
+    "methods": "fe3bb5707f976b9bf78eb67f1c38b57ba4f20bee0e15223a074e27725dc2f26b",
+    "test_index": "4dbc2e5ed73d74a162662ddf2ae40f8d3a34e7d3a2c7af3dbc32f20e7850a9d3",
+    "titles": "c3d4265c2e2a4a6efdc38acf0daeeaf28fbdf37416a30c305ff71e8427f9b731",
+    "workflow": "4415f4c293b6277ee2929fbfc361651d81f855b6a07317ecaf98e05c69f86ec4"
+  },
+  "variable_stages": [
+    {
+      "definition_count": 11,
+      "id": "variable_stage:core",
+      "title": "Core",
+      "variables": [
+        {
+          "consumers": [
+            "volatility",
+            "similarity graph",
+            "Monte Carlo"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "ln(close_t / close_t-1)",
+          "id": "variable:daily_log_return",
+          "title": "Daily log return"
+        },
+        {
+          "consumers": [
+            "eligibility",
+            "bubble size"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "ln(1 + median(dollar_volume, 20))",
+          "id": "variable:dollar_vol_20d_log",
+          "title": "Log dollar volume"
+        },
+        {
+          "consumers": [
+            "dollar_vol_20d_log"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "close_price x volume",
+          "id": "variable:dollar_volume",
+          "title": "Dollar volume"
+        },
+        {
+          "consumers": [
+            "ANN",
+            "ridge",
+            "market-pulse Z"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "close_t / rolling_max_60 - 1",
+          "id": "variable:drawdown_60d",
+          "title": "60-day drawdown"
+        },
+        {
+          "consumers": [
+            "ANN",
+            "ridge",
+            "neighbor return"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "close_t / close_t-20 - 1",
+          "id": "variable:ret_20d",
+          "title": "20-day momentum"
+        },
+        {
+          "consumers": [
+            "ANN",
+            "ridge",
+            "market pulse"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "close_t / close_t-5 - 1",
+          "id": "variable:ret_5d",
+          "title": "5-day return"
+        },
+        {
+          "consumers": [
+            "ANN",
+            "ridge",
+            "custom 3D"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "close_t / close_t-60 - 1",
+          "id": "variable:ret_60d",
+          "title": "60-day return"
+        },
+        {
+          "consumers": [
+            "legacy broad ANN"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "ret_20d / stabilized vol_20d",
+          "id": "variable:risk_adjusted_momentum",
+          "title": "Risk-adjusted momentum"
+        },
+        {
+          "consumers": [
+            "ANN",
+            "ridge",
+            "Monte Carlo regime"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "std(log return, 20) x sqrt(252)",
+          "id": "variable:vol_20d",
+          "title": "20-day volatility"
+        },
+        {
+          "consumers": [
+            "lean volatility ANN",
+            "risk view",
+            "Monte Carlo regime"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "std(log return, 60) x sqrt(252)",
+          "id": "variable:vol_60d",
+          "title": "60-day volatility"
+        },
+        {
+          "consumers": [
+            "legacy broad ANN"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "robust_z(close / MA20 - 1)",
+          "id": "variable:z_ma20",
+          "title": "MA20 z-score"
+        }
+      ]
+    },
+    {
+      "definition_count": 4,
+      "id": "variable_stage:graph",
+      "title": "Graph",
+      "variables": [
+        {
+          "consumers": [
+            "narrow graph block",
+            "bubble size",
+            "crowding change"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "count(similarity >= threshold)",
+          "id": "variable:graph_degree",
+          "title": "Graph degree"
+        },
+        {
+          "consumers": [
+            "similarity weighting",
+            "similarity color"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "mean(top-k positive correlations)",
+          "id": "variable:graph_similarity_mean",
+          "title": "Mean neighbor similarity"
+        },
+        {
+          "consumers": [
+            "convergence velocity",
+            "custom 3D color"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "neighbor_ret_20d - ret_20d",
+          "id": "variable:neighbor_divergence",
+          "title": "Neighbor divergence"
+        },
+        {
+          "consumers": [
+            "neighbor divergence",
+            "legacy graph ANN"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "weighted_mean(neighbor ret_20d)",
+          "id": "variable:neighbor_ret_20d",
+          "title": "Neighbor 20-day return"
+        }
+      ]
+    },
+    {
+      "definition_count": 4,
+      "id": "variable_stage:identity",
+      "title": "Identity",
+      "variables": [
+        {
+          "consumers": [
+            "splits",
+            "date slider",
+            "embargo"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "trading-date timestamp",
+          "id": "variable:begins_at",
+          "title": "Observation date"
+        },
+        {
+          "consumers": [
+            "3D hover",
+            "stock inspector"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "Nasdaq symbol -> security name",
+          "id": "variable:company_name",
+          "title": "Company name"
+        },
+        {
+          "consumers": [
+            "market-pulse color",
+            "future sector residual target"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "Nasdaq symbol -> sector",
+          "id": "variable:sector",
+          "title": "Sector"
+        },
+        {
+          "consumers": [
+            "all ticker-level features"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "normalized uppercase symbol",
+          "id": "variable:ticker",
+          "title": "Ticker"
+        }
+      ]
+    },
+    {
+      "definition_count": 9,
+      "id": "variable_stage:model",
+      "title": "Model",
+      "variables": [
+        {
+          "consumers": [
+            "decision rank",
+            "five-sleeve replay",
+            "regime policy"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "ANN(features) -> score/probability",
+          "id": "variable:ann_probability",
+          "title": "ANN score"
+        },
+        {
+          "consumers": [
+            "confidence proxy",
+            "bubble size"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "rolling_mean(ret_5d > 0, 126)",
+          "id": "variable:empirical_upside_probability_5d",
+          "title": "Empirical upside rate"
+        },
+        {
+          "consumers": [
+            "universe mean",
+            "residual target",
+            "paper outcome"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "close_t+5 / close_t - 1",
+          "id": "variable:future_return_5d",
+          "title": "Future 5-day return"
+        },
+        {
+          "consumers": [
+            "custom bubble size"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "2 x |upside rate - 0.5|",
+          "id": "variable:prediction_confidence_proxy",
+          "title": "Confidence proxy"
+        },
+        {
+          "consumers": [
+            "paper portfolio weight"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "base exposure x regime gate",
+          "id": "variable:regime_exposure",
+          "title": "Regime exposure"
+        },
+        {
+          "consumers": [
+            "ANN label",
+            "ridge label",
+            "rank IC"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "future return - universe mean",
+          "id": "variable:residual_return_5d",
+          "title": "5-day residual target"
+        },
+        {
+          "consumers": [
+            "decision rank",
+            "validation metrics"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "Ridge(features) -> residual score",
+          "id": "variable:ridge_score",
+          "title": "Ridge score"
+        },
+        {
+          "consumers": [
+            "weighted paper portfolio"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "base_weight x f(similarity)",
+          "id": "variable:similarity_weight",
+          "title": "Similarity weight"
+        },
+        {
+          "consumers": [
+            "residual target"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "mean(future_return_5d within date)",
+          "id": "variable:universe_mean_return_5d",
+          "title": "Universe mean return"
+        }
+      ]
+    },
+    {
+      "definition_count": 16,
+      "id": "variable_stage:motion",
+      "title": "Motion",
+      "variables": [
+        {
+          "consumers": [
+            "motion color",
+            "narrow challenger"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "graph_degree_t - graph_degree_t-5",
+          "id": "variable:crowding_change_5d",
+          "title": "5-date crowding change"
+        },
+        {
+          "consumers": [
+            "velocity",
+            "curvature"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "latent_x_t - latent_x_t-1",
+          "id": "variable:delta_latent_x",
+          "title": "Change in latent X"
+        },
+        {
+          "consumers": [
+            "velocity",
+            "curvature"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "latent_y_t - latent_y_t-1",
+          "id": "variable:delta_latent_y",
+          "title": "Change in latent Y"
+        },
+        {
+          "consumers": [
+            "velocity",
+            "curvature"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "latent_z_t - latent_z_t-1",
+          "id": "variable:delta_latent_z",
+          "title": "Change in latent Z"
+        },
+        {
+          "consumers": [
+            "motion sphere size"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "rolling_sum(cluster changed, 20)",
+          "id": "variable:graph_cluster_switch_count_20d",
+          "title": "20-date cluster switches"
+        },
+        {
+          "consumers": [
+            "motion Z",
+            "regime exposure"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "consecutive dates in current cluster",
+          "id": "variable:graph_regime_residence_days",
+          "title": "Regime residence"
+        },
+        {
+          "consumers": [
+            "custom 3D"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "velocity_t - velocity_t-1",
+          "id": "variable:latent_acceleration",
+          "title": "Latent acceleration"
+        },
+        {
+          "consumers": [
+            "custom 3D"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "angle(delta_t, delta_t-1)",
+          "id": "variable:latent_path_curvature",
+          "title": "Path curvature"
+        },
+        {
+          "consumers": [
+            "motion Y"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "radius_t - radius_t-1",
+          "id": "variable:latent_radial_expansion",
+          "title": "Radial expansion"
+        },
+        {
+          "consumers": [
+            "radial expansion"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "sqrt(x^2 + y^2 + z^2)",
+          "id": "variable:latent_radius",
+          "title": "Latent radius"
+        },
+        {
+          "consumers": [
+            "motion X",
+            "acceleration"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "norm(delta_x, delta_y, delta_z)",
+          "id": "variable:latent_velocity",
+          "title": "Latent velocity"
+        },
+        {
+          "consumers": [
+            "similarity X",
+            "delta X"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "PCA component 1",
+          "id": "variable:latent_x",
+          "title": "Latent X"
+        },
+        {
+          "consumers": [
+            "similarity Y",
+            "delta Y"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "PCA component 2",
+          "id": "variable:latent_y",
+          "title": "Latent Y"
+        },
+        {
+          "consumers": [
+            "similarity Z",
+            "delta Z"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "PCA component 3",
+          "id": "variable:latent_z",
+          "title": "Latent Z"
+        },
+        {
+          "consumers": [
+            "custom 3D"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "change in -|neighbor divergence|",
+          "id": "variable:neighbor_convergence_velocity",
+          "title": "Neighbor convergence"
+        },
+        {
+          "consumers": [
+            "cluster switches",
+            "regime residence"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "KMeans(latent_x, latent_y, latent_z)",
+          "id": "variable:state_cluster",
+          "title": "Graph state cluster"
+        }
+      ]
+    },
+    {
+      "definition_count": 2,
+      "id": "variable_stage:raw",
+      "title": "Raw",
+      "variables": [
+        {
+          "consumers": [
+            "daily_log_return",
+            "returns",
+            "drawdown",
+            "dollar_volume"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "ResearchPrices.close_price at t",
+          "id": "variable:close_price",
+          "title": "Close price"
+        },
+        {
+          "consumers": [
+            "dollar_volume"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "ResearchPrices.volume at t",
+          "id": "variable:volume",
+          "title": "Volume"
+        }
+      ]
+    },
+    {
+      "definition_count": 13,
+      "id": "variable_stage:validation",
+      "title": "Validation",
+      "variables": [
+        {
+          "consumers": [
+            "promotion review"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "ROC AUC",
+          "id": "variable:auc",
+          "title": "AUC"
+        },
+        {
+          "consumers": [
+            "promotion review"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "mean((probability - outcome)^2)",
+          "id": "variable:brier",
+          "title": "Brier score"
+        },
+        {
+          "consumers": [
+            "top-k selection"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "rank(model score within date)",
+          "id": "variable:decision_rank",
+          "title": "Decision rank"
+        },
+        {
+          "consumers": [
+            "promotion review"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "weighted calibration gap across 10 bins",
+          "id": "variable:ece_10",
+          "title": "10-bin ECE"
+        },
+        {
+          "consumers": [
+            "bootstrap",
+            "promotion review"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "net return - eligible-universe return",
+          "id": "variable:excess_return",
+          "title": "Excess return"
+        },
+        {
+          "consumers": [
+            "promotion review"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "negative Bernoulli log likelihood",
+          "id": "variable:log_loss",
+          "title": "Log loss"
+        },
+        {
+          "consumers": [
+            "promotion review"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "min(wealth / running peak - 1)",
+          "id": "variable:maximum_drawdown",
+          "title": "Maximum drawdown"
+        },
+        {
+          "consumers": [
+            "excess return",
+            "maximum drawdown"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "gross return - costs",
+          "id": "variable:net_return",
+          "title": "Net paper return"
+        },
+        {
+          "consumers": [
+            "promotion review"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "corr(score, residual_return_5d)",
+          "id": "variable:rank_ic",
+          "title": "Rank IC"
+        },
+        {
+          "consumers": [
+            "research context",
+            "future unseen confirmation"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "2026-05-29 through 2026-08-24",
+          "id": "variable:sealed_holdout",
+          "title": "Consumed 60-date holdout"
+        },
+        {
+          "consumers": [
+            "turnover",
+            "paper outcomes"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "highest ranks in eligible universe",
+          "id": "variable:top_k_selection",
+          "title": "Top-k paper selection"
+        },
+        {
+          "consumers": [
+            "net return"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "turnover x round-trip cost",
+          "id": "variable:transaction_cost_bps",
+          "title": "Transaction costs"
+        },
+        {
+          "consumers": [
+            "transaction costs",
+            "net return"
+          ],
+          "evidence_ids": [
+            "legacy_catalog"
+          ],
+          "formula": "fraction of holdings changed",
+          "id": "variable:turnover",
+          "title": "Turnover"
+        }
+      ]
+    }
+  ],
+  "workflow_records": [
+    {
+      "evidence_ids": [
+        "daily_decision_workflow_view"
+      ],
+      "id": "action:define_scoring_contract",
+      "kind": "next_action",
+      "lifecycle_status": "DOCUMENTARY_REFERENCE",
+      "scope": "Curated project context.",
+      "status": "current_design_discussion_no_experiment",
+      "summary": "Choose target/horizon(s), executable outcome, feature/history/universe requirements and return/downside outputs before choosing model details or triggers. Mark data/clock unknowns rather than claiming a daily service. No fitting, backtest, collection or picks.",
+      "title": "Define the forecast question in the whole workflow"
+    },
+    {
+      "evidence_ids": [
+        "freshness",
+        "full_project_history_diagnostic",
+        "provider_identity_review",
+        "provider_missing_policy",
+        "public_collection_status",
+        "shadow_readiness",
+        "state",
+        "workflow_repair_execution"
+      ],
+      "id": "action:fresh_inputs",
+      "kind": "next_action",
+      "lifecycle_status": "DOCUMENTED",
+      "scope": "Source-linked documentary state at the stated date; implementation/qualification scope does not imply predictive validity or a currently running service.",
+      "status": "source_qualification_open_not_default_reset",
+      "summary": "For separately approved actual forecasting/replay, validate precisely required dated inputs and preserve original label/unknown coverage. Do not require another broad remaining2537audit before offline adapter design or repeat completed identity/provider checks.",
+      "title": "Review lifecycle-aware expected inputs and full coverage"
+    },
+    {
+      "evidence_ids": [
+        "gate",
+        "knowledge_sync_contract",
+        "knowledge_sync_execution",
+        "neo4j_free_validation",
+        "state"
+      ],
+      "id": "action:knowledge_base",
+      "kind": "next_action",
+      "lifecycle_status": "DOCUMENTED",
+      "scope": "Source-linked documentary state at the stated date; implementation/qualification scope does not imply predictive validity or a currently running service.",
+      "status": "current",
+      "summary": "Review source changes, validate the canonical graph, then publish immutable revisions under the knowledge sync contract; each destination needs a separate acknowledgement.",
+      "title": "Keep this map and source checkpoints synchronized"
+    },
+    {
+      "evidence_ids": [
+        "knowledge_delivery",
+        "knowledge_delivery_execution",
+        "knowledge_delivery_note",
+        "neo4j_integration"
+      ],
+      "id": "action:knowledge_delivery_approval",
+      "kind": "next_action",
+      "lifecycle_status": "COMPLETED",
+      "scope": "Records the explicit answers to the exact pending questions; earlier review rejections are historical. The approved scope does not include public sharing or future unrelated payloads.",
+      "status": "completed_approved_actions_executed",
+      "summary": "Both exact approvals were received and executed. The HTML is attached and embedded in private Notion and the existing private website published successfully. Notion iframe execution remains unverified; do not request the same approvals again.",
+      "title": "Completed approved private knowledge delivery"
+    },
+    {
+      "evidence_ids": [
+        "knowledge_sync_contract",
+        "knowledge_sync_execution",
+        "neo4j_free_validation"
+      ],
+      "id": "action:knowledge_publish_ack",
+      "kind": "next_action",
+      "lifecycle_status": "ONGOING_MANUAL_PUBLICATION_GUARD",
+      "scope": "Documentary delivery only; no experiment or live trading action.",
+      "status": "required_for_each_reviewed_release",
+      "summary": "For each reviewed release, record exact database, native Notion and website acknowledgements and their source mode. Keep operational progress in execution receipts.",
+      "title": "Verify matching acknowledgements for each knowledge release"
+    },
+    {
+      "evidence_ids": [
+        "fallback",
+        "qc",
+        "qualification_spec",
+        "readiness"
+      ],
+      "id": "action:lineage",
+      "kind": "next_action",
+      "lifecycle_status": "DOCUMENTED",
+      "scope": "Source-linked documentary state at the stated date; implementation/qualification scope does not imply predictive validity or a currently running service.",
+      "status": "blocked_by_source_access",
+      "summary": "Pass a new bounded source qualification, then reconstruct at least756 trustworthy historical dates before Architecture v3. No purchases or repeat failed qualification.",
+      "title": "Qualify a genuinely new no-cost or already-entitled source"
+    },
+    {
+      "evidence_ids": [
+        "knowledge_delivery_execution",
+        "neo4j_integration",
+        "neo4j_local_setup"
+      ],
+      "id": "action:neo4j_choice",
+      "kind": "next_action",
+      "lifecycle_status": "DOCUMENTARY_REFERENCE",
+      "scope": "Curated project context.",
+      "status": "completed_user_selected_free_local_setup",
+      "summary": "The original free local installation choice was completed. The user later authorized the existing Aura trial, now verified in its separate execution record. Local setup history is preserved.",
+      "title": "Free local Neo4j setup selected and installed"
+    },
+    {
+      "evidence_ids": [
+        "knowledge_sync_contract",
+        "knowledge_sync_execution",
+        "neo4j_free_validation"
+      ],
+      "id": "action:neo4j_import",
+      "kind": "next_action",
+      "lifecycle_status": "DOCUMENTARY_REFERENCE",
+      "scope": "Curated project context.",
+      "status": "completed_free_revision_and_overlay_verified",
+      "summary": "All exact Free payload/endpoint checks, guarded activation and complete URL-overlay patch passed. Native Notion acknowledged 167 records and 210 typed relations. Historical trial/local records are preserved.",
+      "title": "Completed verified Neo4j Free active revision"
+    },
+    {
+      "evidence_ids": [
+        "daily_decision_workflow_view",
+        "full_project_history_diagnostic",
+        "test_explanation_index"
+      ],
+      "id": "action:paper_integration",
+      "kind": "next_action",
+      "lifecycle_status": "DOCUMENTARY_REFERENCE",
+      "scope": "Curated project context.",
+      "status": "downstream_adapter_after_scoring_design",
+      "summary": "Use the whole workflow view. Connect explicit model estimates and supplied positions to both entry and held-review policies, then existing cash/validity and dated paper output. No new execution authorized.",
+      "title": "Review one concrete daily paper adapter"
+    },
+    {
+      "evidence_ids": [
+        "full_project_history_diagnostic",
+        "state",
+        "workflow_repair_execution"
+      ],
+      "id": "action:timing_design",
+      "kind": "next_action",
+      "lifecycle_status": "PROPOSED",
+      "scope": "Source-linked documentary state at the stated date; implementation/qualification scope does not imply predictive validity or a currently running service.",
+      "status": "proposed_not_authorized_to_fit",
+      "summary": "Reuse existing Architecturev3 and cash mechanics designs. After integration and real-use input/configuration gates, freeze only the specific missing scoring/retention/exit choices. No new fitting authorized by this documentary review.",
+      "title": "Freeze a small variable-duration paper comparison"
+    },
+    {
+      "evidence_ids": [
+        "workflow"
+      ],
+      "id": "collection:legacy_pipeline",
+      "kind": "workflow",
+      "lifecycle_status": "CONFIGURED",
+      "scope": "Source-linked documentary state at the stated date; implementation/qualification scope does not imply predictive validity or a currently running service.",
+      "status": "configured_not_observed",
+      "summary": "Weekday22:00UTC cron is configured. It is an authenticated notebook/model workflow, not proof that the separate public collector runs on a schedule or that a recent pipeline succeeded.",
+      "title": "Legacy GitHub notebook pipeline"
+    },
+    {
+      "evidence_ids": [
+        "provider_identity_review",
+        "public_collection_status",
+        "workflow_first_checkpoint",
+        "workflow_repair_execution"
+      ],
+      "id": "collection:public_daily",
+      "kind": "collector",
+      "lifecycle_status": "DOCUMENTED",
+      "scope": "Source-linked documentary state at the stated date; implementation/qualification scope does not imply predictive validity or a currently running service.",
+      "status": "strict_collector_unchanged_full_feed_unqualified",
+      "summary": "One prior strict2597-label attempt saved no bars. Later60-label metadata-only check identifiesACA/ACVA missing, with reviewed October cash conversions. Full coverage remains unqualified; no standing daily service or broad rerun.",
+      "title": "Public Robinhood daily collector"
+    },
+    {
+      "evidence_ids": [
+        "freshness",
+        "workflow_first_checkpoint"
+      ],
+      "id": "collection:security_shadow",
+      "kind": "collector",
+      "lifecycle_status": "UNKNOWN",
+      "scope": "Source-linked documentary state at the stated date; implementation/qualification scope does not imply predictive validity or a currently running service.",
+      "status": "single_filename_observed_completeness_unverified",
+      "summary": "OSL filename inventory throughNov20contains onlySep19manifest; contents unopened, completion and daily continuity unverified. Historical lineage gap remains.",
+      "title": "Prospective security-master snapshots"
+    },
+    {
+      "evidence_ids": [
+        "freshness",
+        "shadow_readiness",
+        "state",
+        "workflow_first_checkpoint",
+        "workflow_repair_execution"
+      ],
+      "id": "collection:shadow_lock",
+      "kind": "workflow",
+      "lifecycle_status": "UNKNOWN",
+      "scope": "Source-linked documentary state at the stated date; implementation/qualification scope does not imply predictive validity or a currently running service.",
+      "status": "discontinuous_recorded_late_lock_warmup_conflict",
+      "summary": "OSL has1schema-conforming Sep8as-of lock across54scheduled sessions; recordedSep9at18:26UTC after next core open.53session manifests absent. Protected warmup conflict blocks legacy writer; payload integrity and independent timing unknown. Legacy entry is now disabled locally/OSL; new metadata preflight is installed but creates no forecasts or prediction locks.",
+      "title": "Prospective decision locks"
+    },
+    {
+      "evidence_ids": [
+        "full_project_history_diagnostic"
+      ],
+      "id": "component:buy_ticket_formatter",
+      "kind": "workflow",
+      "lifecycle_status": "DOCUMENTARY_REFERENCE",
+      "scope": "Curated project context.",
+      "status": "implemented_separate_prototype",
+      "summary": "Explicit CSV proposals to BUY-only review tickets; not connected to cash state, SELL/HOLD/WAIT or a broker.",
+      "title": "Review-only BUY ticket formatter"
+    },
+    {
+      "evidence_ids": [
+        "cash_module",
+        "cash_validation"
+      ],
+      "id": "component:cash_ledger_v1",
+      "kind": "component",
+      "lifecycle_status": "COMPLETED",
+      "scope": "Offline software mechanics and synthetic checks only; no predictive validity, real-data replay or trading approval.",
+      "status": "implemented_synthetic_validated",
+      "summary": "Tracks settled cash, receivables, positions, partial exits, fees and action receipts with retry protection. No automatic five-day exit, stale-price fill, short, add-on or brokertransport.",
+      "title": "Offline cash-account paper ledger"
+    },
+    {
+      "evidence_ids": [
+        "public_collector_contract",
+        "workflow_repair_execution"
+      ],
+      "id": "component:collector_v2",
+      "kind": "collector",
+      "lifecycle_status": "DOCUMENTARY_REFERENCE",
+      "scope": "Curated project context.",
+      "status": "software_verified_actual_feed_blocked",
+      "summary": "Exact requested symbol/date cells, reviewed calendar, preserved run receipts and safe failure codes. Partial/invalid/conflicting inputs are not saved; membership and delisting coverage are not certified.",
+      "title": "Fixed-label public collector with strict completeness"
+    },
+    {
+      "evidence_ids": [
+        "state",
+        "test_explanation_index"
+      ],
+      "id": "component:cursor_context_rule",
+      "kind": "workflow",
+      "lifecycle_status": "DOCUMENTARY_REFERENCE",
+      "scope": "Curated project context.",
+      "status": "configured_file_runtime_loading_unverified",
+      "summary": "AlwaysApply project rule points to AGENTS, current question, reviewed completed work and explanation index. Actual Cursor loading and future compliance are not certified.",
+      "title": "Shared Cursor project starting rule"
+    },
+    {
+      "evidence_ids": [
+        "future_preflight_contract",
+        "future_preflight_implementation",
+        "workflow_repair_execution"
+      ],
+      "id": "component:future_preflight",
+      "kind": "workflow",
+      "lifecycle_status": "DOCUMENTARY_REFERENCE",
+      "scope": "Curated project context.",
+      "status": "implemented_verified_metadata_only",
+      "summary": "Explicit session and activation bounds, hash-bound input declarations and immutable readiness receipts. Scoring always false; no model/history minimum registered.",
+      "title": "Future-only readiness guard"
+    },
+    {
+      "evidence_ids": [
+        "knowledge_delivery",
+        "knowledge_delivery_execution",
+        "knowledge_delivery_note",
+        "knowledge_sync_contract",
+        "knowledge_sync_execution",
+        "neo4j_free_validation"
+      ],
+      "id": "component:knowledge_delivery",
+      "kind": "component",
+      "lifecycle_status": "IMPLEMENTED_REVIEWED_DELIVERY_WORKFLOW",
+      "scope": "Documentary views only. Reviewed source files retain authority; snapshot publication, a live authenticated backend and recurring synchronization are separate verified states.",
+      "status": "implemented_private_documentary_views",
+      "summary": "Private Notion records and typed relationships, the website graph and the Neo4j serving base share reviewed content revisions. The workflow preserves historical deliveries and records each destination acknowledgement separately.",
+      "title": "Private knowledge library and interactive graph delivery"
+    },
+    {
+      "evidence_ids": [
+        "knowledge_sync_contract",
+        "knowledge_sync_execution",
+        "neo4j_free_validation"
+      ],
+      "id": "component:knowledge_release_v1",
+      "kind": "component",
+      "lifecycle_status": "IMPLEMENTED_VERSIONED_RELEASE_MECHANICS",
+      "scope": "Release mechanics. The exact source snapshot, target revision, counts and destination acknowledgements are recorded in metadata and execution receipts.",
+      "status": "implemented_immutable_revision_and_overlay_workflow",
+      "summary": "One sanitized documentary content revision is frozen with hashes and backups. Notion page URLs are a separate guarded overlay. Source changes require another reviewed release; delivery receipts do not silently alter semantic content.",
+      "title": "Immutable knowledge release and link-overlay mechanism"
+    },
+    {
+      "evidence_ids": [
+        "full_project_history_diagnostic"
+      ],
+      "id": "component:legacy_proposal_board",
+      "kind": "workflow",
+      "lifecycle_status": "DOCUMENTARY_REFERENCE",
+      "scope": "Curated project context.",
+      "status": "implemented_not_portfolio_aware",
+      "summary": "Source hardcodes is_holdingFalse and weight0. Old horizon-max probabilities are not approved new signals. Live website invocation is unverified.",
+      "title": "Legacy daily proposal generator"
+    },
+    {
+      "evidence_ids": [
+        "neo4j_aura_execution",
+        "neo4j_aura_validation"
+      ],
+      "id": "component:neo4j_aura",
+      "kind": "component",
+      "lifecycle_status": "DOCUMENTARY_MIRROR_VERIFIED",
+      "scope": "Historical pinned trial execution. Not the current Free active revision or a perpetual hosting commitment.",
+      "status": "historical_verified_trial_retained_free_is_current",
+      "summary": "The earlier trial retains its separately verified 164-record package. The current documentary query base is the Free active revision; the trial history and its December 5 expiry are preserved.",
+      "title": "Historical verified Aura trial mirror"
+    },
+    {
+      "evidence_ids": [
+        "knowledge_sync_contract",
+        "knowledge_sync_execution",
+        "neo4j_free_validation"
+      ],
+      "id": "component:neo4j_free",
+      "kind": "component",
+      "lifecycle_status": "VERIFIED_DOCUMENTARY_BASE_AVAILABLE",
+      "scope": "Private documentary query base. Free lifecycle rules and independent backups apply; live website authentication and recurring operation require separate verification.",
+      "status": "verified_project_scoped_free_serving_base",
+      "summary": "The Free serving base isolates stock documentary revisions from unrelated artwork, validates exact payloads and endpoints, and selects the published revision through one guarded active pointer.",
+      "title": "Verified Neo4j Free documentary query base"
+    },
+    {
+      "evidence_ids": [
+        "knowledge_delivery_execution",
+        "neo4j_aura_execution",
+        "neo4j_aura_validation",
+        "neo4j_exporter",
+        "neo4j_integration",
+        "neo4j_integration_note",
+        "neo4j_local_setup",
+        "neo4j_package_manifest"
+      ],
+      "id": "component:neo4j_package",
+      "kind": "component",
+      "lifecycle_status": "DOCUMENTARY_MIRROR_VERIFIED",
+      "scope": "Historical 164-record package and its verified trial import. The later Free revision has separate immutable files and exact validation.",
+      "status": "historical_pinned_package_import_verified",
+      "summary": "The earlier offline package and its verified trial import are preserved with their own evidence and artwork baseline. The current Free serving mechanism uses separate revision-scoped files and validation.",
+      "title": "Historical pinned Neo4j import package"
+    },
+    {
+      "evidence_ids": [
+        "architecture",
+        "gate"
+      ],
+      "id": "component:state_ledger",
+      "kind": "component",
+      "lifecycle_status": "DOCUMENTED",
+      "scope": "Source-linked documentary state at the stated date; implementation/qualification scope does not imply predictive validity or a currently running service.",
+      "status": "implemented_prior_research",
+      "summary": "Prior state-aware v2 mechanics already handle held positions, entry eligibility and sells outside the new-entry universe. Reuse reviewed mechanics; prior models were not promoted.",
+      "title": "Buy / hold / sell / avoid state engine"
+    },
+    {
+      "evidence_ids": [
+        "cash_contract",
+        "cash_walkthrough"
+      ],
+      "id": "contract:cash_variable_holding",
+      "kind": "implementation_contract",
+      "lifecycle_status": "DOCUMENTED",
+      "scope": "Offline software mechanics and synthetic checks only; no predictive validity, real-data replay or trading approval.",
+      "status": "mechanics_frozen_predictor_pending",
+      "summary": "Explicit buy/hold/sell/avoid states, dated settlement, position and cash invariants; starting capital andrisk/costlimits are required inputs, not assumed defaults.",
+      "title": "Cash-account state and settlement rules"
+    },
+    {
+      "evidence_ids": [
+        "knowledge_sync_contract",
+        "knowledge_sync_execution",
+        "neo4j_free_validation"
+      ],
+      "id": "contract:knowledge_sync_v1",
+      "kind": "contract",
+      "lifecycle_status": "DOCUMENTED_IMPLEMENTED_MECHANICS",
+      "scope": "Publication mechanics only. Live-service authentication and recurring operations have separate configuration and verification receipts.",
+      "status": "implemented_manual_revision_workflow",
+      "summary": "Reviewed files feed immutable sanitized releases, guarded Free activation and separately acknowledged Notion/website views. Refresh is staged and manual; automatic two-way/background synchronization is off.",
+      "title": "Reviewed one-way knowledge publication contract"
+    },
+    {
+      "evidence_ids": [
+        "qualification_spec"
+      ],
+      "id": "contract:lineage_qualification",
+      "kind": "qualification_contract",
+      "lifecycle_status": "DOCUMENTED",
+      "scope": "Curated project context.",
+      "status": "required_before_reconstruction",
+      "summary": "New source candidates must pass the early/middle/recent stable-ID, alias, listing/exit, terminal-return and adjustment checks before bulk reconstruction. A no-cost or already-entitled route may qualify; CRSP is optional.",
+      "title": "Bounded historical source qualification"
+    },
+    {
+      "evidence_ids": [
+        "cohort_conditions_result",
+        "geometry_cohort_provenance"
+      ],
+      "id": "gap:broad_market_regime_evidence",
+      "kind": "blocker",
+      "lifecycle_status": "DOCUMENTARY_REFERENCE",
+      "scope": "Curated project context.",
+      "status": "unverified",
+      "summary": "The original six-month36-stock replay contains only3 five-session falling-reference baskets at the frozen cutoff. It does not establish prolonged bear/sideways or whole-market behavior.",
+      "title": "Broad-market falling and sideways evidence unestablished"
+    },
+    {
+      "evidence_ids": [
+        "cash_contract",
+        "cash_validation",
+        "full_project_history_diagnostic"
+      ],
+      "id": "gap:cash_replay_adapters",
+      "kind": "blocker",
+      "lifecycle_status": "BLOCKED",
+      "scope": "Offline software mechanics and synthetic checks only; no predictive validity, real-data replay or trading approval.",
+      "status": "blocked_real_replay",
+      "summary": "Corporate actions, immutable decision/expiry, holdings/state import and a deterministic daily batch adapter remain unconnected. Existing proposal CSV and BUY tickets are separate from cash state; offline design may proceed without another broad source audit.",
+      "title": "Real replay adapters not implemented"
+    },
+    {
+      "evidence_ids": [
+        "architecture",
+        "cash_contract",
+        "cash_validation",
+        "daily_decision_workflow_view"
+      ],
+      "id": "gap:cash_timing_design",
+      "kind": "blocker",
+      "lifecycle_status": "PROPOSED",
+      "scope": "Source-linked documentary state at the stated date; implementation/qualification scope does not imply predictive validity or a currently running service.",
+      "status": "pending_design",
+      "summary": "Ledger mechanics are defined and tested. Paper balance, risk/cost limits, corporate-action/intent adapters and a new predictive design remain unfrozen.",
+      "title": "Forecast target, horizon, model and portfolio policy pending"
+    },
+    {
+      "evidence_ids": [
+        "provider_identity_review",
+        "workflow_first_checkpoint",
+        "workflow_repair_execution"
+      ],
+      "id": "gap:future_lock_path",
+      "kind": "blocker",
+      "lifecycle_status": "DOCUMENTARY_REFERENCE",
+      "scope": "Curated project context.",
+      "status": "metadata_guard_implemented_inputs_and_scoring_unqualified",
+      "summary": "Future-only metadata checks are verified. Two ended-security cases are documented; full input eligibility, usable history and scoring design remain unqualified. No actual forecast or backfilled lock is authorized.",
+      "title": "Safe future-only lock path and complete inputs"
+    },
+    {
+      "evidence_ids": [
+        "knowledge_sync_contract",
+        "knowledge_sync_execution",
+        "neo4j_free_validation"
+      ],
+      "id": "gap:knowledge_live_backend",
+      "kind": "blocker",
+      "lifecycle_status": "SEPARATE_SERVICE_CONFIGURATION_GATE",
+      "scope": "Only live backend operation. Configuration and request acknowledgements are recorded separately from immutable content and released snapshot availability.",
+      "status": "live_authentication_and_request_verification_required",
+      "summary": "The fixed server read is implemented. A production live-database claim additionally requires private authentication configuration and a verified request; a released fallback remains a distinct serving mode.",
+      "title": "Configure and verify private live backend separately"
+    },
+    {
+      "evidence_ids": [
+        "qualification_spec",
+        "readiness"
+      ],
+      "id": "gap:lineage",
+      "kind": "blocker",
+      "lifecycle_status": "BLOCKED",
+      "scope": "Source-linked documentary state at the stated date; implementation/qualification scope does not imply predictive validity or a currently running service.",
+      "status": "blocked",
+      "summary": "Stable security identities, aliases/ticker reuse, true listings and exits, delisted histories/terminal returns and consistent adjustments are not certified.",
+      "title": "Missing historical membership and terminal returns"
+    },
+    {
+      "evidence_ids": [
+        "knowledge_delivery_execution",
+        "neo4j_aura_execution",
+        "neo4j_exporter",
+        "neo4j_integration",
+        "neo4j_integration_note",
+        "neo4j_local_setup",
+        "neo4j_package_manifest"
+      ],
+      "id": "gap:neo4j_runtime",
+      "kind": "blocker",
+      "lifecycle_status": "OPTIONAL_ALTERNATIVE_ROUTE",
+      "scope": "Local alternative only; do not interpret local authentication as confirmed or repeat the completed cloud import merely to resolve this node.",
+      "status": "optional_local_route_unverified_cloud_mirror_available",
+      "summary": "The optional local Community connection/import remain unconfirmed. The current verified Neo4j Free documentary mirror is available independently; local login does not block it.",
+      "title": "Optional local Neo4j authentication remains unverified"
+    },
+    {
+      "evidence_ids": [
+        "full_project_history_diagnostic"
+      ],
+      "id": "gap:paper_workflow_integration",
+      "kind": "blocker",
+      "lifecycle_status": "DOCUMENTARY_REFERENCE",
+      "scope": "Curated project context.",
+      "status": "specific_missing_adapter_identified",
+      "summary": "Connect explicit dated proposals and supplied holdings to existing cash/position state and one review report. Offline synthetic adapter design does not require a broad market audit; actual forecasting still separately gated.",
+      "title": "Daily paper components are not integrated"
+    },
+    {
+      "evidence_ids": [
+        "provider_ended_cases",
+        "provider_identity_review",
+        "provider_missing_policy",
+        "public_collector_contract",
+        "workflow_repair_execution"
+      ],
+      "id": "gap:public_provider_symbol_mapping",
+      "kind": "blocker",
+      "lifecycle_status": "DOCUMENTARY_REFERENCE",
+      "scope": "Curated project context.",
+      "status": "two_cases_reviewed_full_coverage_unqualified",
+      "summary": "ACA/ACVA absent from first60 have dated SEC cash-conversion evidence. Blank slots remain unattributed; no parent aliases or full-feed pass. Review lifecycle-aware expected inputs across all2597original labels before further collection.",
+      "title": "Current provider coverage and security lifecycle gaps"
+    },
+    {
+      "evidence_ids": [
+        "fallback",
+        "hybrid",
+        "qc"
+      ],
+      "id": "gap:qualified_source_access",
+      "kind": "blocker",
+      "lifecycle_status": "BLOCKED",
+      "scope": "Curated project context.",
+      "status": "blocked",
+      "summary": "Completed free routes have failed full-lineage gates and no institutional entitlement is established. A genuinely different free/already-entitled source can be considered after a new bounded design.",
+      "title": "No fully qualified free historical source established"
+    },
+    {
+      "evidence_ids": [
+        "readiness"
+      ],
+      "id": "gap:sector",
+      "kind": "blocker",
+      "lifecycle_status": "BLOCKED",
+      "scope": "Source-linked documentary state at the stated date; implementation/qualification scope does not imply predictive validity or a currently running service.",
+      "status": "blocked",
+      "summary": "Current sector labels may describe the chart; they cannot stand in for historical sector membership.",
+      "title": "Dated sector classifications missing"
+    },
+    {
+      "evidence_ids": [
+        "provider_missing_policy"
+      ],
+      "id": "policy:provider_missing_data",
+      "kind": "contract",
+      "lifecycle_status": "DOCUMENTARY_REFERENCE",
+      "scope": "Curated project context.",
+      "status": "reviewed_operational_no_scoring_approval",
+      "summary": "All2597labels retained. Missing/unresolved records remain visible; strictcollector unchanged. No prices or aliases inferred.",
+      "title": "Preserve original labels and missing-data evidence"
+    },
+    {
+      "evidence_ids": [
+        "full_project_history_diagnostic"
+      ],
+      "id": "policy:task_start_evidence",
+      "kind": "contract",
+      "lifecycle_status": "DOCUMENTARY_REFERENCE",
+      "scope": "Curated project context.",
+      "status": "required_current_task_start_rule",
+      "summary": "Name existing component, exact missing delta, reason for new work and completion evidence. Do not reset generic data/graph/model/history stages.",
+      "title": "Reuse evidence before starting work"
+    }
+  ]
+}

@@ -1,0 +1,408 @@
+{
+  "as_of": "2026-11-22",
+  "content_sha256": "128841b759ac4d9761cf030f673204ba92bbbfae0b2f01dec52b5d542d878114",
+  "counts": {
+    "canonical_source_records": 70,
+    "public_safe_source_records": 65,
+    "referenced_public_evidence_records": 55,
+    "unsafe_source_records_omitted": 5,
+    "unused_safe_source_records_omitted": 10
+  },
+  "document_kind": "sanitized_source_title_and_digest_index",
+  "evidence": [
+    {
+      "authority": "reviewed_design_history",
+      "id": "architecture",
+      "scope": "Targets, dependencies, completed fixed-geometry rule and inspection",
+      "sha256": "bad967975509d4b7a6abe2fd2a439bd7c50011ee597d012c6509392302663e6f",
+      "title": "Architecture"
+    },
+    {
+      "authority": "reviewed_software_contract",
+      "id": "cash_contract",
+      "scope": "Frozen cash/position mechanics; predictive replay remains blocked",
+      "sha256": "3b6a902c9c0cd78d510c601c07f56dbe75a33beb23585ff92e2c433539630062",
+      "title": "Cash Contract"
+    },
+    {
+      "authority": "implementation_code",
+      "id": "cash_module",
+      "scope": "Pureofflinecashledger; no predictor orbrokertransport",
+      "sha256": "93bc65ec6128f9f2d5795e49fa3beb11bdc0d4d2475507036d58d01e3a1a4501",
+      "title": "Cash Module"
+    },
+    {
+      "authority": "reviewed_synthetic_software_validation",
+      "id": "cash_validation",
+      "scope": "16fictionalsoftwaretests, zero realdata/backtests/forecasts",
+      "sha256": "8f617839f90f4af0acbced0e78b9bf0cddeb56a90c9326fabdb6f881468e273f",
+      "title": "Cash Validation"
+    },
+    {
+      "authority": "reviewed_contract_walkthrough",
+      "id": "cash_walkthrough",
+      "scope": "Human-readableaccounting/actionrules andremaininggates",
+      "sha256": "13bf5954a5ea6e44fa1445d0f16d72f526e792766e178b4a53604017d27940b0",
+      "title": "Cash Walkthrough"
+    },
+    {
+      "authority": "frozen_diagnostic_design",
+      "id": "cohort_conditions_design",
+      "scope": "Pinned source, fixedÂ±1% cohort bins and arithmetic-only accounting before inspection.",
+      "sha256": "ac0f8449b5edbf4be87f7de82015e14d860140428581aa77d2bf60793c1cf82f",
+      "title": "Cohort Conditions Design"
+    },
+    {
+      "authority": "reviewed_posthoc_diagnostic",
+      "id": "cohort_conditions_result",
+      "scope": "Original26 saved baskets partitioned by realized cohort outcomes; no new model, portfolio or market-regime confirmation.",
+      "sha256": "53e2f9d26e6bca733eddae344a65de7115e85570112c4a25054a28e9965ae677",
+      "title": "Cohort Conditions Result"
+    },
+    {
+      "authority": "source_linked_architecture_view_not_execution",
+      "id": "daily_decision_workflow_view",
+      "scope": "Data/clock -> forecast target/horizon/features/model -> entry and held review -> constraints -> advance paper report and mature outcomes; current unknowns explicit.",
+      "sha256": "4415f4c293b6277ee2929fbfc361651d81f855b6a07317ecaf98e05c69f86ec4",
+      "title": "Daily Decision Workflow View"
+    },
+    {
+      "authority": "reviewed_diagnostic",
+      "id": "diagnostic_result",
+      "scope": "Saved forecasts/holdings/weights inspection; no retraining or correction",
+      "sha256": "7cd61b76e10f69b81e8ed87519b9aebe24b3020ea22588db2ee910ba312b0fee",
+      "title": "Diagnostic Result"
+    },
+    {
+      "authority": "reviewed_display_export",
+      "id": "display",
+      "scope": "Current fixed physical-reference map scope and eight-variable definitions",
+      "sha256": "64392c66b5c2349297d89b481d2bb82e869c8258d7b3f2e4dd4417cfd6a762dc",
+      "title": "Display"
+    },
+    {
+      "authority": "reviewed_documentary_source",
+      "id": "document:fe3bb5707f976b9b",
+      "scope": "Reviewed documentary input to the public method catalog.",
+      "sha256": "fe3bb5707f976b9bf78eb67f1c38b57ba4f20bee0e15223a074e27725dc2f26b",
+      "title": "Method Performance Review V1 20261121"
+    },
+    {
+      "authority": "reviewed_design_and_result",
+      "id": "earnings",
+      "scope": "Dated issuer-event recency, deformation pilot and failed replay",
+      "sha256": "4b56c4439c377c99036fd1981f9226089f2204ecf18a8984e19c87378075b0c6",
+      "title": "Earnings"
+    },
+    {
+      "authority": "frozen_experiment",
+      "id": "earnings_design",
+      "scope": "Qualified36 stock next-open price/corporate-action outcome contract and ridge comparison",
+      "sha256": "04cdc0676bfc0ecc52e315bb7546fcab350e7ecc26ba1695737bddd1d69227a2",
+      "title": "Earnings Design"
+    },
+    {
+      "authority": "reviewed_capability_assessment",
+      "id": "fallback",
+      "scope": "Alpha Vantage plus SEC and existing prices structural failures",
+      "sha256": "2e7ea2ada6ce131cc4da1c3130a5a93351333327ad13e4a6c9fe256dbbd95968",
+      "title": "Fallback"
+    },
+    {
+      "authority": "dated_read_only_review",
+      "id": "freshness",
+      "scope": "November8 OSL/website/prospective-manifest checks, not continuous present observation",
+      "sha256": "f39b45df0cfbb270df23b36e0e002396dbbd87a05ec87251dbbf22c25cafc273",
+      "title": "Freshness"
+    },
+    {
+      "authority": "reviewed_documentary_history_and_source_reconciliation",
+      "id": "full_project_history_diagnostic",
+      "scope": "32accessiblechats/702turns; capability statuses and specific missing integration. Not a new model test or live-service certification.",
+      "sha256": "68fedcacaeb19d89c6d32f1d1b3334ae278eccd966c3eb1937ca80a1c99fe553",
+      "title": "Full Project History Diagnostic"
+    },
+    {
+      "authority": "registered_software_contract",
+      "id": "future_preflight_contract",
+      "scope": "Future activation and input boundary; metadata only, no registered scoring design/history requirement.",
+      "sha256": "6d96d55e8ed02a93b99bfb596554eb2970f886e1b66f7927a2123ccc91d86e4b",
+      "title": "Future Preflight Contract"
+    },
+    {
+      "authority": "reviewed_software_scope",
+      "id": "future_preflight_implementation",
+      "scope": "Session timing, pins, immutable receipts and always-disabled scoring.",
+      "sha256": "88a209e9b03fcfb340c266006834e9efdc0ac0ca79f7b9600974f6085ad95069",
+      "title": "Future Preflight Implementation"
+    },
+    {
+      "authority": "canonical_registry",
+      "id": "gate",
+      "scope": "Completed, approved, rejected designs, decisions and consumed holdout guard",
+      "sha256": "0f1b185abf919cf3fc0edf0c1557bddb9fc279f6ce90b1f6921fac658aed29df",
+      "title": "Gate"
+    },
+    {
+      "authority": "reviewed_documentary_provenance",
+      "id": "geometry_cohort_provenance",
+      "scope": "Earlier32-label union of4 top24 liquidity cohorts versus later manually fixed36 familiar issuers.",
+      "sha256": "64b1fe2cff380b3c10cc79dc3852af4e5c07e13e21f8921e24372344b2a5371f",
+      "title": "Geometry Cohort Provenance"
+    },
+    {
+      "authority": "reviewed_source_provenance_and_primary_reference_research",
+      "id": "hold_sell_background",
+      "scope": "Safe notebook/filter origin, documented book recommendations and current cash/exit reference families; no new model or performance validation.",
+      "sha256": "c2919f347016aef1da6fa4b523a24572b07790284552e55ef4e3228acc55b221",
+      "title": "Hold Sell Background"
+    },
+    {
+      "authority": "reviewed_capability_assessment",
+      "id": "hybrid",
+      "scope": "Public records useful for corroboration, not a certified full primary panel",
+      "sha256": "f268065c242af44ef8a4fb4c5a60d7538e1eba135e906f202ac963d3b1c3b9da",
+      "title": "Hybrid"
+    },
+    {
+      "authority": "reviewed_delivery_record",
+      "id": "knowledge_delivery",
+      "scope": "Preserved original private Notion/Canvas delivery, browser tests and approval history from the owning session.",
+      "sha256": "0d0720ee7293be10cc0d60fc25561feeb159b2b06c83c1d65cd4765f13f11064",
+      "title": "Knowledge Delivery"
+    },
+    {
+      "authority": "owning_session_verified_delivery_execution",
+      "id": "knowledge_delivery_execution",
+      "scope": "Historical approved Notion/private website execution and then-pending local Neo4j handoff; later Aura execution has a separate record.",
+      "sha256": "b3cdd1a5c92aebd629e21c62979397c3bf7e4cd8bdaf5dba62f8716f3d3edb99",
+      "title": "Knowledge Delivery Execution"
+    },
+    {
+      "authority": "reviewed_delivery_record",
+      "id": "knowledge_delivery_note",
+      "scope": "Preserved original private delivery notes and approval history.",
+      "sha256": "4cd42df6d53a4987b328b38a46c280a2464e3a1f977489f10432230f8dbf822f",
+      "title": "Knowledge Delivery Note"
+    },
+    {
+      "authority": "reviewed_documentary_workflow",
+      "id": "knowledge_sync_contract",
+      "scope": "One-way reviewed revision publication, guarded activation, Notion/website acknowledgements and restoration limits.",
+      "sha256": "b10da66600da760f6aec677d08a4c9a5cb933046520917fdb950d039d99e7178",
+      "title": "Knowledge Sync Contract"
+    },
+    {
+      "authority": "owning_session_verified_documentary_execution",
+      "id": "knowledge_sync_execution",
+      "scope": "Per-destination acknowledgements and separate content-revision/link-overlay provenance; consult the execution receipt for observed state.",
+      "sha256": "8a0084fb151c472d4a679a7f7f147087fe4e5a60eaefb29ee4db0ee0212aa7e9",
+      "title": "Knowledge Sync Execution"
+    },
+    {
+      "authority": "legacy_variable_catalog",
+      "id": "legacy_catalog",
+      "scope": "Legacy variable formulas and tested-scope assertions, not current prediction proof",
+      "sha256": "c75ef033e248a59cea3c8282b93eb313d246f1abc294fbd6edaed4b5c580b142",
+      "title": "Legacy Catalog"
+    },
+    {
+      "authority": "reviewed_result",
+      "id": "local_result",
+      "scope": "Matched four-arm sixmonth fixed-map movement replay; no promotion",
+      "sha256": "ef686529406e437d47e9e48b1ddd4f8ac4f08d54b8022a5befa470f295ac3958",
+      "title": "Local Result"
+    },
+    {
+      "authority": "reviewed_probe",
+      "id": "massive_probe",
+      "scope": "Historical entitlement and recent reference probe results",
+      "sha256": "fc73d8d0d4de4b294b1871ba4c18fb0e5ab0d33988e92c13cebc6421866478d8",
+      "title": "Massive Probe"
+    },
+    {
+      "authority": "curated_presentation_alias",
+      "id": "model_evidence_titles",
+      "scope": "Friendly labels/questions only; canonical registry and reviewed artifacts retain all lifecycle, signature, result and numeric authority.",
+      "sha256": "c3d4265c2e2a4a6efdc38acf0daeeaf28fbdf37416a30c305ff71e8427f9b731",
+      "title": "Model Evidence Titles"
+    },
+    {
+      "authority": "observed_authenticated_cloud_documentary_execution",
+      "id": "neo4j_aura_execution",
+      "scope": "Verified pinned private Aura trial import, artwork preservation, no credential/billing/model changes and explicit snapshot limits.",
+      "sha256": "e5bed56848d4893bea8a6aaa16a0e6f85362cf98f77928d5988226029f7102f1",
+      "title": "Neo4J Aura Execution"
+    },
+    {
+      "authority": "observed_ui_validation_results",
+      "id": "neo4j_aura_validation",
+      "scope": "Exact constraint schemas, properties, record/source/edge/evidence IDs, zero stale counts and unchanged artwork baseline.",
+      "sha256": "819bb77888d88a5e75e5ca31f40be93c702a8924640c33eb0021fe7db483ec74",
+      "title": "Neo4J Aura Validation"
+    },
+    {
+      "authority": "implementation_code",
+      "id": "neo4j_exporter",
+      "scope": "Software-only offline CSV/Cypher exporter; no live database or frontend connection.",
+      "sha256": "f71a59d4aa88cca9900addc960e3bc22b640ae5d1f67bab06135dcea48c8ceea",
+      "title": "Neo4J Exporter"
+    },
+    {
+      "authority": "observed_authenticated_free_database_validation",
+      "id": "neo4j_free_validation",
+      "scope": "Observed project-scoped payload/endpoint validation, guarded activation and unrelated-data preservation.",
+      "sha256": "a39c2c7febeca29d6fbbbb9414b9fa70899ce6219cca276d5c6aef7fbacc190a",
+      "title": "Neo4J Free Validation"
+    },
+    {
+      "authority": "reviewed_documentary_integration_status",
+      "id": "neo4j_integration",
+      "scope": "Historical trial documentary import and optional local setup history, superseded for serving by the Free revision workflow.",
+      "sha256": "88baf3c9a448e481879c1b9c25cf9c35e4ca53240868797a01c865bb90705c2d",
+      "title": "Neo4J Integration"
+    },
+    {
+      "authority": "reviewed_documentary_integration_status",
+      "id": "neo4j_integration_note",
+      "scope": "Historical documentary roles, trial execution and optional local runtime handoff; original snapshots preserved.",
+      "sha256": "1591eeaf78db26293eec9be99a9d5439580bee5d935fa5364dfb837c8cbd543b",
+      "title": "Neo4J Integration Note"
+    },
+    {
+      "authority": "verified_local_runtime_setup",
+      "id": "neo4j_local_setup",
+      "scope": "Portable Neo4j Community 5.26.33 and Temurin 21 installed; loopback-only runtime with authentication enabled; no data import.",
+      "sha256": "54a67d2780363122d5336c8fad72ec361ba1829ef5367b4dd389a1d66d35404c",
+      "title": "Neo4J Local Setup"
+    },
+    {
+      "authority": "pinned_offline_package_manifest",
+      "id": "neo4j_package_manifest",
+      "scope": "164 records, 203 typed relations, 31 sources, 207 provenance links and 162 Notion URLs from the unchanged pinned snapshot.",
+      "sha256": "449370a225dd2fa2c92489729beb856ed61c76c12031516a37353c9f41ed3473",
+      "title": "Neo4J Package Manifest"
+    },
+    {
+      "authority": "reviewed_documentary_entitlement_terms",
+      "id": "provider_cash_terms",
+      "scope": "Gross contractual consideration, never prices, returns or accountcash.",
+      "sha256": "a1077dc61319f396efb4dbddcd4bf92dd5fa753ad2fee853d95857bec6e27926",
+      "title": "Provider Cash Terms"
+    },
+    {
+      "authority": "reviewed_primary_source_cases",
+      "id": "provider_ended_cases",
+      "scope": "Dated ACA/ACVA public common-share conversions; no claim for every historical ticker use.",
+      "sha256": "1655bcfc8ab40d7169bb67b6df73ae9debfcf0b37cd0bd60f4ede93f6cce9a10",
+      "title": "Provider Ended Cases"
+    },
+    {
+      "authority": "reviewed_operational_metadata",
+      "id": "provider_identity_review",
+      "scope": "One60-label metadata observation; two documentary security-end cases, not full source qualification.",
+      "sha256": "974526478e8e336952c44ba1ae4032467f8465096bc3b6e18146f72d1d5b0ce9",
+      "title": "Provider Identity Review"
+    },
+    {
+      "authority": "reviewed_operational_policy",
+      "id": "provider_missing_policy",
+      "scope": "Preserve2597labels and unknowns; no aliases/imputedprices or scoring.",
+      "sha256": "9e8e239b743c18595baf0da7cb3dd69241f219c539c45ef13d8466cf9d453216",
+      "title": "Provider Missing Policy"
+    },
+    {
+      "authority": "dated_execution_status",
+      "id": "public_collection_status",
+      "scope": "Only coverage counts and run time, no raw bars; November19 latest date partial",
+      "sha256": "5c8aa6ab9e98dcf760008699eccf72def295c560c75263de1927eb74a60c36c7",
+      "title": "Public Collection Status"
+    },
+    {
+      "authority": "reviewed_collector_contract",
+      "id": "public_collector_contract",
+      "scope": "Fixed-label response completeness and preserved attempt receipts, not security-master qualification.",
+      "sha256": "621f5c95049b778d5e61f69f232b033015da0d3d6b43a82d12a649d18a697c88",
+      "title": "Public Collector Contract"
+    },
+    {
+      "authority": "reviewed_qualification",
+      "id": "qc",
+      "scope": "Completed free-cloud qualification; failed aggregate gates",
+      "sha256": "af03b478609f9bf272ae923026e5cc5d117cc7b8104b586b46666046b215ab98",
+      "title": "Qc"
+    },
+    {
+      "authority": "frozen_source_specification",
+      "id": "qualification_spec",
+      "scope": "Required stable IDs, aliases, lifecycle, terminal returns and adjustment gates",
+      "sha256": "f66aebf8c18188e88123ae3629fc741a47b2674fac3baac49410c763ea9f44df",
+      "title": "Qualification Spec"
+    },
+    {
+      "authority": "reviewed_source_audit",
+      "id": "readiness",
+      "scope": "Observed preholdout price coverage and failed historical lineage",
+      "sha256": "94183193a3074e6fbbf8318eea428fa69686df4024aed2ed0559fb59a927ed10",
+      "title": "Readiness"
+    },
+    {
+      "authority": "dated_readiness_attempt",
+      "id": "shadow_readiness",
+      "scope": "September8 blocked attempt; later checkpoint/review may supersede that instant",
+      "sha256": "eacb832739e0084f9bc4001ce72aaf3a9aade27b7f9d7849d7f7a4f2338a8751",
+      "title": "Shadow Readiness"
+    },
+    {
+      "authority": "canonical_checkpoint",
+      "id": "state",
+      "scope": "Accumulated state, latest reviewed model/diagnostic and unresolved dependencies",
+      "sha256": "1c1e84ee3541544295164dcfcf6d484ae821a68a0ccd567238c7bc7f376b3b26",
+      "title": "State"
+    },
+    {
+      "authority": "reviewed_documentation_inventory_overlay",
+      "id": "test_explanation_index",
+      "scope": "Maps34current registered IDs to33frozen cards plus one saved-result diagnostic; no new tests or empirical validation.",
+      "sha256": "4dbc2e5ed73d74a162662ddf2ae40f8d3a34e7d3a2c7af3dbc32f20e7850a9d3",
+      "title": "Test Explanation Index"
+    },
+    {
+      "authority": "legacy_catalog_index",
+      "id": "variable_catalog_index",
+      "scope": "Legacy catalog count and links only; stale sealed-holdout guardrail is superseded by context_gate.",
+      "sha256": "e3e472c4d9ce9f75569ece80f0b26685f276907ea3f58b37520daf9214823a68",
+      "title": "Variable Catalog Index"
+    },
+    {
+      "authority": "code_configuration_only",
+      "id": "workflow",
+      "scope": "Legacy authenticated notebook/model workflow configuredcron; no current run verified",
+      "sha256": "c892ddcf5b575241f8de18b7cd063d3ab46a92d3af9f5632b2028337da4c1456",
+      "title": "Workflow"
+    },
+    {
+      "authority": "reviewed_user_priority_and_metadata_audit",
+      "id": "workflow_first_checkpoint",
+      "scope": "User-paused3D development; OSL/local metadata inventory, late recorded lock and protected warmup conflict. No model/data/outcome payload reads.",
+      "sha256": "59af85cb22b985d491e586a6328dbfadd199362a4db5978135ba7e6eaccaf583",
+      "title": "Workflow First Checkpoint"
+    },
+    {
+      "authority": "reviewed_operational_execution",
+      "id": "workflow_repair_execution",
+      "scope": "Installed safety software, synthetic checks and one blocked observational collection plus bounded symbol diagnostics; no model/backtest/forecast.",
+      "sha256": "42b799599ff6be96e18ec3685f0474e93ab8a8e53542de284acb4e60cc2ef59f",
+      "title": "Workflow Repair Execution"
+    }
+  ],
+  "privacy_note": "Titles, authority labels and content digests are public; local paths, URLs, account identifiers and private release locations are omitted.",
+  "schema_version": "public_evidence_index_v1",
+  "source_snapshot": {
+    "graph": "cc84e6576cd082f9ab53253c8ad3860f9babac58a012aea77f7189de7b0390f3",
+    "methods": "fe3bb5707f976b9bf78eb67f1c38b57ba4f20bee0e15223a074e27725dc2f26b",
+    "test_index": "4dbc2e5ed73d74a162662ddf2ae40f8d3a34e7d3a2c7af3dbc32f20e7850a9d3",
+    "titles": "c3d4265c2e2a4a6efdc38acf0daeeaf28fbdf37416a30c305ff71e8427f9b731",
+    "workflow": "4415f4c293b6277ee2929fbfc361651d81f855b6a07317ecaf98e05c69f86ec4"
+  }
+}

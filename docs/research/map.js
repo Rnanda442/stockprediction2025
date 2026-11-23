@@ -1,0 +1,334 @@
+"use strict";
+
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const NS = "http://www.w3.org/2000/svg";
+  const list = (value) => Array.isArray(value) ? value : [];
+  const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (mark) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[mark]));
+  const human = (value) => String(value ?? "").replace(/[_]+/g, " ").replace(/\s+/g, " ").trim();
+  const normalizeSearch = (value) => String(value ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[‐‑‒–—−]/g, "-").replace(/[^\p{L}\p{N}]+/gu, " ").trim().toLowerCase();
+  const plain = (value) => {
+    if (value == null || value === "") return "Not recorded";
+    if (Array.isArray(value)) return value.map(plain).join(" · ");
+    if (typeof value === "object") return Object.entries(value).map(([key, item]) => `${human(key)}: ${plain(item)}`).join(" · ");
+    return String(value);
+  };
+  const sentences = (value) => value == null ? [] : Array.isArray(value) ? value.map(plain) : [plain(value)];
+  const useLabels = { reusable_software: "Reusable software", exploratory_signal: "Exploratory finding", diagnostic_only: "Diagnostic only", failed: "Negative result", blocked: "Blocked", notrun: "Not run", "blocked/notrun": "Blocked or not run" };
+  const useClasses = { reusable_software: "software", exploratory_signal: "signal", diagnostic_only: "diagnostic", failed: "failed", blocked: "blocked", notrun: "notrun", "blocked/notrun": "blocked" };
+  const highlightIds = new Set([
+    "trajectory_master_month_v1_20261108", "residual_sleeve_family_confirmation_v1",
+    "architecture_v2_volatility_conditioned_dual_head_mc_v1", "market_pattern_group_generalization_walk_forward_v1",
+    "earnings_geometry_paper_replay_v1_20261117",
+  ]);
+  const stageAliases = {
+    market_data: ["Market observations", "Input", "Archive exists; fresh feed unqualified"],
+    availability_clock: ["Availability & clock", "Timing", "Deadline still unverified"],
+    forecast_contract: ["Forecast question", "Question", "Target not frozen"],
+    features_universe: ["Features & universe", "Measurement", "Measurements exist"],
+    model: ["Return & risk model", "Estimation", "No model promoted"],
+    entry_review: ["New-stock review", "Entry branch", "Policy not connected"],
+    portfolio_state: ["Holdings & cash", "State input", "Actual state unconfirmed"],
+    holding_review: ["Holding review", "Holding branch", "Mechanics exist; policy pending"],
+    constraints: ["Cash & risk checks", "Validation", "Configuration pending"],
+    paper_report: ["Daily paper review", "Review", "Integration pending"],
+    paper_ledger: ["Paper state ledger", "Accounting", "Engine built; runner missing"],
+    mature_outcomes: ["Later outcomes", "Evaluation", "Future process"],
+  };
+  const state = { view: "workflow", stageId: "", methodId: "", nodeId: "", graph: null, stages: [], pipelineEdges: [], studies: [], nodes: [], edges: [], evidence: new Map(), nodeById: new Map(), studyById: new Map(), expandedConnections: false, loaded: false };
+
+  function announce(value) { $("announcement").textContent = value; }
+  function useStatus(study) { return study.appropriate_use?.status || study.use_status || "diagnostic_only"; }
+  function positiveResearch(study) { return study.has_positive_finding === true && study.positive_finding_type !== "completed_software_or_data"; }
+  function studyTitle(study) { return study.friendly_title || study.title || human(study.canonical_id); }
+  function familyTitle(study) { return typeof study.family === "object" ? study.family.title || study.family.name || study.family.id : study.family_title || study.family || study.family_id || "Other research"; }
+  function familyId(study) { return typeof study.family === "object" ? study.family.id || familyTitle(study) : study.family_id || study.family || "other"; }
+  function nodeTitle(node) { return node?.experiment?.friendly_title || node?.title || node?.label || human(node?.id) || "Project record"; }
+  function evidenceIds(record) { return list(record.evidence_ids || record.source_refs || record.sources).map((item) => typeof item === "string" ? item : item.id).filter(Boolean); }
+  function pill(status, label) { return `<span class="pill ${esc(useClasses[status] || "diagnostic")}">${esc(label || useLabels[status] || human(status) || "Status not recorded")}</span>`; }
+  function itemList(items) { return `<ul class="clean-list">${sentences(items).map((item) => `<li>${esc(item)}</li>`).join("")}</ul>`; }
+  function section(title, content) { return content ? `<section class="detail-section"><h4>${esc(title)}</h4>${content}</section>` : ""; }
+
+  function evidenceMarkup(ids) {
+    const entries = [...new Set(ids)].map((id) => state.evidence.get(id) || { id, title: human(id) });
+    if (!entries.length) return '<p class="meta">No additional evidence reference was attached.</p>';
+    return `<ul class="evidence-list">${entries.map((source) => `<li><strong>${esc(source.title || human(source.id))}</strong>${source.authority ? `<div class="meta">${esc(human(source.authority))}</div>` : ""}${source.scope ? `<div class="meta">${esc(plain(source.scope))}</div>` : ""}${source.sha256 ? `<div class="file-path">Source digest ${esc(source.sha256.slice(0, 16))}…</div>` : ""}</li>`).join("")}</ul>`;
+  }
+
+  function setHash() {
+    const params = new URLSearchParams({ view: state.view });
+    if (state.view === "workflow" && state.stageId) params.set("stage", state.stageId);
+    if (state.view === "models" && state.methodId) params.set("method", state.methodId);
+    if (state.view === "relations" && state.nodeId) params.set("node", state.nodeId);
+    try { history.replaceState(null, "", `#${params.toString()}`); } catch { /* Read-only embedded previews may disallow URL updates. */ }
+  }
+  function setView(view, updateHash = true) {
+    if (!["workflow", "models", "relations"].includes(view)) view = "workflow";
+    state.view = view;
+    document.querySelectorAll("[data-view]").forEach((button) => {
+      const selected = button.dataset.view === view;
+      button.setAttribute("aria-selected", String(selected)); button.tabIndex = selected ? 0 : -1;
+    });
+    ["workflow", "models", "relations"].forEach((name) => { $(`view-${name}`).hidden = name !== view; });
+    if (view === "workflow") requestAnimationFrame(drawWorkflowWires);
+    if (view === "relations") requestAnimationFrame(drawRelations);
+    if (updateHash) setHash();
+  }
+  function openMethod(id) {
+    if (!state.studyById.has(id)) return;
+    state.methodId = id; $("model-search").value = ""; $("model-status").value = "all"; $("model-family").value = "all";
+    renderModels(); setView("models");
+    $("model-detail").scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+  function openNode(id) {
+    if (!state.nodeById.has(id)) return;
+    state.nodeId = id; state.expandedConnections = false;
+    $("relation-search").value = ""; $("relation-type").value = "all";
+    renderRecords(); renderRecordDetail(); setView("relations");
+    $("record-detail").scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
+  function stageClass(stage) {
+    const value = String(stage.readiness || stage.status || "").toLowerCase();
+    if (/missing|block|pending|not.?connect|not.?run|design|unregister|unqualif|unverif|unconfirm/.test(value)) return "gap";
+    if (/research|explor|diagnos|unpromot|study/.test(value)) return "research";
+    return "built";
+  }
+  function stageTitle(stage) { return stage.title || stage.label || human(stage.id); }
+  function shortStageTitle(stage) { return stage.short_title || stageAliases[stage.id]?.[0] || stageTitle(stage); }
+  function stageStatus(stage) { return stage.status_label || stage.readiness_label || stageAliases[stage.id]?.[2] || human(stage.readiness || stage.status) || "Readiness described in evidence"; }
+  function edgeSource(edge) { return edge.source || edge.from; }
+  function edgeTarget(edge) { return edge.target || edge.to; }
+  function edgeRelation(edge) { return human(edge.relation || edge.type || edge.label || "connects to"); }
+  function stageLinks(stage) {
+    const ids = list(stage.study_ids || stage.experiment_ids || stage.linked_studies || stage.model_ids).map((item) => typeof item === "string" ? item : item.canonical_id || item.id);
+    const nodeIds = new Set(list(stage.node_ids || stage.canonical_node_ids || stage.record_ids));
+    for (const edge of state.edges) {
+      if (nodeIds.has(edge.source) || nodeIds.has(edge.target)) {
+        const other = nodeIds.has(edge.source) ? edge.target : edge.source;
+        if (other.startsWith("experiment:") && state.studyById.has(other.slice(11))) ids.push(other.slice(11));
+      }
+    }
+    return [...new Set(ids)].map((id) => state.studyById.get(id)).filter(Boolean);
+  }
+  function renderWorkflow() {
+    if (!state.stages.length) {
+      $("workflow-map").innerHTML = '<p class="empty">No reviewed workflow stages were supplied.</p>';
+      $("stage-detail").innerHTML = '<h3>Workflow evidence unavailable</h3><p class="detail-summary">The page does not infer a working pipeline from variable definitions.</p>';
+      return;
+    }
+    if (!state.stages.some((stage) => stage.id === state.stageId)) state.stageId = state.stages[0].id;
+    $("workflow-map").innerHTML = '<svg class="workflow-wires" aria-hidden="true"></svg>' + state.stages.map((stage) => `<button class="stage-button ${stageClass(stage)} ${stage.id === state.stageId ? "selected" : ""}" type="button" data-stage="${esc(stage.id)}" aria-pressed="${stage.id === state.stageId}"><span class="stage-position">${esc(stage.group || stage.category || stageAliases[stage.id]?.[1] || "Workflow stage")}</span><b>${esc(shortStageTitle(stage))}</b><span class="stage-state">${esc(stageStatus(stage))}</span></button>`).join("");
+    $("workflow-map").querySelectorAll("[data-stage]").forEach((button) => button.addEventListener("click", () => { state.stageId = button.dataset.stage; renderWorkflow(); setHash(); $("workflow-map").querySelector(".stage-button.selected")?.focus({ preventScroll: true }); announce(`Selected ${stageTitle(state.stages.find((stage) => stage.id === state.stageId))}`); }));
+    const stage = state.stages.find((item) => item.id === state.stageId);
+    const existing = stage.existing || stage.what_exists || stage.what_we_have || stage.known || stage.built || stage.current_state;
+    const remaining = stage.remaining || stage.remaining_delta || stage.missing || stage.open_dependencies;
+    const studies = stageLinks(stage);
+    const nodeIds = list(stage.node_ids || stage.canonical_node_ids || stage.record_ids || stage.linked_nodes);
+    const records = nodeIds.map((id) => state.nodeById.get(id)).filter(Boolean);
+    const linked = studies.map((study) => `<button class="record-chip" data-open-method="${esc(study.canonical_id)}">${esc(studyTitle(study))}</button>`).join("");
+    $("stage-detail").innerHTML = `<div class="detail-kicker"><p class="eyebrow">Selected stage</p>${pill(stageClass(stage) === "gap" ? "blocked" : "diagnostic_only", stageStatus(stage))}</div><h3>${esc(stageTitle(stage))}</h3><p class="detail-summary">${esc(stage.summary || stage.question || stage.description || stage.purpose || "Read the saved work and its limits for this stage.")}</p>${section("What we already have", itemList(existing || ["See the linked reviewed project records."]))}${section("What remains", itemList(remaining || ["No additional implementation claim is inferred from this map."]))}${studies.length ? section("Related studies", `<div class="linked-records">${linked}</div>`) : ""}${records.length ? section("Explore connections", `<div class="linked-records">${records.map((node) => `<button class="record-chip" data-open-node="${esc(node.id)}">${esc(nodeTitle(node))}</button>`).join("")}</div>`) : ""}<details class="detail-section"><summary>Source evidence</summary>${evidenceMarkup(evidenceIds(stage))}</details>`;
+    $("stage-detail").querySelectorAll("[data-open-method]").forEach((button) => button.onclick = () => openMethod(button.dataset.openMethod));
+    $("stage-detail").querySelectorAll("[data-open-node]").forEach((button) => button.onclick = () => openNode(button.dataset.openNode));
+    const connections = state.pipelineEdges.filter((edge) => edgeSource(edge) === stage.id || edgeTarget(edge) === stage.id);
+    $("workflow-connections").innerHTML = connections.map((edge) => {
+      const from = state.stages.find((item) => item.id === edgeSource(edge)); const to = state.stages.find((item) => item.id === edgeTarget(edge));
+      if (!from || !to) return "";
+      return `<div class="connection-line"><button data-connected-stage="${esc(from.id)}">${esc(shortStageTitle(from))}</button><span class="relation-verb">${esc(edgeRelation(edge))}</span><button data-connected-stage="${esc(to.id)}">${esc(shortStageTitle(to))}</button></div>`;
+    }).join("");
+    $("workflow-connections").querySelectorAll("[data-connected-stage]").forEach((button) => button.onclick = () => { state.stageId = button.dataset.connectedStage; renderWorkflow(); setHash(); });
+    requestAnimationFrame(drawWorkflowWires);
+  }
+  function svgElement(name, attrs = {}, value) { const item = document.createElementNS(NS, name); Object.entries(attrs).forEach(([key, val]) => item.setAttribute(key, val)); if (value !== undefined) item.textContent = value; return item; }
+  function drawWorkflowWires() {
+    if (state.view !== "workflow") return;
+    const board = $("workflow-map"), svg = board.querySelector(".workflow-wires"); if (!svg) return;
+    const bounds = board.getBoundingClientRect(); svg.setAttribute("viewBox", `0 0 ${bounds.width} ${bounds.height}`); svg.replaceChildren();
+    for (const edge of state.pipelineEdges) {
+      const start = [...board.querySelectorAll("[data-stage]")].find((button) => button.dataset.stage === edgeSource(edge));
+      const end = [...board.querySelectorAll("[data-stage]")].find((button) => button.dataset.stage === edgeTarget(edge));
+      if (!start || !end) continue;
+      const a = start.getBoundingClientRect(), b = end.getBoundingClientRect();
+      const sameRow = Math.abs(a.top - b.top) < 5;
+      const x1 = (sameRow ? a.right : a.left + a.width / 2) - bounds.left;
+      const y1 = (sameRow ? a.top + a.height / 2 : a.bottom) - bounds.top;
+      const x2 = (sameRow ? b.left : b.left + b.width / 2) - bounds.left;
+      const y2 = (sameRow ? b.top + b.height / 2 : b.top) - bounds.top;
+      const active = edgeSource(edge) === state.stageId || edgeTarget(edge) === state.stageId;
+      const path = sameRow ? `M${x1},${y1}L${x2},${y2}` : `M${x1},${y1}C${x1},${y1 + 18} ${x2},${y2 - 18} ${x2},${y2}`;
+      svg.append(svgElement("path", { d: path, fill: "none", stroke: active ? "#268a84" : "#d2e0e5", "stroke-width": active ? 2 : 1, "stroke-dasharray": active ? "" : "3 3" }));
+    }
+  }
+
+  function metricMarkup(metric) {
+    const label = metric.label || metric.name || metric.metric || "Saved measure";
+    const preciseUnit = /AUC|squared probability|Brier/i.test(metric.unit || "");
+    const formatted = typeof metric.value === "number" ? metric.value.toLocaleString("en-US", { maximumFractionDigits: preciseUnit ? 6 : /training SD|correlation/i.test(metric.unit || "") ? 4 : 2 }) : metric.value;
+    const value = metric.displayValue || metric.display_value || (metric.value == null ? "Not recorded" : `${formatted}${metric.unit ? ` ${metric.unit}` : ""}`);
+    const interval = metric.confidenceInterval || metric.confidence_interval;
+    const digits = interval && /AUC|squared probability|Brier/i.test(interval.unit || "") ? 6 : 2;
+    const note = [metric.definition, metric.scope, interval ? `${interval.level ? `${interval.level * 100}% ` : ""}interval: ${Number(interval.lower).toFixed(digits)} to ${Number(interval.upper).toFixed(digits)} ${interval.unit || ""}` : ""].filter(Boolean).map(plain).join(" · ");
+    return `<tr><th scope="row">${esc(label)}${note ? `<p class="metric-note">${esc(note)}</p>` : ""}</th><td title="${esc(metric.value ?? "Not recorded")}">${esc(value)}</td></tr>`;
+  }
+  function renderModels() {
+    const query = normalizeSearch($("model-search").value), status = $("model-status").value, family = $("model-family").value;
+    const visible = state.studies.filter((study) => (!query || normalizeSearch([studyTitle(study), study.question_title, study.canonical_id, study.what_it_predicts, study.inputs_and_method, familyTitle(study)].map(plain).join(" ")).includes(query)) && (status === "all" || status === "positive" ? status === "all" || positiveResearch(study) : useStatus(study) === status) && (family === "all" || familyId(study) === family));
+    if (visible.length && !visible.some((study) => study.canonical_id === state.methodId)) state.methodId = visible[0].canonical_id;
+    $("model-count").textContent = `${visible.length} / ${state.studies.length} records`;
+    $("model-empty").hidden = Boolean(visible.length);
+    $("model-list").innerHTML = visible.map((study) => `<button class="model-item ${study.canonical_id === state.methodId ? "selected" : ""}" type="button" data-method="${esc(study.canonical_id)}" aria-pressed="${study.canonical_id === state.methodId}"><strong>${esc(studyTitle(study))}</strong><span class="item-family">${esc(familyTitle(study))}</span>${pill(useStatus(study))}</button>`).join("");
+    $("model-list").querySelectorAll("[data-method]").forEach((button) => button.onclick = () => { state.methodId = button.dataset.method; renderModels(); setHash(); announce(`Selected ${studyTitle(state.studyById.get(state.methodId))}`); });
+    const study = visible.find((item) => item.canonical_id === state.methodId);
+    if (!study) { $("model-detail").innerHTML = '<h3>No matching study</h3><p class="detail-summary">Clear a filter to return to the reviewed records.</p>'; return; }
+    const statusCode = useStatus(study), metrics = list(study.metrics);
+    const reuse = study.appropriate_use?.reusable_parts || study.reusable_parts;
+    const limitations = study.limits || study.what_failed_or_limits || study.limitations;
+    const scope = study.scope || study.dateWindows || study.dates_and_counts;
+    const costs = study.costs || study.scope?.costs;
+    const hasPositive = study.has_positive_finding === true;
+    const positiveType = String(study.positive_finding_type || "");
+    const positiveHeading = /software|data|display|coverage/i.test(positiveType) ? "Useful completed work" : "Positive finding, with limits";
+    const experimentNode = state.nodeById.get(`experiment:${study.canonical_id}`) || state.nodes.find((node) => node.experiment?.canonical_id === study.canonical_id || node.id === study.canonical_id);
+    $("model-detail").innerHTML = `<div class="detail-kicker"><p class="eyebrow">${esc(familyTitle(study))}</p>${pill(statusCode)}</div><h3>${esc(studyTitle(study))}</h3>${study.question_title ? `<p class="question">${esc(study.question_title)}</p>` : ""}<div class="definition-grid"><dl><dt>What it predicts or measures</dt><dd>${esc(plain(study.what_it_predicts || study.target))}</dd></dl><dl><dt>Compared with</dt><dd>${esc(plain(study.baseline || study.baseline_or_control))}</dd></dl></div>${section("How it worked", `<p>${esc(plain(study.inputs_and_method || study.what_was_done))}</p>`)}${hasPositive && study.positive_finding ? `<div class="evidence-banner"><h4>${positiveHeading}</h4><p>${esc(plain(study.positive_finding))}</p></div>` : ""}${section("Saved answer", `<p>${esc(plain(study.reviewed_verdict || study.answer || study.verdict))}</p>`)}${metrics.length ? section("Saved measurements", `<table class="metrics"><tbody>${metrics.map(metricMarkup).join("")}</tbody></table>`) : '<p class="scope-note">No measured performance score is recorded for this design, data stage or diagnostic. Missing results are not zero.</p>'}${scope ? `<div class="scope-note"><strong>Sample and timing:</strong> ${esc(plain(scope))}${costs ? `<br><strong>Costs:</strong> ${esc(plain(costs))}` : ""}</div>` : '<p class="scope-note">Exact date, sample or cost fields were not attached here. Do not assume they match another test.</p>'}${section("What can be reused", itemList(reuse || ["Use the referenced code or idea only within its recorded evidence and current project permissions."]))}${section("What this does not establish", itemList(limitations || ["No promoted model or trading authorization."]))}${experimentNode ? `<section class="detail-section"><button class="record-chip" id="open-model-connections">See this study's project connections</button></section>` : ""}<details><summary>Evidence and canonical record</summary>${evidenceMarkup(evidenceIds(study))}<p class="identifier">${esc(study.canonical_id)} · ${esc(human(study.status || study.registry_status))}</p><p class="meta">A positive finding, completed software, and model promotion are separate claims. No model is promoted.</p></details>`;
+    $("open-model-connections")?.addEventListener("click", () => openNode(experimentNode.id));
+  }
+  function renderHighlights() {
+    $("highlight-list").innerHTML = state.studies.filter((study) => highlightIds.has(study.canonical_id) && positiveResearch(study)).map((study) => `<button type="button" class="highlight-card" data-highlight="${esc(study.canonical_id)}"><span class="pill signal">Exploratory finding</span><strong>${esc(studyTitle(study))}</strong><span>${esc(plain(study.positive_finding))}</span><small>Read the target, control and limits</small></button>`).join("");
+    $("highlight-list").querySelectorAll("[data-highlight]").forEach((button) => button.onclick = () => openMethod(button.dataset.highlight));
+  }
+
+  function nodeGroup(node) {
+    const kind = String(node.kind || "other").toLowerCase();
+    if (kind === "variable_stage") return { label: "Variable group", color: "#789d94" };
+    if (/variable|feature/.test(kind)) return { label: "Variable", color: "#5b8d82" };
+    if (/experiment|model|diagnostic|study/.test(kind)) return { label: "Study", color: "#6682ab" };
+    if (/code|script|component|workflow/.test(kind)) return { label: "Code & workflow", color: "#7481a3" };
+    if (/source|data|artifact/.test(kind)) return { label: "Data & evidence", color: "#7c98a9" };
+    if (/block|constraint|gate|risk/.test(kind)) return { label: "Boundary", color: "#b59462" };
+    return { label: human(node.kind || "Project record"), color: "#7a9b9c" };
+  }
+  function renderRecords() {
+    const query = normalizeSearch($("relation-search").value), kind = $("relation-type").value;
+    const visible = state.nodes.filter((node) => (kind === "all" || node.kind === kind) && (!query || normalizeSearch([nodeTitle(node), node.id, node.summary, node.variable?.formula || node.formula, node.kind].map(plain).join(" ")).includes(query))).sort((a, b) => nodeTitle(a).localeCompare(nodeTitle(b)));
+    $("record-count").textContent = `${visible.length} / ${state.nodes.length} records`;
+    $("record-list").innerHTML = visible.length ? visible.map((node) => `<button class="kg-record ${node.id === state.nodeId ? "selected" : ""}" type="button" data-node="${esc(node.id)}" aria-pressed="${node.id === state.nodeId}"><strong>${esc(nodeTitle(node))}</strong><small>${esc(nodeGroup(node).label)}</small></button>`).join("") : '<p class="empty">No matching records. Try another word or record type.</p>';
+    $("record-list").querySelectorAll("[data-node]").forEach((button) => button.onclick = () => { state.nodeId = button.dataset.node; state.expandedConnections = false; renderRecords(); renderRecordDetail(); setHash(); });
+  }
+  function relationsFor(id) { return state.edges.filter((edge) => edge.source === id || edge.target === id); }
+  function renderRecordDetail() {
+    const node = state.nodeById.get(state.nodeId); if (!node) return;
+    const related = relationsFor(node.id);
+    $("neighborhood-title").textContent = nodeTitle(node);
+    const studyId = node.experiment?.canonical_id || node.id.replace(/^experiment:/, "");
+    const study = state.studyById.get(studyId);
+    const variable = node.variable || (node.kind === "variable" ? node : null);
+    $("record-detail").innerHTML = `<div class="detail-kicker"><p class="eyebrow">${esc(nodeGroup(node).label)}</p><span class="pill diagnostic">${esc(human(node.lifecycle_status || node.status || "Documentary record"))}</span></div><h3>${esc(nodeTitle(node))}</h3><p class="detail-summary">${esc(node.summary || "No additional summary was supplied.")}</p>${node.scope ? `<p class="scope-note">${esc(plain(node.scope))}</p>` : ""}${variable ? section("Variable definition", `<p>${esc(plain(variable.formula || variable.definition))}</p><p class="meta">${esc(plain(variable.stage || ""))} · A definition is not predictive proof.</p>${variable.consumers ? itemList(variable.consumers) : ""}`) : ""}${study ? `<button id="open-related-study" class="record-chip">Read the study and its saved results</button>` : ""}${section(`Typed connections (${related.length})`, `<div class="relation-links">${related.map((edge) => { const outgoing = edge.source === node.id, other = state.nodeById.get(outgoing ? edge.target : edge.source); return other ? `<button class="relation-link" data-related="${esc(other.id)}"><span>${outgoing ? "To" : "From"} · ${esc(edgeRelation(edge))}</span><strong>${esc(nodeTitle(other))}</strong></button>` : ""; }).join("") || '<p class="meta">No typed connections were supplied for this record.</p>'}</div>`)}<details class="detail-section"><summary>Source evidence</summary>${evidenceMarkup(evidenceIds(node))}<p class="identifier">${esc(node.id)}</p></details>`;
+    $("record-detail").querySelectorAll("[data-related]").forEach((button) => button.onclick = () => { state.nodeId = button.dataset.related; state.expandedConnections = false; renderRecords(); renderRecordDetail(); setHash(); });
+    $("open-related-study")?.addEventListener("click", () => openMethod(study.canonical_id));
+    drawRelations(); announce(`Selected ${nodeTitle(node)}. ${related.length} typed connections.`);
+  }
+  function shortLines(value, width, limit = 3) {
+    const words = String(value).split(/\s+/), lines = []; let current = "";
+    for (const word of words) { if (current && `${current} ${word}`.length > width) { lines.push(current); current = word; } else current += `${current ? " " : ""}${word}`; }
+    if (current) lines.push(current);
+    if (lines.length > limit) return [...lines.slice(0, limit - 1), `${lines[limit - 1].slice(0, Math.max(1, width - 1))}…`];
+    return lines;
+  }
+  function drawRelations() {
+    if (state.view !== "relations") return;
+    const node = state.nodeById.get(state.nodeId); if (!node) return;
+    const svg = $("relation-svg"), width = Math.max(270, $("graph-wrap").clientWidth), mobile = width < 540;
+    const unique = new Map(); for (const edge of relationsFor(node.id)) { const id = edge.source === node.id ? edge.target : edge.source; if (state.nodeById.has(id) && !unique.has(id)) unique.set(id, { node: state.nodeById.get(id), edge }); }
+    const all = [...unique.values()].sort((a, b) => nodeTitle(a.node).localeCompare(nodeTitle(b.node)));
+    const initialLimit = mobile ? 3 : width < 760 ? 6 : 10;
+    const shown = all.slice(0, state.expandedConnections ? 40 : initialLimit);
+    const boxWidth = mobile ? Math.min(260, width - 55) : Math.min(205, (width - 120) / 3);
+    const boxHeight = 77;
+    let height, selectedPosition, positions;
+    if (mobile) {
+      height = Math.max(285, 110 + shown.length * 102); selectedPosition = { x: width / 2, y: 57 };
+      positions = shown.map((item, index) => ({ ...item, x: width / 2, y: 158 + index * 102 }));
+    } else if (width < 760) {
+      height = Math.max(340, 145 + Math.ceil(shown.length / 2) * 110); selectedPosition = { x: width / 2, y: 58 };
+      positions = shown.map((item, index) => ({ ...item, x: index % 2 ? width * .73 : width * .27, y: 165 + Math.floor(index / 2) * 110 }));
+    } else {
+      const rows = Math.ceil(shown.length / 2); height = Math.max(380, rows * 98 + 55); selectedPosition = { x: width / 2, y: height / 2 };
+      positions = shown.map((item, index) => ({ ...item, x: index % 2 ? width - boxWidth / 2 - 17 : boxWidth / 2 + 17, y: 55 + Math.floor(index / 2) * 98 }));
+    }
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`); svg.style.maxHeight = "none"; svg.style.height = `${height}px`; svg.replaceChildren();
+    const defs = svgElement("defs"), marker = svgElement("marker", { id: "project-edge-marker", viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 5, markerHeight: 5, orient: "auto-start-reverse" }); marker.append(svgElement("path", { d: "M0,0 L10,5 L0,10 Z", fill: "#afc7d2" })); defs.append(marker); svg.append(defs);
+    for (const item of positions) {
+      const sourceIsSelected = item.edge.source === node.id;
+      let x1 = selectedPosition.x, y1 = selectedPosition.y, x2 = item.x, y2 = item.y;
+      if (mobile) { x1 -= boxWidth / 2 + 5; x2 -= boxWidth / 2 + 5; }
+      else if (width < 760) { y1 += boxHeight / 2; y2 -= boxHeight / 2; }
+      else { x1 += Math.sign(x2 - x1) * (boxWidth / 2 + 2); x2 -= Math.sign(x2 - x1) * (boxWidth / 2 + 2); }
+      const path = mobile ? `M${x1},${y1}C10,${y1} 10,${y2} ${x2},${y2}` : `M${x1},${y1}C${(x1 + x2) / 2},${y1} ${(x1 + x2) / 2},${y2} ${x2},${y2}`;
+      svg.append(svgElement("path", { d: path, class: "graph-edge", [sourceIsSelected ? "marker-end" : "marker-start"]: "url(#project-edge-marker)" }));
+    }
+    function drawNode(item, position, selected) {
+      const group = svgElement("g", { class: "svg-node", transform: `translate(${position.x - boxWidth / 2},${position.y - boxHeight / 2})`, tabindex: "0", role: "button", "aria-label": `${selected ? "Selected: " : "Open "}${nodeTitle(item)}` });
+      const color = nodeGroup(item).color;
+      group.append(svgElement("rect", { x: 0, y: 0, width: boxWidth, height: boxHeight, rx: 8, fill: selected ? "#e5f2ef" : "#ffffff", stroke: selected ? "#16847b" : "#cedee4", "stroke-width": selected ? 2 : 1 }));
+      group.append(svgElement("rect", { x: 0, y: 14, width: 3, height: boxHeight - 28, rx: 1, fill: color }));
+      group.append(svgElement("text", { x: 13, y: 19, "font-size": 14, fill: "#6b8291" }, nodeGroup(item).label));
+      const lines = shortLines(nodeTitle(item), Math.max(16, Math.floor((boxWidth - 26) / 7.5)), 2);
+      lines.forEach((line, index) => group.append(svgElement("text", { x: 13, y: 40 + index * 18, "font-size": 15, "font-weight": selected ? 650 : 550 }, line)));
+      group.append(svgElement("title", {}, nodeTitle(item)));
+      const select = () => { if (selected) { $("record-detail").scrollIntoView({ behavior: "smooth", block: "nearest" }); return; } state.nodeId = item.id; state.expandedConnections = false; renderRecords(); renderRecordDetail(); setHash(); };
+      group.addEventListener("click", select); group.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); select(); } }); svg.append(group);
+    }
+    positions.forEach((item) => drawNode(item.node, item, false)); drawNode(node, selectedPosition, true);
+    $("more-connections").hidden = state.expandedConnections || all.length <= initialLimit;
+    $("more-connections").textContent = `Show ${Math.min(40, all.length)} connections`;
+    $("graph-note").textContent = all.length ? `${shown.length} of ${all.length} related records shown here. Every typed connection is listed below; choose a record to follow its neighborhood.` : "This record has no supplied relationships. Search the full list to explore another record.";
+  }
+
+  function readHash() {
+    const params = new URLSearchParams(location.hash.slice(1));
+    const method = params.get("method"), node = params.get("node"), stage = params.get("stage");
+    if (method && state.studyById.has(method)) state.methodId = method;
+    if (node && state.nodeById.has(node)) state.nodeId = node;
+    if (stage && state.stages.some((item) => item.id === stage)) state.stageId = stage;
+    renderWorkflow(); renderModels(); renderRecords(); renderRecordDetail();
+    setView(params.get("view") || (node ? "relations" : method ? "models" : "workflow"), false);
+  }
+  function populateSelect(element, values) { element.querySelectorAll("option:not(:first-child)").forEach((option) => option.remove()); for (const [value, label] of values) element.add(new Option(label, value)); }
+  async function load() {
+    $("loading").hidden = false; $("load-error").hidden = true; $("app").hidden = true;
+    try {
+      const files = ["workflow-view.public.json", "method-catalog.public.json", "project-graph.public.json", "evidence-index.public.json"];
+      const [workflow, catalog, graph, evidence] = await Promise.all(files.map(async (file) => { const response = await fetch(`./${file}`, { cache: "no-store", credentials: "same-origin" }); if (!response.ok) throw Error("Reviewed data file unavailable"); return response.json(); }));
+      if (!Array.isArray(graph.nodes) || !Array.isArray(graph.edges) || !Array.isArray(catalog.studies)) throw Error("Unsupported reviewed data format");
+      state.graph = graph; state.nodes = graph.nodes; state.edges = graph.edges; state.studies = catalog.studies;
+      state.nodeById = new Map(state.nodes.map((node) => [node.id, node])); state.studyById = new Map(state.studies.map((study) => [study.canonical_id, study]));
+      state.evidence = new Map(list(evidence.evidence).map((item) => [item.id, item]));
+      state.stages = list(workflow.pipeline_stages || workflow.workflow_stages); state.pipelineEdges = list(workflow.pipeline_edges || workflow.workflow_edges);
+      $("study-count").textContent = state.studies.length; $("variable-count").textContent = state.nodes.filter((node) => node.kind === "variable").length; $("relation-count").textContent = state.edges.length;
+      const date = graph.as_of || catalog.as_of || workflow.as_of;
+      $("as-of").textContent = date ? `Public documentary snapshot · ${String(date).slice(0, 10)}` : "Public documentary snapshot";
+      $("public-content-hash").textContent = graph.content_sha256 ? `Content ${graph.content_sha256.slice(0, 12)}…` : "Content digest not recorded";
+      $("public-content-hash").title = graph.content_sha256 || "Content digest not recorded";
+      $("current-question").textContent = workflow.current_question?.question || workflow.current_question || workflow.working_question || workflow.next_design_decision || "How should existing evidence, holdings and cash mechanics connect into a clear paper review?";
+      $("current-mode").textContent = workflow.current_question?.mode ? human(workflow.current_question.mode) : "Workflow explanation and design. No new experiments or real stock actions.";
+      populateSelect($("model-family"), [...new Map(state.studies.map((study) => [familyId(study), familyTitle(study)])).entries()].sort((a, b) => a[1].localeCompare(b[1])));
+      populateSelect($("relation-type"), [...new Set(state.nodes.map((node) => node.kind || "other"))].sort().map((kind) => [kind, human(kind)]));
+      state.methodId = state.studies.find((study) => study.canonical_id === "trajectory_master_month_v1_20261108")?.canonical_id || state.studies[0]?.canonical_id || "";
+      state.stageId = state.stages[0]?.id || "";
+      state.nodeId = list(graph.focus_ids).find((id) => state.nodeById.has(id)) || state.nodes.find((node) => /goal|question/.test(node.kind || ""))?.id || state.nodes[0]?.id || "";
+      $("loading").hidden = true; $("app").hidden = false; state.loaded = true; renderHighlights(); readHash(); announce("Reviewed project map loaded.");
+    } catch { $("loading").hidden = true; $("load-error").hidden = false; announce("The reviewed project files could not be loaded."); }
+  }
+  document.querySelectorAll("[data-view]").forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
+  $("tab-workflow").parentElement.addEventListener("keydown", (event) => { if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return; const buttons = [...document.querySelectorAll("[data-view]")]; const current = buttons.indexOf(document.activeElement); if (current < 0) return; event.preventDefault(); const index = event.key === "Home" ? 0 : event.key === "End" ? buttons.length - 1 : (current + (event.key === "ArrowRight" ? 1 : -1) + buttons.length) % buttons.length; buttons[index].focus(); setView(buttons[index].dataset.view); });
+  ["model-search", "model-status", "model-family"].forEach((id) => $(id).addEventListener(id.includes("search") ? "input" : "change", renderModels));
+  $("clear-models").onclick = () => { $("model-search").value = ""; $("model-status").value = "all"; $("model-family").value = "all"; renderModels(); };
+  $("relation-search").addEventListener("input", renderRecords); $("relation-type").onchange = renderRecords;
+  $("clear-relations").onclick = () => { $("relation-search").value = ""; $("relation-type").value = "all"; renderRecords(); };
+  $("more-connections").onclick = () => { state.expandedConnections = true; drawRelations(); };
+  $("retry-load").onclick = load;
+  window.addEventListener("hashchange", () => { if (state.loaded) readHash(); });
+  new ResizeObserver(() => { if (state.loaded) { drawWorkflowWires(); drawRelations(); } }).observe($("workflow-map"));
+  new ResizeObserver(() => { if (state.loaded && state.view === "relations") drawRelations(); }).observe($("graph-wrap"));
+  load();
+})();

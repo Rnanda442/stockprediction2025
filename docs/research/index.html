@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#123448">
+  <meta name="description" content="Explore the stock research workflow, every registered study, its evidence, and the connections between them.">
+  <title>Project map · Stock research</title>
+  <link rel="stylesheet" href="map.css">
+  <script src="map.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to project map</a>
+  <header class="masthead">
+    <a class="brand" href="/"><span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span><span>Stock research<span class="brand-sub">Project atlas</span></span></a>
+    <nav aria-label="Research navigation"><a href="/project-map/" aria-current="page">Project map</a><a href="/knowledge-map/">Knowledge library</a><a href="/research-review/">Earlier review</a></nav>
+    <span class="paper-badge">Paper research</span>
+  </header>
+  <main id="main">
+    <section class="intro" aria-labelledby="page-title">
+      <div><p class="eyebrow">The work, connected</p><h1 id="page-title">See what we have.<br><span>Understand what comes next.</span></h1><p class="intro-copy">Follow the workflow, open a study, or trace an idea to its evidence. Completed work stays visible alongside its limits.</p></div>
+      <div class="intro-note"><span class="note-icon" aria-hidden="true">◈</span><div><strong>No model is promoted.</strong><p>Useful software and positive research findings are different from a verified stock-picking edge.</p><span id="as-of" class="meta">Loading reviewed source…</span></div></div>
+    </section>
+    <div id="load-error" class="load-error" role="alert" hidden><strong>The reviewed project files could not load.</strong><p>The page does not substitute live market data. Reload to try the saved project files again.</p><button id="retry-load" class="button">Reload project files</button></div>
+    <div id="loading" class="loading" role="status">Loading the reviewed workflow and evidence…</div>
+    <div id="app" hidden>
+      <section class="inventory" aria-label="Project inventory"><div><strong id="study-count">—</strong><span>registered studies & designs</span></div><div><strong id="variable-count">—</strong><span>documented variables</span></div><div><strong id="relation-count">—</strong><span>project relationships</span></div><p>Counts describe project records,<br>not independent successful tests.</p></section>
+      <div class="tabbar" role="tablist" aria-label="Explore the project"><button id="tab-workflow" role="tab" aria-selected="true" aria-controls="view-workflow" data-view="workflow">Workflow</button><button id="tab-models" role="tab" aria-selected="false" aria-controls="view-models" data-view="models" tabindex="-1">Models & evidence</button><button id="tab-relations" role="tab" aria-selected="false" aria-controls="view-relations" data-view="relations" tabindex="-1">All relationships</button></div>
+
+      <section id="view-workflow" class="view" role="tabpanel" aria-labelledby="tab-workflow">
+        <div class="section-heading"><div><p class="eyebrow">From inputs to a paper decision</p><h2>One workflow. Different states of readiness.</h2></div><p>Choose a stage to see what exists, what it establishes, and the missing connection.</p></div>
+        <div class="workflow-layout"><section class="panel workflow-board" aria-label="Interactive workflow"><div class="board-heading"><h3>The project pathway</h3><span>Select a stage</span></div><div id="workflow-map" class="workflow-map"></div><div class="path-legend"><span><i class="key-built"></i>Existing work</span><span><i class="key-research"></i>Research evidence</span><span><i class="key-gap"></i>Open dependency</span></div><div id="workflow-connections" class="workflow-connections"></div></section><aside id="stage-detail" class="panel detail-panel" aria-live="polite" aria-label="Selected workflow stage"></aside></div>
+        <div class="focus-strip"><span class="focus-icon" aria-hidden="true">◎</span><div><p class="eyebrow">Current working question</p><p id="current-question">Read the current project question.</p><small id="current-mode">Existing evidence and workflow design; no new model run.</small></div></div>
+      </section>
+
+      <section id="view-models" class="view" role="tabpanel" aria-labelledby="tab-models" hidden>
+        <div class="section-heading"><div><p class="eyebrow">Keep the useful findings and the caveats</p><h2>Every study has a question.</h2></div><p>A positive number is not a universal model grade. Compare results only within the same target, dates and cost rules.</p></div>
+        <div class="model-guide"><b>How to read this library</b><span><i class="status-dot software"></i>Reusable software</span><span><i class="status-dot signal"></i>Exploratory finding</span><span><i class="status-dot diagnostic"></i>Diagnostic only</span><span><i class="status-dot failed"></i>Negative result</span><span><i class="status-dot blocked"></i>Blocked or not run</span></div>
+        <section class="research-clues" aria-label="Qualified research highlights"><div class="clue-heading"><h3>Useful clues worth keeping</h3><p>Five different questions. Each finding keeps its own baseline and limitations; none is an approved trading model.</p></div><div id="highlight-list" class="highlight-list"></div></section>
+        <details class="reading-note"><summary>What the different scores mean</summary><ul><li>The approximately 24% improvement describes lower rolling-variable error versus persistence. It is not 24 percentage points better trading accuracy.</li><li>AUC measures separation for a specified label. Residual top-decile ranking, ordinary up/down direction and profitable buy/sell timing are different targets.</li><li>The remembered approximately 0.74 R² remains an unverified historical claim in the reviewed evidence. It is not a trading-accuracy grade.</li><li>Lower drawdown can come from holding more cash. Read cash exposure and after-cost excess return alongside the risk result.</li></ul></details>
+        <div class="model-controls panel"><label class="search-field"><span>Find a model or question</span><input id="model-search" type="search" placeholder="Ridge, ANN, movement, risk…" autocomplete="off"></label><label><span>Evidence category</span><select id="model-status"><option value="all">All evidence categories</option><option value="positive">Research finding, with limits</option><option value="reusable_software">Reusable software</option><option value="exploratory_signal">Exploratory signal</option><option value="diagnostic_only">Diagnostic only</option><option value="failed">Negative result</option><option value="blocked/notrun">Blocked or not run</option></select></label><label><span>Method family</span><select id="model-family"><option value="all">All families</option></select></label></div>
+        <div class="model-layout"><section class="panel model-list-panel" aria-label="Study records"><div class="list-heading"><strong id="model-count"></strong><button id="clear-models" class="text-button">Clear filters</button></div><div id="model-list" class="model-list"></div><p id="model-empty" class="empty" hidden>No matching studies. Try a different word or clear the filters.</p></section><article id="model-detail" class="panel model-detail" aria-live="polite" aria-label="Selected study evidence"></article></div>
+      </section>
+
+      <section id="view-relations" class="view" role="tabpanel" aria-labelledby="tab-relations" hidden>
+        <div class="section-heading"><div><p class="eyebrow">Variables, code, experiments and decisions</p><h2>Follow one connection at a time.</h2></div><p>This is a map of project knowledge. Positions and connections do not describe stock prices or predictive influence.</p></div>
+        <div class="relations-layout"><aside class="panel relation-browser"><label class="search-field"><span>Find any project record</span><input id="relation-search" type="search" placeholder="A variable, model, file or question…" autocomplete="off"></label><label><span>Record type</span><select id="relation-type"><option value="all">All record types</option></select></label><div class="list-heading"><strong id="record-count"></strong><button id="clear-relations" class="text-button">Clear</button></div><div id="record-list" class="record-list"></div></aside><div class="relation-main"><section class="panel relationship-graph"><div class="board-heading"><div><p class="eyebrow">Selected neighborhood</p><h3 id="neighborhood-title">Project connections</h3></div><button id="more-connections" class="button subtle" hidden>Show more connections</button></div><div id="graph-wrap" class="graph-wrap"><svg id="relation-svg" role="group" aria-label="Selected project record and its related records" viewBox="0 0 900 520"></svg></div><p id="graph-note" class="graph-note"></p></section><article id="record-detail" class="panel record-detail" aria-live="polite"></article></div></div>
+      </section>
+      <footer class="footer"><p>Reviewed project records. No live quotes, stock picks, model fitting or brokerage connection.<span class="snapshot-proof"><span id="public-content-hash"></span> · This public snapshot is separate from the earlier Neo4j and Notion library release.</span></p><a href="https://github.com/Rnanda442/stockprediction2025/tree/codex/project-knowledge-map-20261122/docs/research" target="_blank" rel="noopener noreferrer">Project map on GitHub</a><a href="/knowledge-map/">Earlier knowledge-map release</a></footer>
+    </div>
+  </main>
+  <div id="announcement" class="sr-only" role="status" aria-live="polite"></div>
+</body>
+</html>
