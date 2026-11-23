@@ -43,8 +43,8 @@ WORKFLOW_KINDS = {
     "workflow", "collector", "component", "contract", "implementation_contract",
     "qualification_contract", "next_action", "blocker",
 }
-REVIEWED_VIEWER_FILES = {"index.html", "map.css", "map.js"}
-REVIEWED_SUPPLEMENTS = {"workflow-details.public.json", "WORKFLOW_DETAILS.md"}
+REVIEWED_VIEWER_FILES = {"index.html", "map.css", "map.js", "knowledge-canvas.js"}
+REVIEWED_SUPPLEMENTS = {"workflow-details.public.json", "WORKFLOW_DETAILS.md", "GRAPH_CANVAS.md", "THIRD_PARTY_NOTICES.md"}
 FORBIDDEN_KEY_FRAGMENTS = {
     "url", "path", "uri", "notion", "instance", "database_name", "username",
     "password", "token", "secret", "credential", "local_repository",
@@ -461,6 +461,8 @@ It is not a trading system, model leaderboard, live database mirror, or complete
 ## Files
 
 - `index.html`, `map.css`, and `map.js` — a self-contained browser for the public graph, workflow, studies, and evidence index.
+- `knowledge-canvas.js` and `vendor/` — the movable graph workspace and its pinned local Cytoscape.js renderer.
+- `GRAPH_CANVAS.md` and `THIRD_PARTY_NOTICES.md` — graph controls, presentation limits and renderer attribution.
 - `project-graph.public.json` — Neo4j/property-graph-compatible nodes and typed edges.
 - `method-catalog.public.json` — {methods_doc['counts']['studies']} saved-evidence study cards with metric scope and limitations.
 - `workflow-view.public.json` — the reviewed 12-stage decision flow, seven variable categories, 59 variable definitions, and public-safe workflow records.
@@ -480,7 +482,7 @@ Rebuilding is a maintainer-only operation because the five reviewed inputs—the
 
 ## View locally
 
-The public viewer has no external runtime dependency. From the repository root, run `python -m http.server 8000 --directory docs/research`, then open `localhost:8000` in a browser. The published JSON keeps canonical IDs, evidence IDs, source-document digests, and per-file content hashes inspectable without exposing the private inputs.
+The public viewer loads its graph renderer locally from the pinned `vendor/` files. From the repository root, run `python -m http.server 8000 --directory docs/research`, then open `localhost:8000` in a browser. The published JSON keeps canonical IDs, evidence IDs, source-document digests, and per-file content hashes inspectable without exposing the private inputs. Graph layout is navigation, not predictive evidence.
 """
     architecture = """# Public documentary architecture
 
@@ -522,6 +524,11 @@ docs/research/EXPORT_ALLOWLIST.md
 docs/research/index.html
 docs/research/map.css
 docs/research/map.js
+docs/research/knowledge-canvas.js
+docs/research/vendor/cytoscape.min.js
+docs/research/vendor/cytoscape.LICENSE
+docs/research/GRAPH_CANVAS.md
+docs/research/THIRD_PARTY_NOTICES.md
 docs/research/project-graph.public.json
 docs/research/method-catalog.public.json
 docs/research/workflow-view.public.json

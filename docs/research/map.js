@@ -51,6 +51,7 @@
   };
 
   let detailScrollEpoch = 0;
+  state.workflowView = "canvas"; state.canvasScope = "context"; state.canvas = null; state.canvasSelectedEdge = null;
   function announce(value) { $("announcement").textContent = value; }
   function resetWorkflowDetailScroll() {
     detailScrollEpoch += 1;
@@ -95,6 +96,7 @@
     const params = new URLSearchParams({ view: state.view });
     if (state.view === "workflow" && state.stageId) params.set("stage", state.stageId);
     if (state.view === "workflow" && state.childStageId) { params.set("parts", "1"); if (state.partFocusId) params.set("focus", state.partFocusId); if (state.partId) params.set("part", state.partId); if (state.showAllParts) params.set("all", "1"); }
+    if (state.view === "workflow" && state.canvasScope === "all") params.set("scope", "all");
     if (state.view === "models" && state.methodId) params.set("method", state.methodId);
     if (state.view === "relations" && state.nodeId) params.set("node", state.nodeId);
     try { history.replaceState(null, "", `#${params.toString()}`); } catch { /* Read-only embedded previews may disallow URL updates. */ }
@@ -108,6 +110,7 @@
     });
     ["workflow", "models", "relations"].forEach((name) => { $(`view-${name}`).hidden = name !== view; });
     if (view === "workflow") requestAnimationFrame(drawWorkflowWires);
+    if (view === "workflow") requestAnimationFrame(() => state.canvas?.resize());
     if (view === "relations") requestAnimationFrame(drawRelations);
     if (updateHash) setHash();
   }
@@ -155,7 +158,7 @@
     else $("workflow-map").querySelector(".stage-button.selected")?.focus({ preventScroll: true });
     announce(`Selected ${stageTitle(state.stages.find((stage) => stage.id === id))}`);
   }
-  function activeWorkflowButton() { return state.childStageId ? $("workflow-map").querySelector(".part-button.selected") || $("part-about-stage") : $("workflow-map").querySelector(".stage-button.selected"); }
+  function activeWorkflowButton() { return state.workflowView === "canvas" ? $("canvas-viewport") : state.childStageId ? $("workflow-map").querySelector(".part-button.selected") || $("part-about-stage") : $("workflow-map").querySelector(".stage-button.selected"); }
   function setPartSearchVisible(visible, focus = false) {
     $("part-find-field").hidden = !visible;
     $("part-find-toggle").setAttribute("aria-expanded", String(visible));
@@ -163,6 +166,7 @@
   }
   function openWorkflowStep(id) {
     if (!state.stages.some((stage) => stage.id === id)) return;
+    state.canvasScope = "context"; state.canvasSelectedEdge = null;
     if (!state.childStageId) state.overviewScrollY = window.scrollY;
     if ($("stage-sheet").open) $("stage-sheet").close();
     state.stageId = id; state.childStageId = id; state.partId = ""; state.partFocusId = ""; state.showAllParts = false; state.detailMode = "stage"; $("part-search").value = "";
@@ -173,6 +177,7 @@
   }
   function returnToWorkflow() {
     if ($("stage-sheet").open) $("stage-sheet").close();
+    state.canvasScope = "context"; state.canvasSelectedEdge = null;
     state.childStageId = ""; state.partId = ""; state.partFocusId = ""; state.showAllParts = false; state.detailMode = "stage"; $("part-search").value = "";
     renderWorkflow(); setHash(); requestAnimationFrame(() => { window.scrollTo({ top: state.overviewScrollY }); activeWorkflowButton()?.focus({ preventScroll: true }); });
   }
@@ -234,11 +239,13 @@
       $("workflow-board-title").textContent = "Data to decisions"; $("workflow-board-subtitle").textContent = "12 steps · open a step to explore";
       $("workflow-board-introduction").textContent = "Open any box to explore its connected parts. Supplied holdings and cash are a separate input.";
     }
+    renderWorkflowCanvas();
     requestAnimationFrame(drawWorkflowWires);
   }
   function svgElement(name, attrs = {}, value) { const item = document.createElementNS(NS, name); Object.entries(attrs).forEach(([key, val]) => item.setAttribute(key, val)); if (value !== undefined) item.textContent = value; return item; }
   function drawWorkflowWires() {
     if (state.view !== "workflow") return;
+    if (state.workflowView === "canvas") return;
     if (state.childStageId) { drawPartWires(); return; }
     const board = $("workflow-map"), svg = board.querySelector(".workflow-wires"); if (!svg) return;
     const bounds = board.getBoundingClientRect(), mobile = bounds.width < 500; svg.setAttribute("viewBox", `0 0 ${bounds.width} ${bounds.height}`); svg.replaceChildren();
@@ -464,6 +471,88 @@
     }
   }
 
+  function canvasNode(id) {
+    const entry = state.workflowPartIndex.get(id);
+    if (entry) return { id, label: entry.node.title, role: isPartCategory(state.workflowSections.get(entry.stageId), entry.node) ? "category" : "leaf", stageId: entry.stageId };
+    const stage = state.stages.find((item) => item.id === id);
+    return stage ? { id, label: shortStageTitle(stage), role: "stage", stageId: id } : null;
+  }
+  function inspectCanvasNode(id) {
+    state.canvasSelectedEdge = null;
+    const entry = state.workflowPartIndex.get(id);
+    if (entry) {
+      if (state.childStageId !== entry.stageId) { state.partFocusId = partParent(state.workflowSections.get(entry.stageId), entry.node); state.showAllParts = false; }
+      state.stageId = entry.stageId; state.childStageId = entry.stageId; state.partId = id; state.detailMode = "part";
+    } else if (state.stages.some((stage) => stage.id === id)) { state.stageId = id; state.detailMode = "stage"; }
+    else return;
+    renderWorkflow(); setHash(); announce(`Selected ${canvasNode(id)?.label}. Read details or explore its connected parts.`);
+  }
+  function setCanvasExpanded(expanded) {
+    const layout = document.querySelector(".workflow-layout"), wasExpanded = layout.classList.contains("canvas-expanded");
+    if (expanded && !wasExpanded) state.canvasExpandedScrollY = window.scrollY;
+    layout.classList.toggle("canvas-expanded", expanded); document.body.classList.toggle("graph-expanded", expanded);
+    $("canvas-expand").setAttribute("aria-pressed", String(expanded)); $("canvas-expand").textContent = expanded ? "Restore" : "Expand";
+    requestAnimationFrame(() => { state.canvas?.resize(); if (expanded) state.canvas?.fit(); else { window.scrollTo({ top: state.canvasExpandedScrollY || 0 }); state.canvas?.fit(); } });
+  }
+  function exploreCanvasNode(id) {
+    const entry = state.workflowPartIndex.get(id);
+    state.canvasScope = "context"; state.canvasSelectedEdge = null;
+    if (!entry) { openWorkflowStep(id); return; }
+    if (state.childStageId !== entry.stageId) { state.childStageId = entry.stageId; state.stageId = entry.stageId; }
+    if (isPartCategory(state.workflowSections.get(entry.stageId), entry.node)) selectWorkflowPart(id, false);
+    else { inspectCanvasNode(id); showWorkflowDetailSheet(); }
+  }
+  function workflowCanvasGraph() {
+    let nodes, edges, key, selectedId;
+    if (state.canvasScope === "all") {
+      nodes = [...state.workflowPartIndex.keys()].map(canvasNode);
+      edges = [...state.workflowSections.values()].flatMap((sectionData) => sectionData.edges).concat(state.crossSectionEdges);
+      key = "all-details"; selectedId = state.partId;
+    } else if (state.childStageId) {
+      const sectionData = currentWorkflowSection(); nodes = state.visibleParts.map((node) => canvasNode(node.id));
+      edges = list(sectionData?.edges); key = `step:${state.childStageId}:${state.showAllParts ? "whole" : state.partFocusId}:${normalizeSearch($("part-search").value)}`; selectedId = state.partId;
+    } else {
+      nodes = state.stages.map((stage) => canvasNode(stage.id)); edges = state.pipelineEdges; key = "workflow"; selectedId = state.stageId;
+    }
+    const ids = new Set(nodes.filter(Boolean).map((node) => node.id));
+    return { key, nodes: nodes.filter(Boolean), selectedId, edges: edges.filter((edge) => ids.has(edgeSource(edge)) && ids.has(edgeTarget(edge))).map((edge, index) => ({ id: `canvas-edge:${key}:${index}`, source: edgeSource(edge), target: edgeTarget(edge), relation: edge.relation || edge.type || "connects_to", label: flowRelationLabels[edge.relation] || human(edge.relation || edge.type || "connects to") })) };
+  }
+  function inspectCanvasEdge(edge) {
+    state.canvasSelectedEdge = edge;
+    const source = canvasNode(edge.source), target = canvasNode(edge.target);
+    const markup = `<p class="eyebrow">Source-defined relationship</p><h3>${esc(source?.label || edge.source)} → ${esc(target?.label || edge.target)}</h3><p class="detail-summary">${esc(edge.label)}</p><p class="scope-note">The arrow records a documented project relationship. It does not establish predictive influence or a working connection.</p><div class="linked-records"><button class="record-chip" data-canvas-inspect="${esc(edge.source)}">Inspect source</button><button class="record-chip" data-canvas-inspect="${esc(edge.target)}">Inspect destination</button></div><p class="identifier">Recorded type: ${esc(edge.relation)}<br>${esc(edge.source)} → ${esc(edge.target)}</p>`;
+    $("stage-detail").innerHTML = markup; $("stage-sheet-content").innerHTML = markup; $("stage-sheet-title").textContent = "Connection details"; $("mobile-stage-label").textContent = "Selected connection"; resetWorkflowDetailScroll();
+    for (const container of [$("stage-detail"), $("stage-sheet-content")]) container.querySelectorAll("[data-canvas-inspect]").forEach((button) => button.onclick = () => { if ($("stage-sheet").open) $("stage-sheet").close(); inspectCanvasNode(button.dataset.canvasInspect); });
+    $("canvas-node-picker").value = ""; $("canvas-explore").disabled = true; $("canvas-details").disabled = false;
+  }
+  function renderWorkflowCanvas() {
+    const graph = workflowCanvasGraph(), canvasMode = state.workflowView === "canvas";
+    $("workflow-canvas-mode").setAttribute("aria-pressed", String(canvasMode)); $("workflow-reading-mode").setAttribute("aria-pressed", String(!canvasMode));
+    $("canvas-workspace").hidden = !canvasMode; $("workflow-reading").hidden = canvasMode || state.canvasScope === "all";
+    $("canvas-reading-all").hidden = canvasMode || state.canvasScope !== "all";
+    document.querySelector(".workflow-board").classList.toggle("canvas-mode", canvasMode);
+    $("canvas-scope").value = state.canvasScope === "all" ? "all" : !state.childStageId ? "workflow" : state.showAllParts ? "step" : "focus";
+    $("canvas-node-picker").innerHTML = '<option value="">Choose a record…</option>' + [...graph.nodes].sort((a, b) => a.label.localeCompare(b.label)).map((node) => `<option value="${esc(node.id)}">${esc(node.label)}${state.canvasScope === "all" ? ` · ${esc(shortStageTitle(state.stages.find((stage) => stage.id === node.stageId)))}` : ""}</option>`).join("");
+    $("canvas-node-picker").value = graph.selectedId || "";
+    const selected = canvasNode(graph.selectedId);
+    $("canvas-explore").disabled = !selected; $("canvas-details").disabled = !selected;
+    $("canvas-explore").textContent = selected?.role === "stage" ? "Open step" : selected?.role === "category" ? "Explore group" : "Read part";
+    $("canvas-count").textContent = `${graph.nodes.length} ${state.canvasScope === "all" ? "detail parts across 12 steps" : state.childStageId ? "parts" : "workflow steps"} · ${graph.edges.length} directed connections · moving nodes changes only this view`;
+    if (state.canvasScope === "all") { $("workflow-board-title").textContent = "All workflow details"; $("workflow-board-subtitle").textContent = `${graph.nodes.length} source-linked parts`; $("part-controls").hidden = true; }
+    if (!canvasMode && state.canvasScope === "all") {
+      $("canvas-reading-all").innerHTML = '<p class="reading-mode-intro">All detail parts. Select a record to inspect its exact inputs, outputs and evidence.</p>' + graph.nodes.map((node) => `<button type="button" class="all-part-record" data-all-part="${esc(node.id)}"><strong>${esc(node.label)}</strong><span>${esc(shortStageTitle(state.stages.find((stage) => stage.id === node.stageId)))}</span></button>`).join("");
+      $("canvas-reading-all").querySelectorAll("[data-all-part]").forEach((button) => button.onclick = () => { inspectCanvasNode(button.dataset.allPart); if (window.matchMedia("(max-width:850px)").matches) showWorkflowDetailSheet(); });
+    }
+    if (!canvasMode) return;
+    try {
+      if (!state.canvas) state.canvas = new window.ProjectKnowledgeCanvas($("canvas-viewport"), { onSelect: inspectCanvasNode, onExplore: exploreCanvasNode, onEdge: inspectCanvasEdge, onViewport: (zoom) => { $("canvas-zoom-label").textContent = `${Math.round(zoom * 100)}%`; } });
+      state.canvas.setGraph(graph); $("canvas-fallback").hidden = true;
+    } catch {
+      state.canvas?.destroy(); state.canvas = null; state.workflowView = "reading"; renderWorkflowCanvas(); $("canvas-fallback").hidden = false;
+      announce("The movable renderer is unavailable. The accessible reading view contains the reviewed records.");
+    }
+  }
+
   function metricMarkup(metric) {
     const label = metric.label || metric.name || metric.metric || "Saved measure";
     const preciseUnit = /AUC|squared probability|Brier/i.test(metric.unit || "");
@@ -599,6 +688,7 @@
     state.partFocusId = partIds.has(params.get("focus")) ? params.get("focus") : "";
     state.partId = partIds.has(params.get("part")) ? params.get("part") : "";
     state.showAllParts = params.get("all") === "1";
+    state.canvasScope = params.get("scope") === "all" ? "all" : "context";
     state.detailMode = state.partId ? "part" : "stage";
     renderWorkflow(); renderModels(); renderRecords(); renderRecordDetail();
     setView(params.get("view") || (node ? "relations" : method ? "models" : "workflow"), false);
@@ -650,6 +740,32 @@
   $("clear-relations").onclick = () => { $("relation-search").value = ""; $("relation-type").value = "all"; renderRecords(); };
   $("more-connections").onclick = () => { state.expandedConnections = true; drawRelations(); };
   $("retry-load").onclick = load;
+  $("workflow-canvas-mode").onclick = () => { state.workflowView = "canvas"; renderWorkflow(); requestAnimationFrame(() => state.canvas?.resize()); };
+  $("workflow-reading-mode").onclick = () => { if (document.querySelector(".workflow-layout").classList.contains("canvas-expanded")) setCanvasExpanded(false); state.workflowView = "reading"; renderWorkflow(); };
+  $("canvas-node-picker").onchange = () => { if ($("canvas-node-picker").value) inspectCanvasNode($("canvas-node-picker").value); };
+  $("canvas-explore").onclick = () => { if ($("canvas-node-picker").value) exploreCanvasNode($("canvas-node-picker").value); };
+  $("canvas-details").onclick = showWorkflowDetailSheet;
+  $("canvas-zoom-in").onclick = () => state.canvas?.zoomBy(1.25);
+  $("canvas-zoom-out").onclick = () => state.canvas?.zoomBy(0.8);
+  $("canvas-fit").onclick = () => state.canvas?.fit();
+  $("canvas-reset").onclick = () => state.canvas?.resetLayout();
+  $("canvas-expand").onclick = () => setCanvasExpanded(!document.querySelector(".workflow-layout").classList.contains("canvas-expanded"));
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !$("stage-sheet").open && document.querySelector(".workflow-layout").classList.contains("canvas-expanded")) { event.preventDefault(); setCanvasExpanded(false); } });
+  $("canvas-scope").onchange = () => {
+    const scope = $("canvas-scope").value; state.canvasSelectedEdge = null;
+    if (scope === "workflow") { returnToWorkflow(); return; }
+    if (scope === "all") state.canvasScope = "all";
+    else {
+      state.canvasScope = "context";
+      if (!state.childStageId) { state.childStageId = state.stageId; state.partFocusId = ""; state.partId = ""; }
+      state.showAllParts = scope === "step"; $("part-search").value = "";
+      if (scope === "focus" && state.partId) {
+        const entry = state.workflowPartIndex.get(state.partId), sectionData = currentWorkflowSection();
+        if (entry && entry.stageId === state.childStageId) state.partFocusId = isPartCategory(sectionData, entry.node) ? entry.node.id : partParent(sectionData, entry.node);
+      }
+    }
+    renderWorkflow(); setHash();
+  };
   $("part-search").addEventListener("input", () => { renderWorkflow(); setHash(); });
   $("part-find-toggle").onclick = () => setPartSearchVisible($("part-find-field").hidden, true);
   $("part-group-select").onchange = () => focusPartCategory($("part-group-select").value);
