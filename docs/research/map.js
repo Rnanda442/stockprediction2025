@@ -35,7 +35,20 @@
     paper_ledger: ["Paper state ledger", "Accounting", "Engine built; runner missing"],
     mature_outcomes: ["Later outcomes", "Evaluation", "Future process"],
   };
-  const state = { view: "workflow", stageId: "", methodId: "", nodeId: "", graph: null, stages: [], pipelineEdges: [], studies: [], nodes: [], edges: [], evidence: new Map(), nodeById: new Map(), studyById: new Map(), expandedConnections: false, loaded: false };
+  const state = { view: "workflow", stageId: "", methodId: "", nodeId: "", graph: null, stages: [], pipelineEdges: [], studies: [], nodes: [], edges: [], evidence: new Map(), nodeById: new Map(), studyById: new Map(), expandedConnections: false, expandedStageIds: new Set(), loaded: false };
+  const flowSlots = {
+    market_data: [1, 2], availability_clock: [2, 2], forecast_contract: [3, 2], features_universe: [4, 2],
+    model: [5, 2], portfolio_state: [5, 3], entry_review: [6, 1], holding_review: [6, 3],
+    constraints: [7, 2], paper_report: [8, 2], paper_ledger: [9, 2], mature_outcomes: [10, 2],
+  };
+  const flowRelationLabels = {
+    attested_as_of: "is checked against", constrains_timing: "sets the timing for", defines_requirements: "defines the required measurements for",
+    supplies_features: "supplies measurements to", defines_target: "defines the forecast target for", supplies_estimates: "supplies estimates to",
+    identifies_held_positions: "identifies the held positions for", proposes_entry: "sends entry proposals to",
+    proposes_continuation_or_exit: "sends continuation or exit proposals to", constrains_cash_and_positions: "supplies cash and position limits to",
+    accepts_or_blocks: "accepts or blocks actions for", supplies_immutable_valid_intents: "passes saved valid intents to",
+    records_outcome_accounting: "records accounting for", preserves_prior_decisions: "preserves advance decisions for",
+  };
 
   function announce(value) { $("announcement").textContent = value; }
   function useStatus(study) { return study.appropriate_use?.status || study.use_status || "diagnostic_only"; }
@@ -111,6 +124,13 @@
     }
     return [...new Set(ids)].map((id) => state.studyById.get(id)).filter(Boolean);
   }
+  function openStage(id, showSheet = true) {
+    if (!state.stages.some((stage) => stage.id === id)) return;
+    state.stageId = id; renderWorkflow(); setHash();
+    if (showSheet && window.matchMedia("(max-width: 850px)").matches && !$("stage-sheet").open) $("stage-sheet").showModal();
+    else $("workflow-map").querySelector(".stage-button.selected")?.focus({ preventScroll: true });
+    announce(`Selected ${stageTitle(state.stages.find((stage) => stage.id === id))}`);
+  }
   function renderWorkflow() {
     if (!state.stages.length) {
       $("workflow-map").innerHTML = '<p class="empty">No reviewed workflow stages were supplied.</p>';
@@ -118,8 +138,14 @@
       return;
     }
     if (!state.stages.some((stage) => stage.id === state.stageId)) state.stageId = state.stages[0].id;
-    $("workflow-map").innerHTML = '<svg class="workflow-wires" aria-hidden="true"></svg>' + state.stages.map((stage) => `<button class="stage-button ${stageClass(stage)} ${stage.id === state.stageId ? "selected" : ""}" type="button" data-stage="${esc(stage.id)}" aria-pressed="${stage.id === state.stageId}"><span class="stage-position">${esc(stage.group || stage.category || stageAliases[stage.id]?.[1] || "Workflow stage")}</span><b>${esc(shortStageTitle(stage))}</b><span class="stage-state">${esc(stageStatus(stage))}</span></button>`).join("");
-    $("workflow-map").querySelectorAll("[data-stage]").forEach((button) => button.addEventListener("click", () => { state.stageId = button.dataset.stage; renderWorkflow(); setHash(); $("workflow-map").querySelector(".stage-button.selected")?.focus({ preventScroll: true }); announce(`Selected ${stageTitle(state.stages.find((stage) => stage.id === state.stageId))}`); }));
+    $("workflow-map").innerHTML = '<svg class="workflow-wires" aria-hidden="true"></svg>' + state.stages.map((stage, index) => {
+      const [row, column] = flowSlots[stage.id] || [index + 1, 2];
+      const selected = stage.id === state.stageId;
+      const lane = stage.id === "entry_review" ? "New-stock branch" : stage.id === "holding_review" ? "Held-stock branch" : stage.id === "portfolio_state" ? "Separate supplied input" : "";
+      return `<div class="flow-slot flow-${esc(stage.id)} ${selected ? "selected" : ""}" style="--flow-row:${row};--flow-column:${column}" data-flow-id="${esc(stage.id)}">${lane ? `<span class="flow-lane-title">${esc(lane)}</span>` : ""}<button class="stage-button flow-node ${stageClass(stage)} ${selected ? "selected" : ""}" type="button" data-stage="${esc(stage.id)}" aria-pressed="${selected}" aria-haspopup="${window.matchMedia("(max-width: 850px)").matches ? "dialog" : "false"}"><b>${esc(shortStageTitle(stage))}</b><span class="stage-state">${esc(stageStatus(stage))}</span></button><details class="flow-node-notes" data-stage-note="${esc(stage.id)}" ${state.expandedStageIds.has(stage.id) ? "open" : ""}><summary>More detail</summary><p>${esc(stage.question || "Read this stage's purpose and evidence.")}</p><p>${esc(plain(stage.known || stage.existing || "See the selected-stage inspector."))}</p></details></div>`;
+    }).join("");
+    $("workflow-map").querySelectorAll("[data-stage]").forEach((button) => button.addEventListener("click", () => openStage(button.dataset.stage)));
+    $("workflow-map").querySelectorAll("[data-stage-note]").forEach((detail) => detail.addEventListener("toggle", () => { detail.open ? state.expandedStageIds.add(detail.dataset.stageNote) : state.expandedStageIds.delete(detail.dataset.stageNote); requestAnimationFrame(drawWorkflowWires); }));
     const stage = state.stages.find((item) => item.id === state.stageId);
     const existing = stage.existing || stage.what_exists || stage.what_we_have || stage.known || stage.built || stage.current_state;
     const remaining = stage.remaining || stage.remaining_delta || stage.missing || stage.open_dependencies;
@@ -127,36 +153,78 @@
     const nodeIds = list(stage.node_ids || stage.canonical_node_ids || stage.record_ids || stage.linked_nodes);
     const records = nodeIds.map((id) => state.nodeById.get(id)).filter(Boolean);
     const linked = studies.map((study) => `<button class="record-chip" data-open-method="${esc(study.canonical_id)}">${esc(studyTitle(study))}</button>`).join("");
-    $("stage-detail").innerHTML = `<div class="detail-kicker"><p class="eyebrow">Selected stage</p>${pill(stageClass(stage) === "gap" ? "blocked" : "diagnostic_only", stageStatus(stage))}</div><h3>${esc(stageTitle(stage))}</h3><p class="detail-summary">${esc(stage.summary || stage.question || stage.description || stage.purpose || "Read the saved work and its limits for this stage.")}</p>${section("What we already have", itemList(existing || ["See the linked reviewed project records."]))}${section("What remains", itemList(remaining || ["No additional implementation claim is inferred from this map."]))}${studies.length ? section("Related studies", `<div class="linked-records">${linked}</div>`) : ""}${records.length ? section("Explore connections", `<div class="linked-records">${records.map((node) => `<button class="record-chip" data-open-node="${esc(node.id)}">${esc(nodeTitle(node))}</button>`).join("")}</div>`) : ""}<details class="detail-section"><summary>Source evidence</summary>${evidenceMarkup(evidenceIds(stage))}</details>`;
-    $("stage-detail").querySelectorAll("[data-open-method]").forEach((button) => button.onclick = () => openMethod(button.dataset.openMethod));
-    $("stage-detail").querySelectorAll("[data-open-node]").forEach((button) => button.onclick = () => openNode(button.dataset.openNode));
     const connections = state.pipelineEdges.filter((edge) => edgeSource(edge) === stage.id || edgeTarget(edge) === stage.id);
-    $("workflow-connections").innerHTML = connections.map((edge) => {
+    const connectionMarkup = connections.map((edge) => {
       const from = state.stages.find((item) => item.id === edgeSource(edge)); const to = state.stages.find((item) => item.id === edgeTarget(edge));
       if (!from || !to) return "";
-      return `<div class="connection-line"><button data-connected-stage="${esc(from.id)}">${esc(shortStageTitle(from))}</button><span class="relation-verb">${esc(edgeRelation(edge))}</span><button data-connected-stage="${esc(to.id)}">${esc(shortStageTitle(to))}</button></div>`;
+      const incoming = to.id === stage.id;
+      const verb = flowRelationLabels[edge.relation] || edgeRelation(edge);
+      return `<div class="flow-dependency"><span>${incoming ? "Incoming dependency" : "Outgoing connection"}</span><p><button data-connected-stage="${esc(from.id)}">${esc(shortStageTitle(from))}</button> ${esc(verb)} <button data-connected-stage="${esc(to.id)}">${esc(shortStageTitle(to))}</button>.</p></div>`;
     }).join("");
-    $("workflow-connections").querySelectorAll("[data-connected-stage]").forEach((button) => button.onclick = () => { state.stageId = button.dataset.connectedStage; renderWorkflow(); setHash(); });
+    const libraryAction = stage.id === "model" ? `<button class="button subtle workflow-library-link" data-workflow-library="models">View saved models and results (${state.studies.length})</button>` : stage.id === "features_universe" ? `<button class="button subtle workflow-library-link" data-workflow-library="variables">Explore the 59 variable definitions</button>` : "";
+    const detailMarkup = `<div class="detail-kicker"><p class="eyebrow">Selected step</p>${pill(stageClass(stage) === "gap" ? "blocked" : "diagnostic_only", stageStatus(stage))}</div><h3>${esc(stageTitle(stage))}</h3><p class="detail-summary">${esc(stage.summary || stage.question || stage.description || stage.purpose || "Read the saved work and its limits for this stage.")}</p>${libraryAction}${section("What we already have", itemList(existing || ["See the linked reviewed project records."]))}${section("What remains", itemList(remaining || ["No additional implementation claim is inferred from this map."]))}${section("Connects with", connectionMarkup)}${studies.length ? section("Related studies", `<div class="linked-records">${linked}</div>`) : ""}${records.length ? section("Explore connections", `<div class="linked-records">${records.map((node) => `<button class="record-chip" data-open-node="${esc(node.id)}">${esc(nodeTitle(node))}</button>`).join("")}</div>`) : ""}<details class="detail-section"><summary>Source evidence</summary>${evidenceMarkup(evidenceIds(stage))}</details>`;
+    $("stage-detail").innerHTML = detailMarkup; $("stage-sheet-content").innerHTML = detailMarkup;
+    $("stage-sheet-title").textContent = shortStageTitle(stage); $("mobile-stage-label").textContent = shortStageTitle(stage);
+    for (const container of [$("stage-detail"), $("stage-sheet-content")]) {
+      container.querySelectorAll("[data-open-method]").forEach((button) => button.onclick = () => { if ($("stage-sheet").open) $("stage-sheet").close(); openMethod(button.dataset.openMethod); });
+      container.querySelectorAll("[data-open-node]").forEach((button) => button.onclick = () => { if ($("stage-sheet").open) $("stage-sheet").close(); openNode(button.dataset.openNode); });
+      container.querySelectorAll("[data-connected-stage]").forEach((button) => button.onclick = () => openStage(button.dataset.connectedStage, false));
+      container.querySelectorAll("[data-workflow-library]").forEach((button) => button.onclick = () => {
+        if ($("stage-sheet").open) $("stage-sheet").close();
+        if (button.dataset.workflowLibrary === "models") {
+          $("model-search").value = ""; $("model-status").value = "all"; $("model-family").value = "all"; renderModels(); setView("models");
+        } else {
+          $("relation-search").value = ""; $("relation-type").value = "variable";
+          state.nodeId = state.nodes.find((node) => node.kind === "variable")?.id || state.nodeId;
+          renderRecords(); renderRecordDetail(); setView("relations");
+        }
+      });
+    }
+    $("workflow-connections").innerHTML = '<p>Arrows show the 15 source-defined dependencies, not a live or approved trading pipeline.</p>';
     requestAnimationFrame(drawWorkflowWires);
   }
   function svgElement(name, attrs = {}, value) { const item = document.createElementNS(NS, name); Object.entries(attrs).forEach(([key, val]) => item.setAttribute(key, val)); if (value !== undefined) item.textContent = value; return item; }
   function drawWorkflowWires() {
     if (state.view !== "workflow") return;
     const board = $("workflow-map"), svg = board.querySelector(".workflow-wires"); if (!svg) return;
-    const bounds = board.getBoundingClientRect(); svg.setAttribute("viewBox", `0 0 ${bounds.width} ${bounds.height}`); svg.replaceChildren();
+    const bounds = board.getBoundingClientRect(), mobile = bounds.width < 500; svg.setAttribute("viewBox", `0 0 ${bounds.width} ${bounds.height}`); svg.replaceChildren();
+    const defs = svgElement("defs");
+    for (const [id, color] of [["flow-arrow", "#8ea7b3"], ["flow-arrow-selected", "#147d79"]]) { const marker = svgElement("marker", { id, viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 6, markerHeight: 6, orient: "auto" }); marker.append(svgElement("path", { d: "M0,0 L10,5 L0,10 Z", fill: color })); defs.append(marker); }
+    svg.append(defs);
     for (const edge of state.pipelineEdges) {
       const start = [...board.querySelectorAll("[data-stage]")].find((button) => button.dataset.stage === edgeSource(edge));
       const end = [...board.querySelectorAll("[data-stage]")].find((button) => button.dataset.stage === edgeTarget(edge));
       if (!start || !end) continue;
       const a = start.getBoundingClientRect(), b = end.getBoundingClientRect();
-      const sameRow = Math.abs(a.top - b.top) < 5;
-      const x1 = (sameRow ? a.right : a.left + a.width / 2) - bounds.left;
-      const y1 = (sameRow ? a.top + a.height / 2 : a.bottom) - bounds.top;
-      const x2 = (sameRow ? b.left : b.left + b.width / 2) - bounds.left;
-      const y2 = (sameRow ? b.top + b.height / 2 : b.top) - bounds.top;
+      const sourceSlot = start.closest(".flow-slot");
+      const expandedNote = sourceSlot?.querySelector(".flow-node-notes[open]");
+      const sourceBottom = expandedNote ? sourceSlot.getBoundingClientRect().bottom : a.bottom;
       const active = edgeSource(edge) === state.stageId || edgeTarget(edge) === state.stageId;
-      const path = sameRow ? `M${x1},${y1}L${x2},${y2}` : `M${x1},${y1}C${x1},${y1 + 18} ${x2},${y2 - 18} ${x2},${y2}`;
-      svg.append(svgElement("path", { d: path, fill: "none", stroke: active ? "#268a84" : "#d2e0e5", "stroke-width": active ? 2 : 1, "stroke-dasharray": active ? "" : "3 3" }));
+      const source = edgeSource(edge), target = edgeTarget(edge);
+      const ax = a.left - bounds.left, ay = a.top - bounds.top, bx = b.left - bounds.left, by = b.top - bounds.top;
+      let x1 = ax + a.width / 2, y1 = sourceBottom - bounds.top + 2, x2 = bx + b.width / 2, y2 = by - 3;
+      let path, label = "", labelX = 0, labelY = 0, rotate = 0;
+      if (source === "forecast_contract" && target === "model") {
+        x1 = ax - 2; y1 = ay + a.height / 2; x2 = bx - 3; y2 = by + b.height / 2;
+        const gutter = Math.max(10, Math.min(x1, x2) - (mobile ? 16 : 32));
+        path = `M${x1},${y1}H${gutter}V${y2}H${x2}`; label = "Target"; labelX = gutter - 5; labelY = (y1 + y2) / 2; rotate = -90;
+      } else if (source === "paper_report" && target === "mature_outcomes") {
+        x1 = ax + a.width + 2; y1 = ay + a.height / 2; x2 = bx + b.width + 3; y2 = by + b.height / 2;
+        const gutter = Math.min(bounds.width + 8, Math.max(x1, x2) + (mobile ? 16 : 32));
+        path = `M${x1},${y1}H${gutter}V${y2}H${x2}`; label = "Prior decisions"; labelX = gutter + 5; labelY = (y1 + y2) / 2; rotate = 90;
+      } else if (source === "portfolio_state" && target === "constraints") {
+        x1 = ax + a.width + 2; y1 = ay + a.height / 2; x2 = bx + b.width + 3; y2 = by + b.height / 2;
+        const gutter = bounds.width + 7; path = `M${x1},${y1}H${gutter}V${y2}H${x2}`;
+      } else if (source === "model" && target === "holding_review" && mobile) {
+        const turn = y2 - 18; path = `M${x1 + 8},${y1}V${turn}H${x2}V${y2}`;
+      } else if (Math.abs(x1 - x2) < 2) path = `M${x1},${y1}V${y2}`;
+      else {
+        const middle = source === "model" ? y1 + 18 : (y1 + y2) / 2;
+        path = `M${x1},${y1}V${middle}H${x2}V${y2}`;
+      }
+      const line = svgElement("path", { d: path, fill: "none", stroke: active ? "#147d79" : "#a4b8c2", "stroke-width": active ? 2.4 : 1.5, "stroke-dasharray": source === "portfolio_state" ? "5 3" : "", "marker-end": `url(#${active ? "flow-arrow-selected" : "flow-arrow"})`, "data-source": source, "data-target": target });
+      line.append(svgElement("title", {}, `${shortStageTitle(state.stages.find((stage) => stage.id === source))} · ${edgeRelation(edge)} · ${shortStageTitle(state.stages.find((stage) => stage.id === target))}`)); svg.append(line);
+      if (label) svg.append(svgElement("text", { x: labelX, y: labelY, transform: `rotate(${rotate} ${labelX} ${labelY})`, "text-anchor": "middle", "font-size": 14, fill: active ? "#147d79" : "#738e9c", class: "flow-wire-label" }, label));
     }
   }
 
@@ -327,6 +395,11 @@
   $("clear-relations").onclick = () => { $("relation-search").value = ""; $("relation-type").value = "all"; renderRecords(); };
   $("more-connections").onclick = () => { state.expandedConnections = true; drawRelations(); };
   $("retry-load").onclick = load;
+  $("mobile-stage-peek").onclick = () => { if (state.stages.length && !$("stage-sheet").open) $("stage-sheet").showModal(); };
+  $("close-stage-sheet").onclick = () => $("stage-sheet").close();
+  $("stage-sheet").addEventListener("close", () => { if (state.view === "workflow") $("workflow-map").querySelector(".stage-button.selected")?.focus({ preventScroll: true }); });
+  $("stage-sheet").addEventListener("click", (event) => { if (event.target === $("stage-sheet")) { const box = $("stage-sheet").getBoundingClientRect(); if (event.clientY < box.top || event.clientY > box.bottom || event.clientX < box.left || event.clientX > box.right) $("stage-sheet").close(); } });
+  window.addEventListener("resize", () => { if (!window.matchMedia("(max-width: 850px)").matches && $("stage-sheet").open) $("stage-sheet").close(); });
   window.addEventListener("hashchange", () => { if (state.loaded) readHash(); });
   new ResizeObserver(() => { if (state.loaded) { drawWorkflowWires(); drawRelations(); } }).observe($("workflow-map"));
   new ResizeObserver(() => { if (state.loaded && state.view === "relations") drawRelations(); }).observe($("graph-wrap"));

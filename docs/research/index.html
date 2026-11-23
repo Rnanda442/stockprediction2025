@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#123448">
   <meta name="description" content="Explore the stock research workflow, every registered study, its evidence, and the connections between them.">
   <title>Project map · Stock research</title>
-  <link rel="stylesheet" href="map.css">
-  <script src="map.js" defer></script>
+  <link rel="stylesheet" href="map.css?v=20261123-flow1">
+  <script src="map.js?v=20261123-flow1" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to project map</a>
@@ -18,19 +18,19 @@
   </header>
   <main id="main">
     <section class="intro" aria-labelledby="page-title">
-      <div><p class="eyebrow">The work, connected</p><h1 id="page-title">See what we have.<br><span>Understand what comes next.</span></h1><p class="intro-copy">Follow the workflow, open a study, or trace an idea to its evidence. Completed work stays visible alongside its limits.</p></div>
-      <div class="intro-note"><span class="note-icon" aria-hidden="true">◈</span><div><strong>No model is promoted.</strong><p>Useful software and positive research findings are different from a verified stock-picking edge.</p><span id="as-of" class="meta">Loading reviewed source…</span></div></div>
+      <div><h1 id="page-title">The daily paper workflow</h1><p class="intro-copy">Follow the arrows. Select a step to open its existing work, missing pieces and evidence.</p></div>
+      <div class="intro-note"><strong>Design view · no model promoted</strong><span id="as-of" class="meta">Loading reviewed source…</span></div>
     </section>
     <div id="load-error" class="load-error" role="alert" hidden><strong>The reviewed project files could not load.</strong><p>The page does not substitute live market data. Reload to try the saved project files again.</p><button id="retry-load" class="button">Reload project files</button></div>
     <div id="loading" class="loading" role="status">Loading the reviewed workflow and evidence…</div>
     <div id="app" hidden>
-      <section class="inventory" aria-label="Project inventory"><div><strong id="study-count">—</strong><span>registered studies & designs</span></div><div><strong id="variable-count">—</strong><span>documented variables</span></div><div><strong id="relation-count">—</strong><span>project relationships</span></div><p>Counts describe project records,<br>not independent successful tests.</p></section>
+      <section class="inventory" aria-label="Project inventory"><div><strong id="study-count">—</strong><span>study & design records</span></div><div><strong id="variable-count">—</strong><span>variables</span></div><div><strong id="relation-count">—</strong><span>relationships</span></div><p class="sr-only">Counts describe project records, not independent successful tests.</p></section>
       <div class="tabbar" role="tablist" aria-label="Explore the project"><button id="tab-workflow" role="tab" aria-selected="true" aria-controls="view-workflow" data-view="workflow">Workflow</button><button id="tab-models" role="tab" aria-selected="false" aria-controls="view-models" data-view="models" tabindex="-1">Models & evidence</button><button id="tab-relations" role="tab" aria-selected="false" aria-controls="view-relations" data-view="relations" tabindex="-1">All relationships</button></div>
 
       <section id="view-workflow" class="view" role="tabpanel" aria-labelledby="tab-workflow">
-        <div class="section-heading"><div><p class="eyebrow">From inputs to a paper decision</p><h2>One workflow. Different states of readiness.</h2></div><p>Choose a stage to see what exists, what it establishes, and the missing connection.</p></div>
-        <div class="workflow-layout"><section class="panel workflow-board" aria-label="Interactive workflow"><div class="board-heading"><h3>The project pathway</h3><span>Select a stage</span></div><div id="workflow-map" class="workflow-map"></div><div class="path-legend"><span><i class="key-built"></i>Existing work</span><span><i class="key-research"></i>Research evidence</span><span><i class="key-gap"></i>Open dependency</span></div><div id="workflow-connections" class="workflow-connections"></div></section><aside id="stage-detail" class="panel detail-panel" aria-live="polite" aria-label="Selected workflow stage"></aside></div>
+        <div class="workflow-layout"><section class="panel workflow-board" aria-label="Interactive vertical workflow"><div class="board-heading"><h2>Data to decisions</h2><span>12 steps · select to inspect</span></div><p class="flow-introduction">The model feeds two different reviews. Supplied holdings and cash are a separate input.</p><div id="workflow-map" class="workflow-map flow-network"></div><div class="path-legend"><span><i class="key-built"></i>Existing work</span><span><i class="key-research"></i>Research evidence</span><span><i class="key-gap"></i>Open dependency</span></div><div id="workflow-connections" class="workflow-connections"></div></section><aside id="stage-detail" class="panel detail-panel" aria-live="polite" aria-label="Selected workflow stage"></aside></div>
         <div class="focus-strip"><span class="focus-icon" aria-hidden="true">◎</span><div><p class="eyebrow">Current working question</p><p id="current-question">Read the current project question.</p><small id="current-mode">Existing evidence and workflow design; no new model run.</small></div></div>
+        <button id="mobile-stage-peek" class="mobile-stage-peek" type="button"><span id="mobile-stage-label">Selected stage</span><strong>Read details</strong></button>
       </section>
 
       <section id="view-models" class="view" role="tabpanel" aria-labelledby="tab-models" hidden>
@@ -49,6 +49,7 @@
       <footer class="footer"><p>Reviewed project records. No live quotes, stock picks, model fitting or brokerage connection.<span class="snapshot-proof"><span id="public-content-hash"></span> · This public snapshot is separate from the earlier Neo4j and Notion library release.</span></p><a href="https://github.com/Rnanda442/stockprediction2025/tree/codex/project-knowledge-map-20261122/docs/research" target="_blank" rel="noopener noreferrer">Project map on GitHub</a><a href="/knowledge-map/">Earlier knowledge-map release</a></footer>
     </div>
   </main>
+  <dialog id="stage-sheet" class="stage-sheet" aria-labelledby="stage-sheet-title"><header><div><p class="eyebrow">Selected workflow step</p><h2 id="stage-sheet-title">Stage details</h2></div><button id="close-stage-sheet" class="button subtle" type="button" autofocus>Close</button></header><div id="stage-sheet-content" class="stage-sheet-content"></div></dialog>
   <div id="announcement" class="sr-only" role="status" aria-live="polite"></div>
 </body>
 </html>
