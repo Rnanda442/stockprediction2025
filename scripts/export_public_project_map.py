@@ -44,7 +44,7 @@ WORKFLOW_KINDS = {
     "qualification_contract", "next_action", "blocker",
 }
 REVIEWED_VIEWER_FILES = {"index.html", "map.css", "map.js", "knowledge-canvas.js"}
-REVIEWED_SUPPLEMENTS = {"workflow-details.public.json", "WORKFLOW_DETAILS.md", "GRAPH_CANVAS.md", "THIRD_PARTY_NOTICES.md"}
+REVIEWED_SUPPLEMENTS = {"workflow-details.public.json", "WORKFLOW_DETAILS.md", "GRAPH_CANVAS.md", "RADIAL_EXPANSION.md", "THIRD_PARTY_NOTICES.md"}
 FORBIDDEN_KEY_FRAGMENTS = {
     "url", "path", "uri", "notion", "instance", "database_name", "username",
     "password", "token", "secret", "credential", "local_repository",
@@ -463,6 +463,7 @@ It is not a trading system, model leaderboard, live database mirror, or complete
 - `index.html`, `map.css`, and `map.js` — a self-contained browser for the public graph, workflow, studies, and evidence index.
 - `knowledge-canvas.js` and `vendor/` — the movable graph workspace and its pinned local Cytoscape.js renderer.
 - `GRAPH_CANVAS.md` and `THIRD_PARTY_NOTICES.md` — graph controls, presentation limits and renderer attribution.
+- `RADIAL_EXPANSION.md` — in-place branches, exact field annotations and declared-reference provenance.
 - `project-graph.public.json` — Neo4j/property-graph-compatible nodes and typed edges.
 - `method-catalog.public.json` — {methods_doc['counts']['studies']} saved-evidence study cards with metric scope and limitations.
 - `workflow-view.public.json` — the reviewed 12-stage decision flow, seven variable categories, 59 variable definitions, and public-safe workflow records.
@@ -528,6 +529,7 @@ docs/research/knowledge-canvas.js
 docs/research/vendor/cytoscape.min.js
 docs/research/vendor/cytoscape.LICENSE
 docs/research/GRAPH_CANVAS.md
+docs/research/RADIAL_EXPANSION.md
 docs/research/THIRD_PARTY_NOTICES.md
 docs/research/project-graph.public.json
 docs/research/method-catalog.public.json

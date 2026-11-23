@@ -1,17 +1,17 @@
 # Movable project graph
 
-The graph workspace is a presentation of the reviewed workflow and its detailed parts. It uses the same five public JSON documents as the reading view. It does not add research assertions, recalculate results or connect to a database.
+The graph workspace is a presentation of the reviewed workflow and its detailed parts. It uses the same five public JSON documents as the reading view. It does not add research assertions, recalculate results or connect to a database. Its default Connected branches mode expands specific parts around persistent main boxes in the same network; see RADIAL_EXPANSION.md for field-level detail and connection provenance.
 
 ## Explore
 
 - Drag a node to give it room. Its edges follow it.
 - Drag an empty part of the canvas to pan. Zoom with the wheel, a trackpad or pinch; zoom buttons are also provided.
 - Select a node to highlight its direct connections and inspect its status, inputs, outputs and evidence.
-- Use the explicit Explore action or double-click a step/group to open its connected parts. Dragging does not drill into a different group.
+- In Connected branches, click a main box to unfold its detailed branch in place. Categories fold/unfold recorded descendants, and detailed parts reveal their exact fields. Multiple branches can stay open. Dragging does not toggle expansion.
 - Fit graph frames the current graph. Reset layout restores the current scope's initial placement. These are different actions.
 - Expand the canvas for more working space. Use the reading view and the part catalog for equivalent text navigation and keyboard access.
 
-Scopes include the twelve-step workflow, a selected category, all parts in the current step, and all 303 detailed parts. The full-detail view contains 453 internal relationships plus one explicit cross-step relationship. The twelve workflow stages and their fifteen dependencies are a separate overview, not extra detail parts. Search and the existing group selector provide smaller views of the same content.
+Secondary scopes include the twelve-step workflow, a selected category, all parts in the current step, and all 303 detailed parts. The full-detail view contains 453 internal relationships plus one explicit cross-step relationship. Connected branches retains the twelve main boxes as anchors and adds visible parts, declared references and field annotations with separate counts. Main boxes and annotations are not extra detail-catalog parts. Search and the existing group selector provide smaller views of the same content.
 
 ## Presentation state
 

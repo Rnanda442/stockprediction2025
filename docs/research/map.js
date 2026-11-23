@@ -51,7 +51,8 @@
   };
 
   let detailScrollEpoch = 0;
-  state.workflowView = "canvas"; state.canvasScope = "context"; state.canvas = null; state.canvasSelectedEdge = null;
+  state.workflowView = "canvas"; state.canvasScope = "connected"; state.canvas = null; state.canvasSelectedEdge = null;
+  state.openBranches = new Set(); state.collapsedCategories = new Set(); state.openLeaves = new Set(); state.displayFieldIndex = new Map(); state.displaySelectionId = "";
   function announce(value) { $("announcement").textContent = value; }
   function resetWorkflowDetailScroll() {
     detailScrollEpoch += 1;
@@ -97,6 +98,8 @@
     if (state.view === "workflow" && state.stageId) params.set("stage", state.stageId);
     if (state.view === "workflow" && state.childStageId) { params.set("parts", "1"); if (state.partFocusId) params.set("focus", state.partFocusId); if (state.partId) params.set("part", state.partId); if (state.showAllParts) params.set("all", "1"); }
     if (state.view === "workflow" && state.canvasScope === "all") params.set("scope", "all");
+    if (state.view === "workflow" && state.canvasScope === "connected") { params.set("scope", "connected"); if (state.openBranches.size) params.set("branches", [...state.openBranches].join(",")); }
+    if (state.view === "workflow" && state.canvasScope === "context") params.set("scope", "context");
     if (state.view === "models" && state.methodId) params.set("method", state.methodId);
     if (state.view === "relations" && state.nodeId) params.set("node", state.nodeId);
     try { history.replaceState(null, "", `#${params.toString()}`); } catch { /* Read-only embedded previews may disallow URL updates. */ }
@@ -166,6 +169,7 @@
   }
   function openWorkflowStep(id) {
     if (!state.stages.some((stage) => stage.id === id)) return;
+    if (state.canvasScope === "connected") { activateConnectedNode(id); return; }
     state.canvasScope = "context"; state.canvasSelectedEdge = null;
     if (!state.childStageId) state.overviewScrollY = window.scrollY;
     if ($("stage-sheet").open) $("stage-sheet").close();
@@ -337,6 +341,11 @@
   }
   function openPartAcrossStages(id) {
     const entry = state.workflowPartIndex.get(id); if (!entry) return;
+    if (state.canvasScope === "connected") {
+      if ($("stage-sheet").open) $("stage-sheet").close();
+      state.openBranches.add(entry.stageId); for (const ancestor of partAncestors(state.workflowSections.get(entry.stageId), id)) state.collapsedCategories.delete(ancestor.id);
+      inspectCanvasNode(id); if (window.matchMedia("(max-width:850px)").matches) showWorkflowDetailSheet(); return;
+    }
     if ($("stage-sheet").open) $("stage-sheet").close();
     state.stageId = entry.stageId; state.childStageId = entry.stageId; state.partId = id; state.detailMode = "part"; state.showAllParts = false; $("part-search").value = "";
     const sectionData = currentWorkflowSection(); state.partFocusId = isPartCategory(sectionData, entry.node) ? id : partParent(sectionData, entry.node);
@@ -471,7 +480,79 @@
     }
   }
 
+  function connectedGraph() {
+    const nodes = state.stages.map((stage) => ({ id: stage.id, label: shortStageTitle(stage), role: "stage", stageId: stage.id })), edges = [];
+    const visible = new Set(), allCanonical = [];
+    for (const [stageId, sectionData] of state.workflowSections) {
+      allCanonical.push(...sectionData.edges);
+      if (!state.openBranches.has(stageId)) continue;
+      const parts = orderedParts(sectionData.nodes).filter((part) => !partAncestors(sectionData, part.id).slice(0, -1).some((ancestor) => state.collapsedCategories.has(ancestor.id)));
+      parts.sort((a, b) => partAncestors(sectionData, a.id).length - partAncestors(sectionData, b.id).length);
+      for (const part of parts) {
+        visible.add(part.id); const parent = partParent(sectionData, part);
+        nodes.push({ id: part.id, label: part.title, role: isPartCategory(sectionData, part) ? "category" : "leaf", stageId, parent_id: parent || stageId, order: part.order || 0 });
+        if (!parent) edges.push({ id: `membership:${stageId}:${part.id}`, source: stageId, target: part.id, relation: "section_membership", label: "part of this step", kind: "membership", display_only: true });
+      }
+    }
+    allCanonical.push(...state.crossSectionEdges);
+    const references = new Map();
+    for (const [ownerId, entry] of state.workflowPartIndex) for (const field of ["inputs", "outputs"]) list(entry.node[field]).forEach((value, index) => {
+      if (typeof value !== "string" || !state.workflowPartIndex.has(value)) return;
+      const source = field === "inputs" ? value : ownerId, target = field === "inputs" ? ownerId : value, key = `${source}\u0000${target}`;
+      if (!references.has(key)) references.set(key, { source, target, references: [] });
+      references.get(key).references.push({ owner_id: ownerId, field, index });
+    });
+    const canonicalPairs = new Set(allCanonical.map((edge) => `${edge.source}\u0000${edge.target}`));
+    for (const [index, edge] of state.pipelineEdges.entries()) edges.push({ id: `main:${index}`, source: edge.source, target: edge.target, relation: edge.relation, label: flowRelationLabels[edge.relation] || human(edge.relation), kind: "main" });
+    for (const [index, edge] of allCanonical.entries()) if (visible.has(edge.source) && visible.has(edge.target)) edges.push({ id: `canonical:${index}`, source: edge.source, target: edge.target, relation: edge.relation, label: human(edge.relation), kind: "canonical", references: references.get(`${edge.source}\u0000${edge.target}`)?.references || [] });
+    for (const [key, pair] of references) if (!canonicalPairs.has(key) && visible.has(pair.source) && visible.has(pair.target)) {
+      const sides = new Set(pair.references.map((ref) => ref.field));
+      edges.push({ id: `declared:${pair.source}:${pair.target}`, source: pair.source, target: pair.target, relation: "declared_reference", label: sides.size > 1 ? "declared input + output" : sides.has("inputs") ? "declared input" : "declared output", kind: "declared_reference", references: pair.references, display_only: true });
+    }
+    const fields = new Map();
+    const addField = (id, label, role, value, ownerId, field, index, canonicalId = "") => {
+      const owner = state.workflowPartIndex.get(ownerId);
+      if (!fields.has(id)) fields.set(id, { id, label, role, value, owner_id: ownerId, parent_id: ownerId, stageId: owner.stageId, owners: [], source_refs: [], canonicalId, display_only: true });
+      const record = fields.get(id); if (!record.owners.includes(ownerId)) record.owners.push(ownerId); record.stageIds = [...new Set(record.owners.map((id) => state.workflowPartIndex.get(id).stageId))]; record.source_refs.push({ owner_id: ownerId, field, index });
+      edges.push({ id: `annotation:${ownerId}:${field}:${index}`, source: ownerId, target: id, relation: "recorded_annotation", label: role === "formula" ? "recorded formula / rule" : role === "component" ? "recorded code component" : "linked variable definition", kind: "annotation", display_only: true, references: [{ owner_id: ownerId, field, index }] });
+    };
+    for (const ownerId of state.openLeaves) {
+      if (!visible.has(ownerId)) continue;
+      const part = state.workflowPartIndex.get(ownerId).node;
+      if (part.formula) addField(`display:formula:${ownerId}`, plain(part.formula), "formula", plain(part.formula), ownerId, "formula", 0);
+      list(part.code_components).forEach((component, index) => addField(`display:code:${encodeURIComponent(plain(component))}`, plain(component), "component", plain(component), ownerId, "code_components", index));
+      list(part.linked_variable_ids).forEach((id, index) => {
+        const variable = state.nodeById.get(id) || state.nodeById.get(`variable:${id}`); if (!variable) return;
+        const label = `${nodeTitle(variable)}\n${plain(variable.formula || variable.variable?.formula || "Definition recorded")}`;
+        addField(`display:definition:${variable.id}`, label, "definition", plain(variable.formula || variable.variable?.formula), ownerId, "linked_variable_ids", index, variable.id);
+      });
+    }
+    state.displayFieldIndex = fields; nodes.push(...fields.values());
+    const selectedId = fields.has(state.displaySelectionId) ? state.displaySelectionId : visible.has(state.partId) ? state.partId : state.stageId;
+    return { key: "connected-branches", incremental: true, nodes, edges, selectedId, counts: { hubs: 12, parts: visible.size, fields: fields.size, canonical: edges.filter((edge) => edge.kind === "canonical").length, references: edges.filter((edge) => edge.kind === "declared_reference").length, membership: edges.filter((edge) => edge.kind === "membership").length } };
+  }
+  function activateConnectedNode(id) {
+    const field = state.displayFieldIndex.get(id); if (field) { inspectCanvasNode(id); return; }
+    const entry = state.workflowPartIndex.get(id);
+    const opening = !entry ? !state.openBranches.has(id) : isPartCategory(state.workflowSections.get(entry.stageId), entry.node) ? state.collapsedCategories.has(id) : !state.openLeaves.has(id);
+    if (!entry) { if (state.openBranches.has(id)) state.openBranches.delete(id); else { state.openBranches.add(id); for (const part of list(state.workflowSections.get(id)?.nodes)) state.collapsedCategories.delete(part.id); } state.partId = ""; state.stageId = id; }
+    else if (isPartCategory(state.workflowSections.get(entry.stageId), entry.node)) state.collapsedCategories.has(id) ? state.collapsedCategories.delete(id) : state.collapsedCategories.add(id);
+    else state.openLeaves.has(id) ? state.openLeaves.delete(id) : state.openLeaves.add(id);
+    inspectCanvasNode(id);
+    if (opening) requestAnimationFrame(() => { if (!entry) state.canvas?.focusBranch(id, true); else state.canvas?.focusSelection(id, entry.stageId, true); });
+  }
+  function inspectDisplayField(field) {
+    const owner = state.workflowPartIndex.get(field.owner_id);
+    const fieldEvidence = [...new Set(field.owners.flatMap((id) => list(state.workflowPartIndex.get(id)?.node.evidence_ids)))];
+    const markup = `<p class="eyebrow">Display annotation · exact recorded field</p><h3>${esc(field.role === "formula" ? "Formula / rule" : field.role === "component" ? "Code component" : "Linked variable definition")}</h3><pre class="part-formula"><code>${esc(field.value)}</code></pre><p class="scope-note">This annotation exposes a recorded formula, code name or definition. It adds no market observation or predictive claim.</p>${section("Recorded by", `<div class="linked-records">${field.owners.map((id) => `<button class="record-chip" data-field-owner="${esc(id)}">${esc(state.workflowPartIndex.get(id)?.node.title || id)}</button>`).join("")}</div>`)}${field.canonicalId ? `<button class="record-chip" data-field-variable="${esc(field.canonicalId)}">Open canonical variable definition</button>` : ""}<p class="identifier">${field.source_refs.map((ref) => `${esc(ref.owner_id)} · ${esc(ref.field)}[${ref.index}]`).join("<br>")}</p>${evidenceMarkup(fieldEvidence)}`;
+    $("stage-detail").innerHTML = markup; $("stage-sheet-content").innerHTML = markup; $("stage-sheet-title").textContent = field.role === "formula" ? "Formula / rule" : field.label; $("mobile-stage-label").textContent = "Selected recorded field"; resetWorkflowDetailScroll();
+    for (const container of [$("stage-detail"), $("stage-sheet-content")]) {
+      container.querySelectorAll("[data-field-owner]").forEach((button) => button.onclick = () => inspectCanvasNode(button.dataset.fieldOwner));
+      container.querySelectorAll("[data-field-variable]").forEach((button) => button.onclick = () => { if ($("stage-sheet").open) $("stage-sheet").close(); openNode(button.dataset.fieldVariable); });
+    }
+  }
   function canvasNode(id) {
+    const field = state.displayFieldIndex.get(id); if (field) return field;
     const entry = state.workflowPartIndex.get(id);
     if (entry) return { id, label: entry.node.title, role: isPartCategory(state.workflowSections.get(entry.stageId), entry.node) ? "category" : "leaf", stageId: entry.stageId };
     const stage = state.stages.find((item) => item.id === id);
@@ -479,11 +560,13 @@
   }
   function inspectCanvasNode(id) {
     state.canvasSelectedEdge = null;
+    if (state.displayFieldIndex.has(id)) { state.displaySelectionId = id; renderWorkflow(); inspectDisplayField(state.displayFieldIndex.get(id)); setHash(); return; }
+    state.displaySelectionId = "";
     const entry = state.workflowPartIndex.get(id);
     if (entry) {
       if (state.childStageId !== entry.stageId) { state.partFocusId = partParent(state.workflowSections.get(entry.stageId), entry.node); state.showAllParts = false; }
       state.stageId = entry.stageId; state.childStageId = entry.stageId; state.partId = id; state.detailMode = "part";
-    } else if (state.stages.some((stage) => stage.id === id)) { state.stageId = id; state.detailMode = "stage"; }
+    } else if (state.stages.some((stage) => stage.id === id)) { state.stageId = id; state.detailMode = "stage"; if (state.canvasScope === "connected") { state.childStageId = ""; state.partId = ""; state.partFocusId = ""; } }
     else return;
     renderWorkflow(); setHash(); announce(`Selected ${canvasNode(id)?.label}. Read details or explore its connected parts.`);
   }
@@ -495,6 +578,7 @@
     requestAnimationFrame(() => { state.canvas?.resize(); if (expanded) state.canvas?.fit(); else { window.scrollTo({ top: state.canvasExpandedScrollY || 0 }); state.canvas?.fit(); } });
   }
   function exploreCanvasNode(id) {
+    if (state.canvasScope === "connected") { activateConnectedNode(id); return; }
     const entry = state.workflowPartIndex.get(id);
     state.canvasScope = "context"; state.canvasSelectedEdge = null;
     if (!entry) { openWorkflowStep(id); return; }
@@ -503,6 +587,7 @@
     else { inspectCanvasNode(id); showWorkflowDetailSheet(); }
   }
   function workflowCanvasGraph() {
+    if (state.canvasScope === "connected") return connectedGraph();
     let nodes, edges, key, selectedId;
     if (state.canvasScope === "all") {
       nodes = [...state.workflowPartIndex.keys()].map(canvasNode);
@@ -520,7 +605,8 @@
   function inspectCanvasEdge(edge) {
     state.canvasSelectedEdge = edge;
     const source = canvasNode(edge.source), target = canvasNode(edge.target);
-    const markup = `<p class="eyebrow">Source-defined relationship</p><h3>${esc(source?.label || edge.source)} → ${esc(target?.label || edge.target)}</h3><p class="detail-summary">${esc(edge.label)}</p><p class="scope-note">The arrow records a documented project relationship. It does not establish predictive influence or a working connection.</p><div class="linked-records"><button class="record-chip" data-canvas-inspect="${esc(edge.source)}">Inspect source</button><button class="record-chip" data-canvas-inspect="${esc(edge.target)}">Inspect destination</button></div><p class="identifier">Recorded type: ${esc(edge.relation)}<br>${esc(edge.source)} → ${esc(edge.target)}</p>`;
+    const provenance = list(edge.references).map((ref) => `${state.workflowPartIndex.get(ref.owner_id)?.node.title || ref.owner_id} · ${ref.field}[${ref.index}]`);
+    const markup = `<p class="eyebrow">${edge.kind === "membership" ? "Display structure · section membership" : edge.kind === "annotation" ? "Display annotation · exact recorded field" : edge.kind === "declared_reference" ? "Display reference · declared input / output" : "Source-defined relationship"}</p><h3>${esc(source?.label || edge.source)} → ${esc(target?.label || edge.target)}</h3><p class="detail-summary">${esc(edge.label)}</p><p class="scope-note">The arrow records a documented project relationship. It does not establish predictive influence or a working connection.</p>${provenance.length ? section("Exact field declarations", itemList(provenance)) : ""}<div class="linked-records"><button class="record-chip" data-canvas-inspect="${esc(edge.source)}">Inspect source</button><button class="record-chip" data-canvas-inspect="${esc(edge.target)}">Inspect destination</button></div><p class="identifier">Recorded type: ${esc(edge.relation)}<br>${esc(edge.source)} → ${esc(edge.target)}</p>`;
     $("stage-detail").innerHTML = markup; $("stage-sheet-content").innerHTML = markup; $("stage-sheet-title").textContent = "Connection details"; $("mobile-stage-label").textContent = "Selected connection"; resetWorkflowDetailScroll();
     for (const container of [$("stage-detail"), $("stage-sheet-content")]) container.querySelectorAll("[data-canvas-inspect]").forEach((button) => button.onclick = () => { if ($("stage-sheet").open) $("stage-sheet").close(); inspectCanvasNode(button.dataset.canvasInspect); });
     $("canvas-node-picker").value = ""; $("canvas-explore").disabled = true; $("canvas-details").disabled = false;
@@ -528,24 +614,33 @@
   function renderWorkflowCanvas() {
     const graph = workflowCanvasGraph(), canvasMode = state.workflowView === "canvas";
     $("workflow-canvas-mode").setAttribute("aria-pressed", String(canvasMode)); $("workflow-reading-mode").setAttribute("aria-pressed", String(!canvasMode));
-    $("canvas-workspace").hidden = !canvasMode; $("workflow-reading").hidden = canvasMode || state.canvasScope === "all";
-    $("canvas-reading-all").hidden = canvasMode || state.canvasScope !== "all";
+    $("canvas-workspace").hidden = !canvasMode; $("workflow-reading").hidden = canvasMode || ["all", "connected"].includes(state.canvasScope);
+    $("canvas-reading-all").hidden = canvasMode || !["all", "connected"].includes(state.canvasScope);
     document.querySelector(".workflow-board").classList.toggle("canvas-mode", canvasMode);
-    $("canvas-scope").value = state.canvasScope === "all" ? "all" : !state.childStageId ? "workflow" : state.showAllParts ? "step" : "focus";
+    $("canvas-scope").value = state.canvasScope === "connected" ? "connected" : state.canvasScope === "all" ? "all" : !state.childStageId ? "workflow" : state.showAllParts ? "step" : "focus";
     $("canvas-node-picker").innerHTML = '<option value="">Choose a record…</option>' + [...graph.nodes].sort((a, b) => a.label.localeCompare(b.label)).map((node) => `<option value="${esc(node.id)}">${esc(node.label)}${state.canvasScope === "all" ? ` · ${esc(shortStageTitle(state.stages.find((stage) => stage.id === node.stageId)))}` : ""}</option>`).join("");
     $("canvas-node-picker").value = graph.selectedId || "";
     const selected = canvasNode(graph.selectedId);
     $("canvas-explore").disabled = !selected; $("canvas-details").disabled = !selected;
     $("canvas-explore").textContent = selected?.role === "stage" ? "Open step" : selected?.role === "category" ? "Explore group" : "Read part";
+    if (state.canvasScope === "connected") $("canvas-explore").textContent = selected?.role === "stage" ? state.openBranches.has(selected.id) ? "Collapse step" : "Unfold step" : selected?.role === "category" ? state.collapsedCategories.has(selected.id) ? "Unfold group" : "Fold group" : state.displayFieldIndex.has(selected?.id) ? "Inspect field" : state.openLeaves.has(selected?.id) ? "Hide fields" : "Reveal fields";
     $("canvas-count").textContent = `${graph.nodes.length} ${state.canvasScope === "all" ? "detail parts across 12 steps" : state.childStageId ? "parts" : "workflow steps"} · ${graph.edges.length} directed connections · moving nodes changes only this view`;
     if (state.canvasScope === "all") { $("workflow-board-title").textContent = "All workflow details"; $("workflow-board-subtitle").textContent = `${graph.nodes.length} source-linked parts`; $("part-controls").hidden = true; }
-    if (!canvasMode && state.canvasScope === "all") {
+    if (state.canvasScope === "connected") {
+      $("workflow-breadcrumb").hidden = true; $("part-controls").hidden = true;
+      $("workflow-board-title").textContent = "One connected workflow"; $("workflow-board-subtitle").textContent = `${state.openBranches.size} open branches · all 12 steps stay connected`;
+      $("workflow-board-introduction").textContent = "Click a step to unfold its actual parts. Click a group to fold it; click a leaf to reveal its formula and code. Several branches can stay open.";
+      $("canvas-count").textContent = `12 step hubs + ${graph.counts.parts} / 303 actual parts + ${graph.counts.fields} display annotations · 15 main links + ${graph.counts.canonical} / 454 source links + ${graph.counts.references} declared field references + ${graph.counts.membership} membership links`;
+    }
+    $("canvas-focus-branch").hidden = state.canvasScope !== "connected"; $("canvas-collapse-branch").hidden = state.canvasScope !== "connected"; $("canvas-collapse-all").hidden = state.canvasScope !== "connected";
+    $("canvas-focus-branch").textContent = selected?.role === "leaf" || state.displayFieldIndex.has(selected?.id) ? "Focus selection" : "Focus branch";
+    if (!canvasMode && ["all", "connected"].includes(state.canvasScope)) {
       $("canvas-reading-all").innerHTML = '<p class="reading-mode-intro">All detail parts. Select a record to inspect its exact inputs, outputs and evidence.</p>' + graph.nodes.map((node) => `<button type="button" class="all-part-record" data-all-part="${esc(node.id)}"><strong>${esc(node.label)}</strong><span>${esc(shortStageTitle(state.stages.find((stage) => stage.id === node.stageId)))}</span></button>`).join("");
       $("canvas-reading-all").querySelectorAll("[data-all-part]").forEach((button) => button.onclick = () => { inspectCanvasNode(button.dataset.allPart); if (window.matchMedia("(max-width:850px)").matches) showWorkflowDetailSheet(); });
     }
     if (!canvasMode) return;
     try {
-      if (!state.canvas) state.canvas = new window.ProjectKnowledgeCanvas($("canvas-viewport"), { onSelect: inspectCanvasNode, onExplore: exploreCanvasNode, onEdge: inspectCanvasEdge, onViewport: (zoom) => { $("canvas-zoom-label").textContent = `${Math.round(zoom * 100)}%`; } });
+      if (!state.canvas) state.canvas = new window.ProjectKnowledgeCanvas($("canvas-viewport"), { onSelect: (id) => state.canvasScope === "connected" ? activateConnectedNode(id) : inspectCanvasNode(id), onExplore: exploreCanvasNode, onEdge: inspectCanvasEdge, onViewport: (zoom) => { $("canvas-zoom-label").textContent = `${Math.round(zoom * 100)}%`; } });
       state.canvas.setGraph(graph); $("canvas-fallback").hidden = true;
     } catch {
       state.canvas?.destroy(); state.canvas = null; state.workflowView = "reading"; renderWorkflowCanvas(); $("canvas-fallback").hidden = false;
@@ -688,7 +783,11 @@
     state.partFocusId = partIds.has(params.get("focus")) ? params.get("focus") : "";
     state.partId = partIds.has(params.get("part")) ? params.get("part") : "";
     state.showAllParts = params.get("all") === "1";
-    state.canvasScope = params.get("scope") === "all" ? "all" : "context";
+    state.canvasScope = params.get("scope") === "all" ? "all" : params.get("scope") === "context" || params.get("parts") === "1" && !params.get("scope") ? "context" : "connected";
+    if (state.canvasScope === "connected") {
+      state.openBranches = new Set((params.get("branches") || "").split(",").filter((id) => state.workflowSections.has(id)));
+      if (state.partId) { const entry = state.workflowPartIndex.get(state.partId); if (entry) state.openBranches.add(entry.stageId); }
+    }
     state.detailMode = state.partId ? "part" : "stage";
     renderWorkflow(); renderModels(); renderRecords(); renderRecordDetail();
     setView(params.get("view") || (node ? "relations" : method ? "models" : "workflow"), false);
@@ -748,11 +847,15 @@
   $("canvas-zoom-in").onclick = () => state.canvas?.zoomBy(1.25);
   $("canvas-zoom-out").onclick = () => state.canvas?.zoomBy(0.8);
   $("canvas-fit").onclick = () => state.canvas?.fit();
+  $("canvas-focus-branch").onclick = () => { const selected = state.displaySelectionId || state.partId; if (selected) state.canvas?.focusSelection(selected, state.stageId); else state.canvas?.focusBranch(state.stageId); };
+  $("canvas-collapse-branch").onclick = () => { state.openBranches.delete(state.stageId); state.partId = ""; state.displaySelectionId = ""; inspectCanvasNode(state.stageId); };
+  $("canvas-collapse-all").onclick = () => { state.openBranches.clear(); state.partId = ""; state.displaySelectionId = ""; inspectCanvasNode(state.stageId); };
   $("canvas-reset").onclick = () => state.canvas?.resetLayout();
   $("canvas-expand").onclick = () => setCanvasExpanded(!document.querySelector(".workflow-layout").classList.contains("canvas-expanded"));
   document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !$("stage-sheet").open && document.querySelector(".workflow-layout").classList.contains("canvas-expanded")) { event.preventDefault(); setCanvasExpanded(false); } });
   $("canvas-scope").onchange = () => {
     const scope = $("canvas-scope").value; state.canvasSelectedEdge = null;
+    if (scope === "connected") { state.canvasScope = "connected"; renderWorkflow(); setHash(); return; }
     if (scope === "workflow") { returnToWorkflow(); return; }
     if (scope === "all") state.canvasScope = "all";
     else {

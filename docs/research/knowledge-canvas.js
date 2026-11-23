@@ -9,6 +9,7 @@
       this.callbacks = callbacks;
       this.cache = new Map();
       this.initialLayouts = new Map();
+      this.connectedPositions = new Map();
       this.currentKey = "";
       this.graph = null;
       this.suppressTapUntil = 0;
@@ -38,6 +39,9 @@
           } },
           { selector: "node[role = 'category']", style: { "background-color": "#eaf6f3", "border-color": "#70a8a2", "font-weight": 600 } },
           { selector: "node[role = 'stage']", style: { "background-color": "#eef4fc", "border-color": "#8aa8c9", "font-weight": 600 } },
+          { selector: "node[role = 'formula']", style: { "width": 300, "height": 112, "font-size": 14, "text-max-width": 272, "background-color": "#fff7de", "border-color": "#ccb874" } },
+          { selector: "node[role = 'component']", style: { "width": 230, "height": 76, "font-size": 14, "text-max-width": 208, "background-color": "#f2f2f8", "border-color": "#aaa4c2" } },
+          { selector: "node[role = 'definition']", style: { "width": 270, "height": 110, "font-size": 14, "text-max-width": 244, "background-color": "#f4f8ed", "border-color": "#a0b58a" } },
           { selector: "edge", style: {
             "curve-style": "bezier", "control-point-step-size": 55,
             "width": 1.65, "line-color": "#b7c9d1", "target-arrow-color": "#9fb7c3",
@@ -49,6 +53,9 @@
             "color": "#36596b", "min-zoomed-font-size": 10, "overlay-opacity": 0,
           } },
           { selector: "edge[relation = 'contains']", style: { "line-style": "dashed", "line-dash-pattern": [7, 4] } },
+          { selector: "edge[kind = 'membership']", style: { "line-style": "dashed", "line-color": "#c5ccd4", "target-arrow-color": "#c5ccd4", "width": 1.1 } },
+          { selector: "edge[kind = 'declared_reference']", style: { "line-style": "dotted", "line-color": "#539990", "target-arrow-color": "#539990", "width": 2 } },
+          { selector: "edge[kind = 'annotation']", style: { "line-style": "dotted", "line-color": "#b9a774", "target-arrow-color": "#b9a774", "width": 1.2 } },
           { selector: ".canvas-muted", style: { "opacity": 0.5 } },
           { selector: "node.canvas-neighbor", style: { "border-color": "#498e9e", "border-width": 2, "background-color": "#f1f8fb" } },
           { selector: "node.canvas-selected", style: { "border-color": "#147d73", "border-width": 4, "background-color": "#dff2eb", "z-index": 10 } },
@@ -64,7 +71,7 @@
         if (this.dragged) this.suppressTapUntil = Date.now() + 320;
         this.remember();
       });
-      this.cy.on("tap", "node", (event) => {
+      this.cy.on("onetap", "node", (event) => {
         if (Date.now() < this.suppressTapUntil) return;
         this.select(event.target.id());
         this.callbacks.onSelect?.(event.target.id());
@@ -105,11 +112,13 @@
       if (!this.currentKey) return;
       const positions = {};
       this.cy.nodes().forEach((node) => { positions[node.id()] = { ...node.position() }; });
+      if (this.currentKey === "connected-branches") for (const [id, position] of Object.entries(positions)) this.connectedPositions.set(id, { ...position });
       this.cache.set(this.currentKey, { positions, zoom: this.cy.zoom(), pan: { ...this.cy.pan() } });
       if (this.cache.size > 45) this.cache.delete(this.cache.keys().next().value);
     }
 
     setGraph(graph) {
+      if (graph.incremental) { this.updateConnectedGraph(graph); return; }
       const signature = `${graph.key}|${graph.nodes.map((node) => node.id).sort().join("|")}|${graph.edges.map((edge) => edge.id).sort().join("|")}`;
       this.graph = graph;
       if (signature === this.currentKey) { this.select(graph.selectedId); return; }
@@ -127,6 +136,85 @@
       else { this.runLayout(false); this.initialLayouts.set(signature, this.readPositions()); this.initialViewport(); }
       this.select(graph.selectedId);
       this.remember();
+    }
+
+    updateConnectedGraph(graph) {
+      const first = this.currentKey !== "connected-branches";
+      if (first) { this.remember(); this.cy.elements().remove(); this.currentKey = "connected-branches"; }
+      this.graph = graph;
+      this.cy.nodes().forEach((node) => this.connectedPositions.set(node.id(), { ...node.position() }));
+      const wantedNodes = new Set(graph.nodes.map((node) => node.id)), wantedEdges = new Set(graph.edges.map((edge) => edge.id));
+      this.cy.batch(() => {
+        this.cy.edges().filter((edge) => !wantedEdges.has(edge.id())).remove();
+        this.cy.nodes().filter((node) => !wantedNodes.has(node.id())).remove();
+        for (const data of graph.nodes) {
+          const existing = this.cy.getElementById(data.id);
+          if (existing.length) { existing.data({ ...data }); continue; }
+          let position = this.connectedPositions.get(data.id);
+          if (position && (!Number.isFinite(position.x) || !Number.isFinite(position.y) || data.role !== "stage" && this.positionOccupied(data, position))) position = null;
+          if (!position && data.role === "stage") { const index = graph.nodes.filter((node) => node.role === "stage").findIndex((node) => node.id === data.id); position = { x: index % 3 * 300, y: Math.floor(index / 3) * 190 }; }
+          if (!position) position = this.placePetal(data, graph);
+          this.cy.add({ group: "nodes", data: { ...data }, position });
+          this.connectedPositions.set(data.id, { ...position });
+        }
+        for (const data of graph.edges) {
+          const edge = this.cy.getElementById(data.id);
+          if (edge.length) edge.data({ ...data }); else this.cy.add({ group: "edges", data: { ...data } });
+        }
+      });
+      this.cy.resize();
+      if (first) {
+        const cached = this.cache.get("connected-branches");
+        if (cached) { this.cy.zoom(cached.zoom); this.cy.pan(cached.pan); } else this.initialViewport();
+      }
+      this.select(graph.selectedId);
+      this.remember();
+    }
+
+    placePetal(data, graph) {
+      const parent = this.cy.getElementById(data.parent_id || data.owner_id || data.stageId), hub = this.cy.getElementById(data.stageId);
+      const rawOrigin = parent.length ? parent.position() : hub.length ? hub.position() : { x: 0, y: 0 };
+      const origin = Number.isFinite(rawOrigin.x) && Number.isFinite(rawOrigin.y) ? rawOrigin : { x: 0, y: 0 };
+      const siblings = graph.nodes.filter((node) => (node.parent_id || node.owner_id || node.stageId) === (data.parent_id || data.owner_id || data.stageId) && node.id !== data.stageId);
+      const index = Math.max(0, siblings.findIndex((node) => node.id === data.id)), count = Math.max(1, siblings.length);
+      const outward = hub.length ? Math.atan2(origin.y - hub.position().y, origin.x - hub.position().x) : -Math.PI / 2;
+      const angle = parent.data("role") === "stage" ? -Math.PI / 2 + index * Math.PI * 2 / count : outward + (index - (count - 1) / 2) * Math.min(0.52, Math.PI * 1.5 / count);
+      const { width } = this.nodeDimensions(data.role);
+      let candidate;
+      for (let attempt = 0; attempt < 70; attempt++) {
+        const radius = (parent.data("role") === "stage" ? 260 : 180) + Math.floor(index / 10) * 80 + attempt * 25;
+        const adjusted = angle + (attempt % 2 ? 1 : -1) * Math.floor(attempt / 2) * 0.085;
+        candidate = { x: origin.x + Math.cos(adjusted) * radius, y: origin.y + Math.sin(adjusted) * radius };
+        if (!this.positionOccupied(data, candidate)) return candidate;
+      }
+      // A finite occupied graph always has free space beyond its rightmost bounding edge.
+      // This deterministic fallback guarantees separation even if every nearby orbit is occupied.
+      const right = this.cy.nodes().reduce((value, other) => Math.max(value, other.position().x + this.nodeDimensions(other.data("role")).width / 2), origin.x);
+      return { x: right + width / 2 + 24, y: origin.y };
+    }
+
+    nodeDimensions(role) {
+      return role === "formula" ? { width: 300, height: 112 } : role === "definition" ? { width: 270, height: 110 } : role === "component" ? { width: 230, height: 76 } : { width: 190, height: 82 };
+    }
+
+    positionOccupied(data, position) {
+      // Batch-added nodes may not have computed styles: use explicit role dimensions on both sides.
+      const candidate = this.nodeDimensions(data.role);
+      return this.cy.nodes().some((other) => { const pos = other.position(), size = this.nodeDimensions(other.data("role")); return Math.abs(pos.x - position.x) < (size.width + candidate.width) / 2 + 24 && Math.abs(pos.y - position.y) < (size.height + candidate.height) / 2 + 18; });
+    }
+
+    focusBranch(stageId, peek = false) {
+      const nodes = this.cy.nodes().filter((node) => node.id() === stageId || node.data("stageId") === stageId || (node.data("stageIds") || []).includes(stageId));
+      if (nodes.length) { this.cy.fit(nodes, 65); if (peek && this.cy.zoom() < 0.6) { this.cy.zoom(0.6); this.cy.center(this.cy.getElementById(stageId)); } this.remember(); }
+    }
+    focusSelection(id, stageId, peek = false) {
+      const node = this.cy.getElementById(id || "");
+      if (!node.length || node.data("role") === "stage") { this.focusBranch(stageId); return; }
+      let neighborhood = node.union(node.connectedEdges().filter((edge) => edge.data("kind") === "annotation").connectedNodes());
+      if (node.data("role") === "category") neighborhood = neighborhood.union(this.cy.nodes().filter((child) => child.data("parent_id") === id));
+      const parent = this.cy.getElementById(node.data("parent_id") || node.data("owner_id") || "");
+      if (parent.length) neighborhood = neighborhood.union(parent);
+      this.cy.fit(neighborhood, 65); if (peek && this.cy.zoom() < 0.6) { this.cy.zoom(0.6); this.cy.center(node); } this.remember();
     }
 
     runLayout(fit = true) {
@@ -191,6 +279,9 @@
 
     fit() { this.cy.resize(); this.cy.fit(undefined, 45); this.remember(); }
     resetLayout() {
+      if (this.graph?.incremental) {
+        const graph = this.graph; this.connectedPositions.clear(); this.cache.delete("connected-branches"); this.currentKey = ""; this.cy.elements().remove(); this.updateConnectedGraph(graph); this.fit(); return;
+      }
       const original = this.initialLayouts.get(this.currentKey);
       if (original) this.cy.nodes().positions((node) => original[node.id()]);
       else { this.runLayout(false); this.initialLayouts.set(this.currentKey, this.readPositions()); }
