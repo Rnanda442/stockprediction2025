@@ -197,8 +197,8 @@
       if (!start || !end) continue;
       const a = start.getBoundingClientRect(), b = end.getBoundingClientRect();
       const sourceSlot = start.closest(".flow-slot");
-      const expandedNote = sourceSlot?.querySelector(".flow-node-notes[open]");
-      const sourceBottom = expandedNote ? sourceSlot.getBoundingClientRect().bottom : a.bottom;
+      const visibleNote = sourceSlot?.querySelector(".flow-node-notes");
+      const sourceBottom = visibleNote && visibleNote.getClientRects().length ? sourceSlot.getBoundingClientRect().bottom : a.bottom;
       const active = edgeSource(edge) === state.stageId || edgeTarget(edge) === state.stageId;
       const source = edgeSource(edge), target = edgeTarget(edge);
       const ax = a.left - bounds.left, ay = a.top - bounds.top, bx = b.left - bounds.left, by = b.top - bounds.top;
