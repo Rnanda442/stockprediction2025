@@ -11,6 +11,8 @@ It is not a trading system, model leaderboard, live database mirror, or complete
 - `method-catalog.public.json` — 34 saved-evidence study cards with metric scope and limitations.
 - `workflow-view.public.json` — the reviewed 12-stage decision flow, seven variable categories, 59 variable definitions, and public-safe workflow records.
 - `evidence-index.public.json` — source titles, authority labels, and content digests without local paths.
+- `workflow-details.public.json` — separately reviewed child diagrams for the 12 workflow steps; its own content hash binds it to this base snapshot.
+- `WORKFLOW_DETAILS.md` — how the child diagrams, status labels and source links are maintained.
 - `ARCHITECTURE.md` — how the public snapshot relates to the reviewed private systems.
 - `EXPORT_ALLOWLIST.md` — exact GitHub publication boundary.
 

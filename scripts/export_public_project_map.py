@@ -44,6 +44,7 @@ WORKFLOW_KINDS = {
     "qualification_contract", "next_action", "blocker",
 }
 REVIEWED_VIEWER_FILES = {"index.html", "map.css", "map.js"}
+REVIEWED_SUPPLEMENTS = {"workflow-details.public.json", "WORKFLOW_DETAILS.md"}
 FORBIDDEN_KEY_FRAGMENTS = {
     "url", "path", "uri", "notion", "instance", "database_name", "username",
     "password", "token", "secret", "credential", "local_repository",
@@ -464,6 +465,8 @@ It is not a trading system, model leaderboard, live database mirror, or complete
 - `method-catalog.public.json` — {methods_doc['counts']['studies']} saved-evidence study cards with metric scope and limitations.
 - `workflow-view.public.json` — the reviewed 12-stage decision flow, seven variable categories, 59 variable definitions, and public-safe workflow records.
 - `evidence-index.public.json` — source titles, authority labels, and content digests without local paths.
+- `workflow-details.public.json` — separately reviewed child diagrams for the 12 workflow steps; its own content hash binds it to this base snapshot.
+- `WORKFLOW_DETAILS.md` — how the child diagrams, status labels and source links are maintained.
 - `ARCHITECTURE.md` — how the public snapshot relates to the reviewed private systems.
 - `EXPORT_ALLOWLIST.md` — exact GitHub publication boundary.
 
@@ -512,6 +515,7 @@ Only the following public documentation files belong to this export:
 
 ```text
 scripts/export_public_project_map.py
+scripts/build_workflow_detail_catalog.py
 docs/research/README.md
 docs/research/ARCHITECTURE.md
 docs/research/EXPORT_ALLOWLIST.md
@@ -522,6 +526,8 @@ docs/research/project-graph.public.json
 docs/research/method-catalog.public.json
 docs/research/workflow-view.public.json
 docs/research/evidence-index.public.json
+docs/research/workflow-details.public.json
+docs/research/WORKFLOW_DETAILS.md
 ```
 
 Explicitly excluded: raw prices, databases, notebooks and outputs, predictions, portfolio or account information, credentials, environment files, private Notion links, Neo4j instance identifiers, local paths, website platform metadata, private release/delivery directories, backups, receipts with operational identifiers, and the unfiltered canonical graph.
@@ -583,7 +589,7 @@ def main() -> int:
     output.mkdir(parents=True, exist_ok=True)
     # The viewer is authored and reviewed separately.  Permit exactly its three
     # public files in the export directory, but never rewrite them here.
-    allowed = set(documents) | set(texts) | REVIEWED_VIEWER_FILES
+    allowed = set(documents) | set(texts) | REVIEWED_VIEWER_FILES | REVIEWED_SUPPLEMENTS
     unexpected = sorted(path.name for path in output.iterdir() if path.is_file() and path.name not in allowed)
     if unexpected:
         raise ValueError(f"Unexpected files in public export directory: {unexpected}")
