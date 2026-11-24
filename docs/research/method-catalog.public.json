@@ -1,0 +1,3091 @@
+{
+  "as_of": "2026-11-22",
+  "content_sha256": "bd26070ec3bf0a512269abdb9522923787c7d6c66699276c6d8e6e823921e1da",
+  "counts": {
+    "saved_aggregate_metrics": 69,
+    "studies": 34
+  },
+  "document_kind": "saved_aggregate_method_review",
+  "interpretation": {
+    "metric_scope": "Compare a metric only within its declared experiment and comparability group.",
+    "promotion": "No model is promoted and no live-trading use is authorized.",
+    "registry_scope": "34 current registered IDs include predictive, diagnostic, documentary, software and planned work; they are not 34 successful models."
+  },
+  "schema_version": "public_method_catalog_v1",
+  "source_snapshot": {
+    "graph": "cc84e6576cd082f9ab53253c8ad3860f9babac58a012aea77f7189de7b0390f3",
+    "methods": "fe3bb5707f976b9bf78eb67f1c38b57ba4f20bee0e15223a074e27725dc2f26b",
+    "test_index": "4dbc2e5ed73d74a162662ddf2ae40f8d3a34e7d3a2c7af3dbc32f20e7850a9d3",
+    "titles": "c3d4265c2e2a4a6efdc38acf0daeeaf28fbdf37416a30c305ff71e8427f9b731",
+    "workflow": "4415f4c293b6277ee2929fbfc361651d81f855b6a07317ecaf98e05c69f86ec4"
+  },
+  "studies": [
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Freeze identities, immutable receipts and separate readiness/lock/maturity reporting"
+        ],
+        "status": "blocked/notrun"
+      },
+      "baseline": "Previously frozen reference/control policies, unchanged.",
+      "canonical_id": "architecture_v2_dual_head_prospective_shadow_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "architecture-v2-dual-head-prospective-shadow-v1:frozen-ann48x24+logistic-downside:identity-free:universe-snapshot20260520:grouped-adjusted-bars:score-after-close:lock-before-next-session:firstlock20260908:min60dates:min11nonoverlap5d:top200:max5:security20:candidate10:t1:cost25:paper-only:no-retune:no-consumed-holdout"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate",
+        "workflow_first_checkpoint",
+        "workflow_repair_execution"
+      ],
+      "family_id": "confirmation",
+      "family_title": "Archived evaluation and future locks",
+      "friendly_title": "Dual-Head Shadow Plan",
+      "has_positive_finding": false,
+      "inputs_and_method": "An unchanged opportunity/downside policy was intended to score after close and lock before next session; require 60 new dates and 11 nonoverlapping cohorts before evaluation.",
+      "metrics": [],
+      "model_promoted": false,
+      "positive_finding": "The frozen-policy and pre-outcome-lock design is useful operational structure, not proof of completed continuous scoring.",
+      "positive_finding_type": "no_confirmed_positive_result",
+      "question_title": "Frozen dual-head forecasts: prospective lock plan",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "next_experiments",
+          "design_signature": "architecture-v2-dual-head-prospective-shadow-v1:frozen-ann48x24+logistic-downside:identity-free:universe-snapshot20260520:grouped-adjusted-bars:score-after-close:lock-before-next-session:firstlock20260908:min60dates:min11nonoverlap5d:top200:max5:security20:candidate10:t1:cost25:paper-only:no-retune:no-consumed-holdout",
+          "index": 1,
+          "source_pointer": "/next_experiments/1",
+          "status": "frozen_waiting_for_asof_grouped_bar"
+        }
+      ],
+      "reviewed_verdict": "A frozen/approved prospective plan is not proof of a continuous completed collection or mature confirmation. No interim outcome inspection performed.",
+      "scope": {
+        "costs": {
+          "configuredCostBps": 25
+        },
+        "counts": {
+          "minimumNewTradingDates": 60,
+          "minimumNonoverlapFiveDayCohorts": 11
+        },
+        "date_windows": {
+          "eligibleAfterConsumedEnd": "2026-08-24",
+          "matureCurrentContinuity": "Not verified in this presentation audit."
+        }
+      },
+      "what_failed_or_limits": [
+        "A later metadata audit found one old manifest whose declared timestamp was after the next open, not a continuous valid prospective run.",
+        "The legacy writer was quarantined because its warmup conflicts with holdout exclusion and it accepted backfills. The new metadata-only guard does not approve scoring or certify strategy inputs.",
+        "Source records include dated readiness/lock assertions; current complete locked continuity is unverified.",
+        "Calendar dates arriving after the holdout are not automatically genuinely prospective evidence.",
+        "No forecast outcomes or protected interim labels read."
+      ],
+      "what_it_predicts": "Future timestamped forecasts under frozen policy; not a newly measured performance result."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Teacher/student separation, feasibility checks and out-of-entry-universe exit handling"
+        ],
+        "status": "failed"
+      },
+      "baseline": "The direct/state/ANN/Monte Carlo arms saved in this same specification; not a cross-experiment ranking.",
+      "canonical_id": "architecture_v2_oracle_pattern_library_mc_1000_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "architecture-v2-oracle-pattern-library-mc1000-v1:teacher100:student-tree-depth5-leaf80:seed20260908:pit-source:top200:max5:security20:candidate10:t1:fractional-min1:cost10-25-50:open-or-labeled-close-proxy:teacher-through20250829:unseen20250902-20260526:preholdout-only"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "state-actions",
+      "family_title": "Learning buy, hold and sell patterns",
+      "friendly_title": "Hindsight Teacher-Student Tree",
+      "has_positive_finding": false,
+      "inputs_and_method": "A hindsight teacher creates pattern/action labels; a frozen student tree and Monte Carlo feasibility checks run on the specified diagnostic period.",
+      "metrics": [
+        {
+          "comparability_group": "experiment:architecture_v2_oracle_pattern_library_mc_1000_v1",
+          "definition": "Saved diagnostic/feasibility paper-account statistic, not a blind confirmation.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "frozen student total return",
+          "scope": "179 signal dates; previously available development panel or limited teacher-transfer scope;25 bps.",
+          "unit": "%",
+          "value": -11.63006842660268
+        },
+        {
+          "comparability_group": "experiment:architecture_v2_oracle_pattern_library_mc_1000_v1",
+          "definition": "Saved diagnostic/feasibility paper-account statistic, not a blind confirmation.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "frozen student maximum drawdown",
+          "scope": "179 signal dates; previously available development panel or limited teacher-transfer scope;25 bps.",
+          "unit": "%",
+          "value": -22.272247949797595
+        }
+      ],
+      "model_promoted": false,
+      "positive_finding": "The feasibility exercise exposed the gap between a hindsight teacher and an executable student policy.",
+      "positive_finding_type": "no_confirmed_positive_result",
+      "question_title": "Can a model learn from hindsight-perfect patterns?",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "completed_experiments",
+          "design_signature": "architecture-v2-oracle-pattern-library-mc1000-v1:teacher100:student-tree-depth5-leaf80:seed20260908:pit-source:top200:max5:security20:candidate10:t1:fractional-min1:cost10-25-50:open-or-labeled-close-proxy:teacher-through20250829:unseen20250902-20260526:preholdout-only",
+          "index": 8,
+          "source_pointer": "/completed_experiments/8",
+          "status": "complete_feasibility_only_no_promotion"
+        },
+        {
+          "bucket": "next_experiments",
+          "design_signature": "architecture-v2-oracle-pattern-library-mc1000-v1:teacher100:student-tree-depth5-leaf80:seed20260908:pit-source:top200:max5:security20:candidate10:t1:fractional-min1:cost10-25-50:open-or-labeled-close-proxy:teacher-through20250829:unseen20250902-20260526:preholdout-only",
+          "index": 5,
+          "source_pointer": "/next_experiments/5",
+          "status": "completed_feasibility_only_no_promotion"
+        }
+      ],
+      "reviewed_verdict": "Stop further testing of this architecture on the current short panel. Reconstruct trustworthy historical universe membership and delisted exits before any robust rerun; do not use rolling folds on the same panel and do not access the consumed holdout.",
+      "scope": {
+        "costs": {
+          "basis": "As recorded by the historical simulator; do not equate with later25bps full-roundtrip baskets.",
+          "configuredCostBps": 25,
+          "execution": "Oracle transfer explicitly used next-session close proxy; later diagnostic policy scope remains already-viewed."
+        },
+        "counts": {
+          "diagnosticOrUnseenDates": 179,
+          "teacherDates": 190
+        },
+        "date_windows": {
+          "signalEnd": "2026-05-18",
+          "signalStart": "2025-09-02"
+        }
+      },
+      "what_failed_or_limits": [
+        "The saved student lost money with a large drawdown. Hindsight teacher profits are not attainable evidence.",
+        "Short history and next-session close proxy do not meet later lineage requirements. Do not repeat on this panel.",
+        "190 teacher dates and179 later signal dates; historical lineage incomplete.",
+        "Already-viewed diagnostics are not blind evidence; feasibility transfer has short teacher history.",
+        "Teacher future-knowledge wealth is never predictive performance.",
+        "Portfolio cost/execution rules differ from the later fixed5-session raw-open studies."
+      ],
+      "what_it_predicts": "Teacher-derived action labels and state-aware diagnostic paper-account behavior; not a blind probability of a profitable trade."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Explicit action states, held-position handling and diagnostic ledger mechanics"
+        ],
+        "status": "diagnostic_only"
+      },
+      "baseline": "The direct/state/ANN/Monte Carlo arms saved in this same specification; not a cross-experiment ranking.",
+      "canonical_id": "architecture_v2_state_aware_pattern_gate_ann_mc_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "architecture-v2-state-aware-pattern-gate-ann-mc-v1:identity-free:teacher-labels-fixed:tree-depth5-leaf80+relu48x24:buy-only-opens:hold-only-retains:sell-exits:avoid-cash:entry-margin005:mc1000-leaf-bootstrap:top200:max5:security20:candidate10:t1:cost25:debug-replay20250902-20260518:prospective-lock-after20260824:no-consumed-holdout"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "state-actions",
+      "family_title": "Learning buy, hold and sell patterns",
+      "friendly_title": "State Action Tree and ANN",
+      "has_positive_finding": false,
+      "inputs_and_method": "Teacher-derived action labels feed a decision tree and ANN with a Monte Carlo gate; BUY opens, HOLD retains, SELL exits and AVOID stays out.",
+      "metrics": [
+        {
+          "comparability_group": "experiment:architecture_v2_state_aware_pattern_gate_ann_mc_v1",
+          "definition": "Saved diagnostic/feasibility paper-account statistic, not a blind confirmation.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "direct tree state gate total return",
+          "scope": "179 signal dates; previously available development panel or limited teacher-transfer scope;25 bps.",
+          "unit": "%",
+          "value": 7.063802678720976
+        },
+        {
+          "comparability_group": "experiment:architecture_v2_state_aware_pattern_gate_ann_mc_v1",
+          "definition": "Saved diagnostic/feasibility paper-account statistic, not a blind confirmation.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "direct tree state gate maximum drawdown",
+          "scope": "179 signal dates; previously available development panel or limited teacher-transfer scope;25 bps.",
+          "unit": "%",
+          "value": -20.096709867800598
+        },
+        {
+          "comparability_group": "experiment:architecture_v2_state_aware_pattern_gate_ann_mc_v1",
+          "definition": "Saved diagnostic/feasibility paper-account statistic, not a blind confirmation.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "ann state gate total return",
+          "scope": "179 signal dates; previously available development panel or limited teacher-transfer scope;25 bps.",
+          "unit": "%",
+          "value": 4.931891768898078
+        },
+        {
+          "comparability_group": "experiment:architecture_v2_state_aware_pattern_gate_ann_mc_v1",
+          "definition": "Saved diagnostic/feasibility paper-account statistic, not a blind confirmation.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "ann state gate maximum drawdown",
+          "scope": "179 signal dates; previously available development panel or limited teacher-transfer scope;25 bps.",
+          "unit": "%",
+          "value": -34.387306198212556
+        },
+        {
+          "comparability_group": "experiment:architecture_v2_state_aware_pattern_gate_ann_mc_v1",
+          "definition": "Saved diagnostic/feasibility paper-account statistic, not a blind confirmation.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "tree mc state gate total return",
+          "scope": "179 signal dates; previously available development panel or limited teacher-transfer scope;25 bps.",
+          "unit": "%",
+          "value": 0.0
+        },
+        {
+          "comparability_group": "experiment:architecture_v2_state_aware_pattern_gate_ann_mc_v1",
+          "definition": "Saved diagnostic/feasibility paper-account statistic, not a blind confirmation.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "tree mc state gate maximum drawdown",
+          "scope": "179 signal dates; previously available development panel or limited teacher-transfer scope;25 bps.",
+          "unit": "%",
+          "value": 0.0
+        }
+      ],
+      "model_promoted": false,
+      "positive_finding": "The stateful paper mechanics were exercised, including retaining held stocks separately from new-entry eligibility.",
+      "positive_finding_type": "no_confirmed_positive_result",
+      "question_title": "Can learned patterns manage buy, hold and sell states?",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "completed_experiments",
+          "design_signature": "architecture-v2-state-aware-pattern-gate-ann-mc-v1:identity-free:teacher-labels-fixed:tree-depth5-leaf80+relu48x24:buy-only-opens:hold-only-retains:sell-exits:avoid-cash:entry-margin005:mc1000-leaf-bootstrap:top200:max5:security20:candidate10:t1:cost25:debug-replay20250902-20260518:prospective-lock-after20260824:no-consumed-holdout",
+          "index": 7,
+          "source_pointer": "/completed_experiments/7",
+          "status": "complete_diagnostic_only_not_blind_not_promotable"
+        },
+        {
+          "bucket": "next_experiments",
+          "design_signature": "architecture-v2-state-aware-pattern-gate-ann-mc-v1:identity-free:teacher-labels-fixed:tree-depth5-leaf80+relu48x24:buy-only-opens:hold-only-retains:sell-exits:avoid-cash:entry-margin005:mc1000-leaf-bootstrap:top200:max5:security20:candidate10:t1:cost25:debug-replay20250902-20260518:prospective-lock-after20260824:no-consumed-holdout",
+          "index": 4,
+          "source_pointer": "/next_experiments/4",
+          "status": "completed_diagnostic_only_not_blind_not_promotable"
+        }
+      ],
+      "reviewed_verdict": "Diagnostic mechanics validated, but no blind evidence exists and no arm is promotable. Freeze for prospective shadow scoring strictly after 2026-08-24; never reuse the consumed holdout or tune thresholds on the replay.",
+      "scope": {
+        "costs": {
+          "basis": "As recorded by the historical simulator; do not equate with later25bps full-roundtrip baskets.",
+          "configuredCostBps": 25,
+          "execution": "Oracle transfer explicitly used next-session close proxy; later diagnostic policy scope remains already-viewed."
+        },
+        "counts": {
+          "diagnosticOrUnseenDates": 179,
+          "teacherDates": 190
+        },
+        "date_windows": {
+          "signalEnd": "2026-05-18",
+          "signalStart": "2025-09-02"
+        }
+      },
+      "what_failed_or_limits": [
+        "Already-viewed diagnostic dates provide no blind evidence. Direct and ANN gates had material drawdowns; MC placed no trades.",
+        "This supplies neither an approved daily HOLD/SELL predictor nor the missing integration with the separate cash ledger/report workflow.",
+        "190 teacher dates and179 later signal dates; historical lineage incomplete.",
+        "Already-viewed diagnostics are not blind evidence; feasibility transfer has short teacher history.",
+        "Teacher future-knowledge wealth is never predictive performance.",
+        "Portfolio cost/execution rules differ from the later fixed5-session raw-open studies."
+      ],
+      "what_it_predicts": "Teacher-derived action labels and state-aware diagnostic paper-account behavior; not a blind probability of a profitable trade."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Prospective protocol only; no performance claim"
+        ],
+        "status": "blocked/notrun"
+      },
+      "baseline": "Previously frozen reference/control policies, unchanged.",
+      "canonical_id": "architecture_v2_state_aware_pattern_gate_prospective_shadow_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "architecture-v2-state-aware-pattern-gate-prospective-shadow-v1:unchanged-tree+ann+mc:identity-free:lock-before-outcomes:start-after20260824:min60dates:min11nonoverlap5d:paper-only:no-consumed-holdout:no-retuning"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "confirmation",
+      "family_title": "Archived evaluation and future locks",
+      "friendly_title": "State Action Shadow Plan",
+      "has_positive_finding": false,
+      "inputs_and_method": "Unchanged tree/ANN/MC policies with forecasts locked before outcomes; no retuning, minimum 60 dates and 11 nonoverlapping cohorts.",
+      "metrics": [],
+      "model_promoted": false,
+      "positive_finding": "Preserves a genuinely future confirmation design instead of recycling the diagnostic replay.",
+      "positive_finding_type": "no_confirmed_positive_result",
+      "question_title": "Frozen state-aware policy: future-only confirmation plan",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "next_experiments",
+          "design_signature": "architecture-v2-state-aware-pattern-gate-prospective-shadow-v1:unchanged-tree+ann+mc:identity-free:lock-before-outcomes:start-after20260824:min60dates:min11nonoverlap5d:paper-only:no-consumed-holdout:no-retuning",
+          "index": 3,
+          "source_pointer": "/next_experiments/3",
+          "status": "approved_after_new_data"
+        }
+      ],
+      "reviewed_verdict": "A frozen/approved prospective plan is not proof of a continuous completed collection or mature confirmation. No interim outcome inspection performed.",
+      "scope": {
+        "costs": {
+          "configuredCostBps": 25
+        },
+        "counts": {
+          "minimumNewTradingDates": 60,
+          "minimumNonoverlapFiveDayCohorts": 11
+        },
+        "date_windows": {
+          "eligibleAfterConsumedEnd": "2026-08-24",
+          "matureCurrentContinuity": "Not verified in this presentation audit."
+        }
+      },
+      "what_failed_or_limits": [
+        "Approval after new data is not a completed scoring run. This route was not certified by the later dual-head metadata audit.",
+        "Input qualification, complete timestamps, frozen policy identity and maturity need separate verification.",
+        "Source records include dated readiness/lock assertions; current complete locked continuity is unverified.",
+        "Calendar dates arriving after the holdout are not automatically genuinely prospective evidence.",
+        "No forecast outcomes or protected interim labels read."
+      ],
+      "what_it_predicts": "Future timestamped forecasts under frozen policy; not a newly measured performance result."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Separate opportunity/downside outputs, exposure-aware reporting and state mechanics"
+        ],
+        "status": "exploratory_signal"
+      },
+      "baseline": "The direct/state/ANN/Monte Carlo arms saved in this same specification; not a cross-experiment ranking.",
+      "canonical_id": "architecture_v2_volatility_conditioned_dual_head_mc_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "architecture-v2-vol-conditioned-dual-head-mc-v1:identity-free:teacher-fixed:direct-rules+relu48x24+logistic-downside:vol055-085:pvmom055:downside040:entrymargin010:mc1000-regimecells:pgt055:top200:max5:t1:cost25:diagnostic20250902-20260518:no-holdout:no-retune"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "risk-gates",
+      "family_title": "Downside and group risk gates",
+      "friendly_title": "Opportunity-Downside ANN",
+      "has_positive_finding": true,
+      "inputs_and_method": "Identity-free ANN opportunity and logistic downside heads drive volatility-conditioned state gates; compare direct rules, dual-head ANN and MC variants.",
+      "metrics": [
+        {
+          "comparability_group": "experiment:architecture_v2_volatility_conditioned_dual_head_mc_v1",
+          "definition": "Saved diagnostic/feasibility paper-account statistic, not a blind confirmation.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "direct variable rule gate total return",
+          "scope": "179 signal dates; previously available development panel or limited teacher-transfer scope;25 bps.",
+          "unit": "%",
+          "value": 2.134943671334266
+        },
+        {
+          "comparability_group": "experiment:architecture_v2_volatility_conditioned_dual_head_mc_v1",
+          "definition": "Saved diagnostic/feasibility paper-account statistic, not a blind confirmation.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "direct variable rule gate maximum drawdown",
+          "scope": "179 signal dates; previously available development panel or limited teacher-transfer scope;25 bps.",
+          "unit": "%",
+          "value": -15.926093428864762
+        },
+        {
+          "comparability_group": "experiment:architecture_v2_volatility_conditioned_dual_head_mc_v1",
+          "definition": "Saved diagnostic/feasibility paper-account statistic, not a blind confirmation.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "ann dual head state gate total return",
+          "scope": "179 signal dates; previously available development panel or limited teacher-transfer scope;25 bps.",
+          "unit": "%",
+          "value": 7.680141737655388
+        },
+        {
+          "comparability_group": "experiment:architecture_v2_volatility_conditioned_dual_head_mc_v1",
+          "definition": "Saved diagnostic/feasibility paper-account statistic, not a blind confirmation.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "ann dual head state gate maximum drawdown",
+          "scope": "179 signal dates; previously available development panel or limited teacher-transfer scope;25 bps.",
+          "unit": "%",
+          "value": -2.630258300396704
+        },
+        {
+          "comparability_group": "experiment:architecture_v2_volatility_conditioned_dual_head_mc_v1",
+          "definition": "Saved diagnostic/feasibility paper-account statistic, not a blind confirmation.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "ann dual head mc gate total return",
+          "scope": "179 signal dates; previously available development panel or limited teacher-transfer scope;25 bps.",
+          "unit": "%",
+          "value": 0.0
+        },
+        {
+          "comparability_group": "experiment:architecture_v2_volatility_conditioned_dual_head_mc_v1",
+          "definition": "Saved diagnostic/feasibility paper-account statistic, not a blind confirmation.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "ann dual head mc gate maximum drawdown",
+          "scope": "179 signal dates; previously available development panel or limited teacher-transfer scope;25 bps.",
+          "unit": "%",
+          "value": 0.0
+        }
+      ],
+      "model_promoted": false,
+      "positive_finding": "Within this saved diagnostic, the ANN gate returned 7.68% with 2.63% maximum drawdown versus 2.13% and 15.93% for the direct-rule gate.",
+      "positive_finding_type": "exploratory_risk_exposure",
+      "question_title": "Separate opportunity and downside estimates",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "completed_experiments",
+          "design_signature": "architecture-v2-vol-conditioned-dual-head-mc-v1:identity-free:teacher-fixed:direct-rules+relu48x24+logistic-downside:vol055-085:pvmom055:downside040:entrymargin010:mc1000-regimecells:pgt055:top200:max5:t1:cost25:diagnostic20250902-20260518:no-holdout:no-retune",
+          "index": 9,
+          "source_pointer": "/completed_experiments/9",
+          "status": "diagnostic_complete_not_blind_not_promotable"
+        },
+        {
+          "bucket": "next_experiments",
+          "design_signature": "architecture-v2-vol-conditioned-dual-head-mc-v1:identity-free:teacher-fixed:direct-rules+relu48x24+logistic-downside:vol055-085:pvmom055:downside040:entrymargin010:mc1000-regimecells:pgt055:top200:max5:t1:cost25:diagnostic20250902-20260518:no-holdout:no-retune",
+          "index": 2,
+          "source_pointer": "/next_experiments/2",
+          "status": "diagnostic_complete_not_blind_not_promotable"
+        }
+      ],
+      "reviewed_verdict": "Keep the dual-head ANN as a future-test hypothesis only. Do not promote, trade, retune from this replay, reuse the consumed holdout, or alter the independently frozen prospective shadow.",
+      "scope": {
+        "costs": {
+          "basis": "As recorded by the historical simulator; do not equate with later25bps full-roundtrip baskets.",
+          "configuredCostBps": 25,
+          "execution": "Oracle transfer explicitly used next-session close proxy; later diagnostic policy scope remains already-viewed."
+        },
+        "counts": {
+          "diagnosticOrUnseenDates": 179,
+          "teacherDates": 190
+        },
+        "date_windows": {
+          "signalEnd": "2026-05-18",
+          "signalStart": "2025-09-02"
+        }
+      },
+      "what_failed_or_limits": [
+        "ANN held about 93.42% cash. Already-viewed diagnostic, not blind confirmation; low drawdown alone does not prove forecast skill.",
+        "The MC arm placed no trades under frozen requirements. Keep the dual-head idea as a future-test hypothesis only.",
+        "190 teacher dates and179 later signal dates; historical lineage incomplete.",
+        "Already-viewed diagnostics are not blind evidence; feasibility transfer has short teacher history.",
+        "Teacher future-knowledge wealth is never predictive performance.",
+        "Portfolio cost/execution rules differ from the later fixed5-session raw-open studies."
+      ],
+      "what_it_predicts": "Teacher-derived action labels and state-aware diagnostic paper-account behavior; not a blind probability of a profitable trade."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Source-qualification contract and evidence checklist"
+        ],
+        "status": "blocked/notrun"
+      },
+      "baseline": "Passing source qualification and at least 756 trustworthy point-in-time dates, not a completed model comparison.",
+      "canonical_id": "architecture_v3_historical_lineage_source_qualification_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "architecture-v3-historical-lineage-source-qualification-v1:bounded-early-middle-recent:stable-id+aliases+listings+exits+delisting-return+adjustment-parity:source-comparison:no-model:no-consumed-holdout:no-bulk-before-pass"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "data-foundation",
+      "family_title": "Data qualification and Architecture v3",
+      "friendly_title": "Security Lineage Qualification Plan",
+      "has_positive_finding": false,
+      "inputs_and_method": "Bounded early/middle/recent checks for stable IDs, historical aliases, listings, exits, terminal returns and adjustment parity before reconstruction.",
+      "metrics": [],
+      "model_promoted": false,
+      "positive_finding": "Makes the missing-data gate explicit and prevents a large survivor-selected archive being treated as a qualified universe.",
+      "positive_finding_type": "no_confirmed_positive_result",
+      "question_title": "Qualify a trustworthy historical security master",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "next_experiments",
+          "design_signature": "architecture-v3-historical-lineage-source-qualification-v1:bounded-early-middle-recent:stable-id+aliases+listings+exits+delisting-return+adjustment-parity:source-comparison:no-model:no-consumed-holdout:no-bulk-before-pass",
+          "index": 19,
+          "source_pointer": "/next_experiments/19",
+          "status": "approved_after_dependency"
+        }
+      ],
+      "reviewed_verdict": "Blocked: source qualification plus756 trustworthy point-in-time reconstructed dates required before model fitting.",
+      "scope": {
+        "costs": {
+          "applicable": false,
+          "reason": "No Architecturev3 model run is authorized or completed."
+        },
+        "counts": {
+          "requiredTrustworthyDates": 756
+        },
+        "date_windows": {
+          "qualificationAnchors": [
+            "2021-08-23",
+            "2024-01-02",
+            "2026-05-28"
+          ]
+        }
+      },
+      "what_failed_or_limits": [
+        "No source has passed full qualification. Prospective snapshots and isolated public-event sidecars do not reconstruct historical membership and terminal returns.",
+        "No full reconstruction or model computation is approved by this catalog.",
+        "Calendar length alone does not pass membership/alias/listing/delisting/terminal-return gates.",
+        "No purchase or new test authorized."
+      ],
+      "what_it_predicts": "Prerequisite historical identity/terminal-return qualification."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Architecture/dependency design only, not an approved working predictor"
+        ],
+        "status": "blocked/notrun"
+      },
+      "baseline": "Passing source qualification and at least 756 trustworthy point-in-time dates, not a completed model comparison.",
+      "canonical_id": "architecture_v3_identity_free_return_risk_policy_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "architecture-v3-identity-free-return-risk-policy-v1:h5:pit-history-min756:residual-return+downside:ridge-logit+relu48x24:state-policy:trainfit-thresholds:regime-block-mc1000:max5:security20:candidate10:t1:cost10-25-50:nested-walk-forward+future-lock:no-consumed-holdout"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "data-foundation",
+      "family_title": "Data qualification and Architecture v3",
+      "friendly_title": "Return-Risk Architecture Plan",
+      "has_positive_finding": false,
+      "inputs_and_method": "Preregistered ridge/logistic and ReLU models predict residual return and downside, with a deterministic variable-duration state policy and training-only thresholds.",
+      "metrics": [],
+      "model_promoted": false,
+      "positive_finding": "The architecture separates prediction targets/models from new entries, held-position decisions and cash/risk constraints.",
+      "positive_finding_type": "no_confirmed_positive_result",
+      "question_title": "Architecture v3: return, downside and state policy",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "next_experiments",
+          "design_signature": "architecture-v3-identity-free-return-risk-policy-v1:h5:pit-history-min756:residual-return+downside:ridge-logit+relu48x24:state-policy:trainfit-thresholds:regime-block-mc1000:max5:security20:candidate10:t1:cost10-25-50:nested-walk-forward+future-lock:no-consumed-holdout",
+          "index": 20,
+          "source_pointer": "/next_experiments/20",
+          "status": "preregistered_blocked_by_lineage"
+        }
+      ],
+      "reviewed_verdict": "Blocked: source qualification plus756 trustworthy point-in-time reconstructed dates required before model fitting.",
+      "scope": {
+        "costs": {
+          "applicable": false,
+          "reason": "No Architecturev3 model run is authorized or completed."
+        },
+        "counts": {
+          "requiredTrustworthyDates": 756
+        },
+        "date_windows": {
+          "qualificationAnchors": [
+            "2021-08-23",
+            "2024-01-02",
+            "2026-05-28"
+          ]
+        }
+      },
+      "what_failed_or_limits": [
+        "Blocked until historical lineage and at least 756 trustworthy point-in-time dates qualify. No fit or performance result exists.",
+        "Do not substitute archive size, recent snapshots or metadata completeness for the historical gate.",
+        "Calendar length alone does not pass membership/alias/listing/delisting/terminal-return gates.",
+        "No purchase or new test authorized."
+      ],
+      "what_it_predicts": "Proposed residual return plus downside policy after data qualification."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Feature-group assembly and ablation machinery"
+        ],
+        "status": "failed"
+      },
+      "baseline": "ANN architecture combinations, plain selection and fixed consensus/similarity/diversification variants.",
+      "canonical_id": "combination_similarity_5d_attempt2",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "combination-similarity-v1:h5:7groups:relu+tanh+deeprelu:3seeds:3splits:holdout60"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "features",
+      "family_title": "ANNs and feature importance",
+      "friendly_title": "Feature Blend ANN",
+      "has_positive_finding": false,
+      "inputs_and_method": "Search seven feature groups and ReLU/tanh/deeper ANN combinations for the source-defined five-session target.",
+      "metrics": [
+        {
+          "comparability_group": "experiment:combination_similarity_5d_attempt2",
+          "definition": "AUC for core_plus_graph_latent3d/relu48x24, reported as provisional selection.",
+          "evidence_ids": [
+            "gate"
+          ],
+          "label": "Reported selected ANN AUC",
+          "scope": "Three chronological splits × three seeds; five-session labels.",
+          "unit": "AUC",
+          "value": 0.49962
+        }
+      ],
+      "model_promoted": false,
+      "positive_finding": "No confirmed predictive gain. A selected combination can be documented without treating selection as confirmation.",
+      "positive_finding_type": "no_confirmed_positive_result",
+      "question_title": "Do feature combinations and latent geometry help?",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "completed_experiments",
+          "design_signature": "combination-similarity-v1:h5:7groups:relu+tanh+deeprelu:3seeds:3splits:holdout60",
+          "index": 12,
+          "source_pointer": "/completed_experiments/12",
+          "status": "completed"
+        }
+      ],
+      "reviewed_verdict": "The selected combination remained near random AUC; favorable portfolio adjustments were exploratory and did not promote a model.",
+      "scope": {
+        "costs": {
+          "basis": "Not numerically restated in local reviewed compact registry."
+        },
+        "counts": {
+          "chronologicalSplits": 3,
+          "featureGroups": 7,
+          "seeds": 3
+        },
+        "date_windows": {
+          "endBefore": "2026-05-29"
+        }
+      },
+      "what_failed_or_limits": [
+        "Selected AUC was 0.49962, near chance. Portfolio adjustments and feature search were exploratory.",
+        "Do not promote the combination or reuse its selected weights as established geometry importance.",
+        "Multiple tested combinations create selection risk.",
+        "Original OSL directory is not present locally; reviewed registry copy is the displayed metric source."
+      ],
+      "what_it_predicts": "Source-defined five-session direction/ranking; model/feature combination search."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Design lineage and completed-work deduplication"
+        ],
+        "status": "diagnostic_only"
+      },
+      "baseline": "Ridge/ReLU and plain versus consensus selections.",
+      "canonical_id": "compact_consensus_cost_5d_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "compact-consensus-cost-v1:h5:novel-pruned-groups:ridge+relu:3splits:holdout60"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "features",
+      "family_title": "ANNs and feature importance",
+      "friendly_title": "Compact Consensus Plan",
+      "has_positive_finding": false,
+      "inputs_and_method": "A compact feature/consensus/cost hypothesis superseded by completed robustness and similarity checks.",
+      "metrics": [],
+      "model_promoted": false,
+      "positive_finding": "Retains the design lineage so this plan is not mistaken for unfinished work.",
+      "positive_finding_type": "no_confirmed_positive_result",
+      "question_title": "Compact feature consensus: superseded plan",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "next_experiments",
+          "design_signature": "compact-consensus-cost-v1:h5:novel-pruned-groups:ridge+relu:3splits:holdout60",
+          "index": 7,
+          "source_pointer": "/next_experiments/7",
+          "status": "superseded_completed_do_not_repeat"
+        }
+      ],
+      "reviewed_verdict": "Superseded by completed robustness and similarity confirmations; no separate numeric performance is asserted.",
+      "scope": {
+        "costs": {
+          "basis": "Approval contemplated costs; no distinct final result packet attached."
+        },
+        "counts": {
+          "separatePerformancePacketAvailable": false
+        },
+        "date_windows": {
+          "endBefore": "2026-05-29"
+        }
+      },
+      "what_failed_or_limits": [
+        "No distinct final numeric packet is attached. Do not count this as another successful experiment or repeat it.",
+        "Do not treat this superseded approval as an additional independent successful experiment."
+      ],
+      "what_it_predicts": "Compact five-session feature/consensus/cost hypothesis."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Seed/split controls and importance reports, without treating selected weights as validated geometry importance"
+        ],
+        "status": "failed"
+      },
+      "baseline": "Chance AUC0.5 plus registered feature additions/drops and within-date shuffles.",
+      "canonical_id": "confirmatory_importance_32915939359",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "confirmatory-importance-v1:h5,h20:relu48x24:3seeds:3splits:holdout60"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "features",
+      "family_title": "ANNs and feature importance",
+      "friendly_title": "ANN Feature Importance Audit",
+      "has_positive_finding": false,
+      "inputs_and_method": "ReLU ANN feature-importance confirmation across three seeds and chronological splits for source-defined 5- and 20-session labels.",
+      "metrics": [
+        {
+          "comparability_group": "experiment:confirmatory_importance_32915939359",
+          "definition": "Saved reviewed aggregate; compare only within this experiment.",
+          "evidence_ids": [
+            "gate"
+          ],
+          "label": "Five-day ANN AUC",
+          "scope": "Exact source-defined sample/target; see experiment scope.",
+          "unit": "AUC",
+          "value": 0.5087
+        },
+        {
+          "comparability_group": "experiment:confirmatory_importance_32915939359",
+          "definition": "Saved reviewed aggregate; compare only within this experiment.",
+          "evidence_ids": [
+            "gate"
+          ],
+          "label": "Twenty-day ANN AUC",
+          "scope": "Exact source-defined sample/target; see experiment scope.",
+          "unit": "AUC",
+          "value": 0.4894
+        },
+        {
+          "comparability_group": "experiment:confirmatory_importance_32915939359",
+          "definition": "Saved reviewed aggregate; compare only within this experiment.",
+          "evidence_ids": [
+            "gate"
+          ],
+          "label": "Five-day ANN Brier",
+          "scope": "Exact source-defined sample/target; see experiment scope.",
+          "unit": "squared probability error",
+          "value": 0.2567
+        },
+        {
+          "comparability_group": "experiment:confirmatory_importance_32915939359",
+          "definition": "Saved reviewed aggregate; compare only within this experiment.",
+          "evidence_ids": [
+            "gate"
+          ],
+          "label": "Twenty-day ANN Brier",
+          "scope": "Exact source-defined sample/target; see experiment scope.",
+          "unit": "squared probability error",
+          "value": 0.259
+        }
+      ],
+      "model_promoted": false,
+      "positive_finding": "The exercise documents why feature importance must be judged against weak overall discrimination; no reliable predictive family was established.",
+      "positive_finding_type": "no_confirmed_positive_result",
+      "question_title": "Which original features helped the ANN?",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "completed_experiments",
+          "design_signature": "confirmatory-importance-v1:h5,h20:relu48x24:3seeds:3splits:holdout60",
+          "index": 11,
+          "source_pointer": "/completed_experiments/11",
+          "status": "completed"
+        }
+      ],
+      "reviewed_verdict": "Five-day discrimination was weak and20-day discrimination below chance; importance findings stayed provisional.",
+      "scope": {
+        "costs": {
+          "basis": "Cost basis not restated in local compact registry summary."
+        },
+        "counts": {
+          "chronologicalSplits": 3,
+          "seeds": 3
+        },
+        "date_windows": {
+          "endBefore": "2026-05-29",
+          "exactStart": "Not recorded in local reviewed aggregate."
+        }
+      },
+      "what_failed_or_limits": [
+        "Five-session AUC was 0.5087; 20-session AUC was 0.4894. Importance stayed provisional.",
+        "Original outputs are unavailable locally; saved aggregates come from the reviewed registry.",
+        "Original OSL result directory is absent locally; displayed figures are the canonical reviewed registry copy.",
+        "Do not transfer importance weights automatically to the current eight-variable physical-reference map."
+      ],
+      "what_it_predicts": "Source-defined5- and20-session classification labels; not the later residual top-decile task."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "As-of release timing, fixed comparison frames and geometry-versus-raw-feature ablations"
+        ],
+        "status": "failed"
+      },
+      "baseline": "Raw XYZ, recency features, warped XYZ+recency, and raw XYZ+displacement on identical rows. Economic comparator in this experiment is GROSS matched36 equal weight.",
+      "canonical_id": "earnings_geometry_paper_replay_v1_20261117",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "earnings-geometry-paper-replay-v1:fixed36:h5-next-open:ridge10:raw-recency-warp-displacement:6x21-expanding:purge6:cost25-top5:asof-sec:consumed-holdout-excluded"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate",
+        "geometry_cohort_provenance"
+      ],
+      "family_id": "earnings-warp",
+      "family_title": "Earnings-sized spheres and warped space",
+      "friendly_title": "Earnings Clock Ridge",
+      "has_positive_finding": true,
+      "inputs_and_method": "Four fixed ridge arms compare plain XYZ, release recency, recency-driven geometric warping and a displacement control for next-open five-session residual returns.",
+      "metrics": [
+        {
+          "comparability_group": "experiment:earnings_geometry_paper_replay_v1_20261117",
+          "definition": "Compounded26-basket strategy return after25 bps round trips.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate",
+            "geometry_cohort_provenance"
+          ],
+          "label": "raw xyz net return",
+          "scope": "126 decision sessions,2025-11-17–2026-05-19;36 targets;26 nonoverlapping five-session baskets; 25 bps full round trip each cycle.",
+          "unit": "%",
+          "value": 0.8479412336057202
+        },
+        {
+          "comparability_group": "experiment:earnings_geometry_paper_replay_v1_20261117",
+          "definition": "Compounded26-basket strategy return after25 bps round trips.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate",
+            "geometry_cohort_provenance"
+          ],
+          "label": "raw xyz recency net return",
+          "scope": "126 decision sessions,2025-11-17–2026-05-19;36 targets;26 nonoverlapping five-session baskets; 25 bps full round trip each cycle.",
+          "unit": "%",
+          "value": 5.9323067511469985
+        },
+        {
+          "comparability_group": "experiment:earnings_geometry_paper_replay_v1_20261117",
+          "definition": "Compounded26-basket strategy return after25 bps round trips.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate",
+            "geometry_cohort_provenance"
+          ],
+          "label": "warped xyz recency net return",
+          "scope": "126 decision sessions,2025-11-17–2026-05-19;36 targets;26 nonoverlapping five-session baskets; 25 bps full round trip each cycle.",
+          "unit": "%",
+          "value": 5.5721873284052315
+        },
+        {
+          "comparability_group": "experiment:earnings_geometry_paper_replay_v1_20261117",
+          "definition": "Compounded26-basket strategy return after25 bps round trips.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate",
+            "geometry_cohort_provenance"
+          ],
+          "label": "raw xyz displacement net return",
+          "scope": "126 decision sessions,2025-11-17–2026-05-19;36 targets;26 nonoverlapping five-session baskets; 25 bps full round trip each cycle.",
+          "unit": "%",
+          "value": 3.9593106495391384
+        },
+        {
+          "comparability_group": "experiment:earnings_geometry_paper_replay_v1_20261117",
+          "definition": "Paired net compounded return difference inside this same replay.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate",
+            "geometry_cohort_provenance"
+          ],
+          "label": "Warp minus plain recency",
+          "scope": "126 decision sessions,2025-11-17–2026-05-19;36 targets;26 nonoverlapping five-session baskets; 25 bps full round trip each cycle.",
+          "unit": "percentage points",
+          "value": -0.360119422741767
+        }
+      ],
+      "model_promoted": false,
+      "positive_finding": "Plain recency had a higher saved point estimate than plain XYZ within this replay. Warping did not improve on recency.",
+      "positive_finding_type": "within_replay_point_estimate_only",
+      "question_title": "Does earnings recency improve the map?",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "completed_experiments",
+          "design_signature": "earnings-geometry-paper-replay-v1:fixed36:h5-next-open:ridge10:raw-recency-warp-displacement:6x21-expanding:purge6:cost25-top5:asof-sec:consumed-holdout-excluded",
+          "index": 3,
+          "source_pointer": "/completed_experiments/3",
+          "status": "completed_reviewed_exploratory_no_promotion"
+        }
+      ],
+      "reviewed_verdict": "No incremental warp benefit established over plain recency; all mean daily rank ICs negative.",
+      "scope": {
+        "costs": {
+          "benchmarkCosts": "Gross benchmark, unlike the later same-cost local-motion test.",
+          "primaryRoundTripBps": 25
+        },
+        "counts": {
+          "baskets": 26,
+          "decisionSessions": 126,
+          "rows": 4536,
+          "tickers": 36
+        },
+        "date_windows": {
+          "lastExit": "2026-05-28",
+          "testEnd": "2026-05-19",
+          "testStart": "2025-11-17",
+          "trainingStart": "2025-10-03"
+        }
+      },
+      "what_failed_or_limits": [
+        "All mean daily rank ICs were negative; no incremental warp benefit was established.",
+        "The saved equal-weight gross comparison is not a same-cost benchmark. Familiar fixed-36 cohort, dependent folds and survivor-selected source limit the result.",
+        "Survivor-selected familiar36-stock cohort.",
+        "Previously inspected historical dates, exploratory.",
+        "Variable geometry is a hypothesis, not causal stock influence."
+      ],
+      "what_it_predicts": "Five-session realized return minus the matched same-date mean."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Fixed geometry, causal peer features, train-only scaling and matched-cost controls"
+        ],
+        "status": "failed"
+      },
+      "baseline": "Own-history, global-flow and shuffled-local controls; matched36 equal weight rebalanced on identical basket dates at the SAME costs.",
+      "canonical_id": "fixed_geometry_local_alignment_v1_20261119",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "fixed-geometry-local-alignment-v1:2597source-aliasexcluded:36targets:own23+global5+local5+peer-shuffle:prior5d-gaussian07-eps001:ridge10:6x21-expand-purge6:h5-nextopen:top5-cost25:seed20261119:no-consumed-holdout:peer-q075-1333-lookback65:self-free-shuffle"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate",
+        "geometry_cohort_provenance",
+        "local_result"
+      ],
+      "family_id": "local-motion",
+      "family_title": "Local geometric movement",
+      "friendly_title": "Neighborhood Motion Ridge",
+      "has_positive_finding": false,
+      "inputs_and_method": "Fixed ridge compares own-history features with market-wide motion, nearby Gaussian-weighted motion and shuffled nearby motion in the fixed 3D space.",
+      "metrics": [
+        {
+          "comparability_group": "experiment:fixed_geometry_local_alignment_v1_20261119",
+          "definition": "Compounded26-basket paper return after25 bps per full round trip.",
+          "evidence_ids": [
+            "local_result"
+          ],
+          "label": "own history net return",
+          "scope": "126 decision sessions,2025-11-17–2026-05-19;36 targets;26 nonoverlapping five-session baskets; 25 bps full round trip each cycle.",
+          "unit": "%",
+          "value": 2.517848183764615
+        },
+        {
+          "comparability_group": "experiment:fixed_geometry_local_alignment_v1_20261119",
+          "definition": "Compounded26-basket paper return after25 bps per full round trip.",
+          "evidence_ids": [
+            "local_result"
+          ],
+          "label": "global motion net return",
+          "scope": "126 decision sessions,2025-11-17–2026-05-19;36 targets;26 nonoverlapping five-session baskets; 25 bps full round trip each cycle.",
+          "unit": "%",
+          "value": -3.7004577746317158
+        },
+        {
+          "comparability_group": "experiment:fixed_geometry_local_alignment_v1_20261119",
+          "definition": "Compounded26-basket paper return after25 bps per full round trip.",
+          "evidence_ids": [
+            "local_result"
+          ],
+          "label": "local motion net return",
+          "scope": "126 decision sessions,2025-11-17–2026-05-19;36 targets;26 nonoverlapping five-session baskets; 25 bps full round trip each cycle.",
+          "unit": "%",
+          "value": -2.662496083359711
+        },
+        {
+          "comparability_group": "experiment:fixed_geometry_local_alignment_v1_20261119",
+          "definition": "Compounded26-basket paper return after25 bps per full round trip.",
+          "evidence_ids": [
+            "local_result"
+          ],
+          "label": "shuffled local motion net return",
+          "scope": "126 decision sessions,2025-11-17–2026-05-19;36 targets;26 nonoverlapping five-session baskets; 25 bps full round trip each cycle.",
+          "unit": "%",
+          "value": -1.2234719988650777
+        },
+        {
+          "comparability_group": "experiment:fixed_geometry_local_alignment_v1_20261119",
+          "definition": "Equal-weight matched36, rebalanced on identical five-session basket dates, charged the same costs. Not buy-and-hold.",
+          "evidence_ids": [
+            "local_result"
+          ],
+          "label": "Same-cost36-stock benchmark",
+          "scope": "126 decision sessions,2025-11-17–2026-05-19;36 targets;26 nonoverlapping five-session baskets; 25 bps full round trip each cycle.",
+          "unit": "%",
+          "value": 10.852392899410045
+        },
+        {
+          "comparability_group": "experiment:fixed_geometry_local_alignment_v1_20261119",
+          "definition": "Mean same-date Spearman correlation between forecasts and realized relative returns.",
+          "evidence_ids": [
+            "local_result"
+          ],
+          "label": "Local daily rank IC",
+          "scope": "126 decision sessions,2025-11-17–2026-05-19;36 targets;26 nonoverlapping five-session baskets; 25 bps full round trip each cycle.",
+          "unit": "correlation",
+          "value": -0.04016874016874017
+        }
+      ],
+      "model_promoted": false,
+      "positive_finding": "No useful incremental local-geometric prediction was established. The own-history arm was positive in absolute return, but also trailed the same-cost benchmark.",
+      "positive_finding_type": "no_confirmed_positive_result",
+      "question_title": "Do nearby stocks help predict a stock's next move?",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "completed_experiments",
+          "design_signature": "fixed-geometry-local-alignment-v1:2597source-aliasexcluded:36targets:own23+global5+local5+peer-shuffle:prior5d-gaussian07-eps001:ridge10:6x21-expand-purge6:h5-nextopen:top5-cost25:seed20261119:no-consumed-holdout:peer-q075-1333-lookback65:self-free-shuffle",
+          "index": 2,
+          "source_pointer": "/completed_experiments/2",
+          "status": "completed_reviewed_exploratory_no_promotion"
+        }
+      ],
+      "reviewed_verdict": "No useful incremental geometric prediction established in this fixed exploratory specification; no promotion or retuning.",
+      "scope": {
+        "costs": {
+          "execution": "Raw next-open proxies with observed splits/cash distributions; full exit/re-entry each cycle.",
+          "primaryRoundTripBps": 25,
+          "sensitivityBps": [
+            10,
+            50
+          ]
+        },
+        "counts": {
+          "baskets": 26,
+          "decisionSessions": 126,
+          "fits": 24,
+          "testRows": 4536,
+          "tickers": 36
+        },
+        "date_windows": {
+          "decision_sessions": 126,
+          "first_decision": "2025-11-17",
+          "last_decision": "2026-05-19",
+          "last_exit": "2026-05-28",
+          "model_fits": 24,
+          "outcome_tickers": 36,
+          "prediction_rows": 4536,
+          "scaler_fits": 24
+        }
+      },
+      "what_failed_or_limits": [
+        "All four strategies trailed the same-cost 36-stock reference in this specification. Local rank IC was negative.",
+        "Only 36 familiar outcome stocks and 126 test dates; conservative peer discontinuity quarantine does not certify adjustment quality.",
+        "The uncertainty interval permits a range of effects; this does not prove every possible geometric model fails.",
+        "Survivor-selected chart universe",
+        "36 familiar outcome-qualified tickers",
+        "Graph proximity is measured feature similarity, not proof of causal influence",
+        "Only five-session movement and target are tested",
+        "Static display formulas can compress distinct raw states",
+        "Historical development results remain exploratory",
+        "Peer corporate-action adjustment is not certified. A fixed discontinuity quarantine reduces large split-like artifacts but misses smaller splits/dividends and may censor genuine large moves.",
+        "One fixed permutation is a pipeline placebo, not robust evidence across random relabelings.",
+        "Own XYZ velocities are redundant linear combinations of feature changes; ridge coefficients are descriptive, not causal importance."
+      ],
+      "what_it_predicts": "Next-open five-session return minus matched same-date36-stock mean."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Pinned-source reconciliation and transparent post-hoc reporting"
+        ],
+        "status": "diagnostic_only"
+      },
+      "baseline": "Original matched 36-stock equal-weight basket on the identical schedule, both charged 25 bps round trip.",
+      "canonical_id": "fixed_geometry_saved_cohort_conditions_diagnostic_v1_20261122",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "fixed-geometry-saved-cohort-conditions-v1:local-only:26original5sessionbaskets:realized-gross36-lte-minus001-gte-plus001:means-net25bps+paired-spread+strict-win-ties:posthoc:no-refit-no-new-portfolios-no-prices-no-retune-no-consumed-holdout"
+      ],
+      "evidence_ids": [
+        "cohort_conditions_design",
+        "cohort_conditions_result",
+        "gate",
+        "geometry_cohort_provenance"
+      ],
+      "family_id": "local-motion",
+      "family_title": "Local geometric movement",
+      "friendly_title": "Regime Breakdown Audit",
+      "has_positive_finding": false,
+      "inputs_and_method": "Descriptive accounting of the original 26 local-motion baskets, grouped after outcomes by the matched 36-stock gross return; frozen boundaries at -1% and +1%.",
+      "metrics": [
+        {
+          "comparability_group": "experiment:fixed_geometry_saved_cohort_conditions_diagnostic_v1_20261122",
+          "definition": "Arithmetic mean of original basket net spreads; not a conditional strategy return.",
+          "evidence_ids": [
+            "cohort_conditions_result"
+          ],
+          "label": "falling mean local minus same-cost reference",
+          "scope": "Post-hoc realized-cohort group: falling",
+          "unit": "percentage points",
+          "value": -1.1664174723518923
+        },
+        {
+          "comparability_group": "experiment:fixed_geometry_saved_cohort_conditions_diagnostic_v1_20261122",
+          "definition": "Arithmetic mean of original basket net spreads; not a conditional strategy return.",
+          "evidence_ids": [
+            "cohort_conditions_result"
+          ],
+          "label": "sideways mean local minus same-cost reference",
+          "scope": "Post-hoc realized-cohort group: sideways",
+          "unit": "percentage points",
+          "value": -0.24886105224943636
+        },
+        {
+          "comparability_group": "experiment:fixed_geometry_saved_cohort_conditions_diagnostic_v1_20261122",
+          "definition": "Arithmetic mean of original basket net spreads; not a conditional strategy return.",
+          "evidence_ids": [
+            "cohort_conditions_result"
+          ],
+          "label": "rising mean local minus same-cost reference",
+          "scope": "Post-hoc realized-cohort group: rising",
+          "unit": "percentage points",
+          "value": -0.6668141885147152
+        }
+      ],
+      "model_promoted": false,
+      "positive_finding": "The accounting identifies where the saved model underperformed without rerunning it. It does not create an entry signal.",
+      "positive_finding_type": "no_confirmed_positive_result",
+      "question_title": "Did local motion work in rising or falling baskets?",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "completed_experiments",
+          "design_signature": "fixed-geometry-saved-cohort-conditions-v1:local-only:26original5sessionbaskets:realized-gross36-lte-minus001-gte-plus001:means-net25bps+paired-spread+strict-win-ties:posthoc:no-refit-no-new-portfolios-no-prices-no-retune-no-consumed-holdout",
+          "index": 0,
+          "source_pointer": "/completed_experiments/0",
+          "status": "completed_reviewed_posthoc_diagnostic_only_no_promotion"
+        }
+      ],
+      "reviewed_verdict": "No promotion or corrective regime policy. Conditional results must not be used to tune or invert the failed model on these dates.",
+      "scope": {
+        "costs": {
+          "roundtripCostBps": 25
+        },
+        "counts": {
+          "conditionBasketCounts": {
+            "falling": 3,
+            "rising": 8,
+            "sideways": 15
+          },
+          "originalBaskets": 26,
+          "outcomeStocks": 36
+        },
+        "date_windows": {
+          "firstDecision": "2025-11-17",
+          "lastDecision": "2026-05-19",
+          "lastExit": "2026-05-28"
+        }
+      },
+      "what_failed_or_limits": [
+        "Local motion trailed the same-cost reference in falling, sideways and rising groups, containing only 3, 15 and 8 baskets.",
+        "Groups are defined by realized outcomes, not information available at decision time. No regime filter, inversion or corrective policy is established.",
+        "36 familiar convenience stocks in a survivor-selected archive; no whole-market or bear-market certification.",
+        "Only 26 original dependent baskets; condition labels are known after outcomes.",
+        "Schedule checks trust pinned saved next-open/five-session declarations; no price or separate market-calendar input is used."
+      ],
+      "what_it_predicts": "Post-hoc accounting of original local-model baskets; not prediction."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Saved-forecast reconstruction, selection attribution and coefficient-stability inspection"
+        ],
+        "status": "diagnostic_only"
+      },
+      "baseline": "The same saved local selections and matched cost-aware benchmark.",
+      "canonical_id": "fixed_geometry_selection_weight_diagnostic_v1_20261120",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "fixed-geometry-selection-weight-diagnostic-v1:saved-only:4arms-local-primary:26baskets:activeweight4way-symmetricwealth:worst-lower-median-best:6folds-commonreference25train:blockcontributions:forecast-reconcile:no-refit-no-retune-no-policy:no-consumed-holdout"
+      ],
+      "evidence_ids": [
+        "diagnostic_result",
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "local-motion",
+      "family_title": "Local geometric movement",
+      "friendly_title": "Selection and Weight Audit",
+      "has_positive_finding": false,
+      "inputs_and_method": "Reconstruct saved forecasts and account for four-arm selections, original basket spreads and six frozen coefficient sets; no fitting or new portfolios.",
+      "metrics": [
+        {
+          "comparability_group": "experiment:fixed_geometry_selection_weight_diagnostic_v1_20261120",
+          "definition": "Difference between compounded net local baskets and compounded same-cost matched benchmark.",
+          "evidence_ids": [
+            "diagnostic_result"
+          ],
+          "label": "Local minus same-cost benchmark",
+          "scope": "126 decision sessions,2025-11-17–2026-05-19;36 targets;26 nonoverlapping five-session baskets; 25 bps full round trip each cycle.",
+          "unit": "percentage points",
+          "value": -13.514888982769769
+        }
+      ],
+      "model_promoted": false,
+      "positive_finding": "The saved predictions and accounting reconciled, supporting an auditable implementation rather than a predictive edge.",
+      "positive_finding_type": "no_confirmed_positive_result",
+      "question_title": "Why did the saved geometric selections lose?",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "completed_experiments",
+          "design_signature": "fixed-geometry-selection-weight-diagnostic-v1:saved-only:4arms-local-primary:26baskets:activeweight4way-symmetricwealth:worst-lower-median-best:6folds-commonreference25train:blockcontributions:forecast-reconcile:no-refit-no-retune-no-policy:no-consumed-holdout",
+          "index": 1,
+          "source_pointer": "/completed_experiments/1",
+          "status": "completed_reviewed_diagnostic_only_no_promotion"
+        }
+      ],
+      "reviewed_verdict": "Original failed model remains frozen without promotion. Do not change weights, invert rankings, remove historically missed tickers, or tune on these dates based on this inspection.",
+      "scope": {
+        "costs": {
+          "roundTripBps": 25
+        },
+        "counts": {
+          "baskets": 26,
+          "forecastsReconstructed": 18144,
+          "newFits": 0,
+          "savedModelBlocks": 6
+        },
+        "date_windows": {
+          "decision_sessions": 126,
+          "first_decision": "2025-11-17",
+          "last_decision": "2026-05-19",
+          "last_exit": "2026-05-28",
+          "model_fits": 24,
+          "outcome_tickers": 36,
+          "prediction_rows": 4536,
+          "scaler_fits": 24
+        }
+      },
+      "what_failed_or_limits": [
+        "The local model still lost to its same-cost benchmark. Hindsight selection buckets do not establish why it failed or identify feasible replacement picks.",
+        "Weight changes neither prove overfitting nor supply corrected weights.",
+        "Hindsight accounting does not explain causality or prove overfitting.",
+        "No alternative picks, corrections, weights or portfolios are proposed."
+      ],
+      "what_it_predicts": "Accounting and saved-model stability; no new predictive experiment."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Scenario definitions and simple-control comparisons"
+        ],
+        "status": "diagnostic_only"
+      },
+      "baseline": "Ridge, random and eligible universe controls as named by the saved registry.",
+      "canonical_id": "graph_scenario_32683358084",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "graph-scenario-v1:h5,h20,h60:ann+ridge+random+universe:blind-paper"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "similarity",
+      "family_title": "Neighbors and similarity graphs",
+      "friendly_title": "Graph Scenario Baselines",
+      "has_positive_finding": false,
+      "inputs_and_method": "Early graph ANN and ridge paper scenarios with random and eligible-universe controls at 5/20/60-session horizons.",
+      "metrics": [],
+      "model_promoted": false,
+      "positive_finding": "The reusable result is scenario/control machinery; no reliable graph ANN classification is established by the reviewed registry summary.",
+      "positive_finding_type": "no_confirmed_positive_result",
+      "question_title": "Early graph ANN versus simple paper controls",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "completed_experiments",
+          "design_signature": "graph-scenario-v1:h5,h20,h60:ann+ridge+random+universe:blind-paper",
+          "index": 10,
+          "source_pointer": "/completed_experiments/10",
+          "status": "completed"
+        }
+      ],
+      "reviewed_verdict": "No reliable graph ANN classification established; exploratory paper scenario machinery retained.",
+      "scope": {
+        "costs": {
+          "basis": "Not restated in local compact reviewed entry."
+        },
+        "counts": {
+          "exactCounts": "Not preserved in local compact reviewed entry."
+        },
+        "date_windows": {
+          "endBefore": "2026-05-29",
+          "exactWindows": "Not preserved in the local registry summary."
+        }
+      },
+      "what_failed_or_limits": [
+        "Original numeric output is not available in this local review. Do not invent a score or infer that blind-paper wording proves independent confirmation.",
+        "Original result directory is unavailable locally; numeric performance is intentionally not invented."
+      ],
+      "what_it_predicts": "Early5/20/60-session graph ANN/ridge/random/universe scenarios."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Train-fitted clustering, graph ablations, blocked uncertainty and label-placebo controls"
+        ],
+        "status": "failed"
+      },
+      "baseline": "Base-only versus crowding, regime and surviving graph block; linear/tanh models and within-date label placebos.",
+      "canonical_id": "graph_signal_confirmatory_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "graph-signal-confirmatory-v1:h5:history400:trainfit-kmeans24:crowding+regime-residence+cluster-switch:elastic+ridge+tanh:6walkforward:date-block-bootstrap:label-placebo:holdout60"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "similarity",
+      "family_title": "Neighbors and similarity graphs",
+      "friendly_title": "Crowding Elastic and ANN",
+      "has_positive_finding": false,
+      "inputs_and_method": "Training-fitted clusters supply crowding, regime residence and cluster-switch features to elastic/ridge/tanh controls over six walk-forward splits.",
+      "metrics": [
+        {
+          "comparability_group": "experiment:graph_signal_confirmatory_v1",
+          "definition": "Mean AUC of the recorded best narrow feature/model configuration.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "Reported elastic+crowding AUC",
+          "scope": "395 dates,922 tickers,6chronological splits; five-session target.",
+          "unit": "AUC",
+          "value": 0.502383294571143
+        },
+        {
+          "comparability_group": "experiment:graph_signal_confirmatory_v1",
+          "definition": "Saved placebo AUC in this same confirmation.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "Within-date label-placebo AUC",
+          "scope": "Same source panel; not a separate independently sampled market.",
+          "unit": "AUC",
+          "value": 0.49617432232739606
+        }
+      ],
+      "model_promoted": false,
+      "positive_finding": "A narrow crowding point estimate was recorded, but no robust incremental graph edge passed the reviewed gates.",
+      "positive_finding_type": "no_confirmed_positive_result",
+      "question_title": "Do crowding and graph regimes beat plain features?",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "completed_experiments",
+          "design_signature": "graph-signal-confirmatory-v1:h5:history400:trainfit-kmeans24:crowding+regime-residence+cluster-switch:elastic+ridge+tanh:6walkforward:date-block-bootstrap:label-placebo:holdout60",
+          "index": 15,
+          "source_pointer": "/completed_experiments/15",
+          "status": "completed_reviewed_not_promoted"
+        },
+        {
+          "bucket": "next_experiments",
+          "design_signature": "graph-signal-confirmatory-v1:h5:history400:trainfit-kmeans24:crowding+regime-residence+cluster-switch:elastic+ridge+tanh:6walkforward:date-block-bootstrap:label-placebo:holdout60",
+          "index": 11,
+          "source_pointer": "/next_experiments/11",
+          "status": "completed_reviewed_not_promoted"
+        }
+      ],
+      "reviewed_verdict": "No promotion: narrow crowding gain was weak, full graph delta crossed zero, and mean ANN AUCs were below chance.",
+      "scope": {
+        "costs": {
+          "configuredTransactionCostBps": 10,
+          "rebalanceSessions": 5
+        },
+        "counts": {
+          "dates": 395,
+          "rows": 237000,
+          "splits": 6,
+          "tickers": 922
+        },
+        "date_windows": {
+          "evaluationExactStart": "Not restated in compact manifest.",
+          "panelEnd": "2026-05-28",
+          "panelStart": "2024-10-22"
+        }
+      },
+      "what_failed_or_limits": [
+        "Best reported AUC was about 0.5024; graph intervals crossed zero and mean ANN AUCs were below chance.",
+        "Do not select a winner from weak incompatible metrics or rerun the completed confirmation.",
+        "Do not compare its AUC directly with residual top-decile ANN AUC.",
+        "Cluster similarity is feature similarity, not causal influence."
+      ],
+      "what_it_predicts": "Five-session direction/ranking on a causal raw panel with training-fitted graph clusters."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Causal feature materialization and panel checks"
+        ],
+        "status": "reusable_software"
+      },
+      "baseline": "Earlier90-date panel.",
+      "canonical_id": "graph_signal_history400_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "graph-signal-history400-v1:raw-causal-features:top600:preholdout-only"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "similarity",
+      "family_title": "Neighbors and similarity graphs",
+      "friendly_title": "Causal Graph Panel Builder",
+      "has_positive_finding": true,
+      "inputs_and_method": "Construct raw past-only graph features for the registered 400-date historical panel; data preparation, not a forecast model.",
+      "metrics": [],
+      "model_promoted": false,
+      "positive_finding": "The reviewed stage produced 240,000 rows over 400 dates and 926 labels, enabling the subsequent frozen graph comparison.",
+      "positive_finding_type": "completed_software_or_data",
+      "question_title": "Build a causal 400-day graph feature panel",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "completed_experiments",
+          "design_signature": "graph-signal-history400-v1:raw-causal-features:top600:preholdout-only",
+          "index": 14,
+          "source_pointer": "/completed_experiments/14",
+          "status": "completed_reviewed"
+        },
+        {
+          "bucket": "next_experiments",
+          "design_signature": "graph-signal-history400-v1:raw-causal-features:top600:preholdout-only",
+          "index": 10,
+          "source_pointer": "/next_experiments/10",
+          "status": "completed_reviewed"
+        }
+      ],
+      "reviewed_verdict": "Reusable400-date pre-cutoff feature panel completed; this does not certify historical membership.",
+      "scope": {
+        "costs": {
+          "applicable": false
+        },
+        "counts": {
+          "dates": 400,
+          "rows": 240000,
+          "tickers": 926
+        },
+        "date_windows": {
+          "end": "2026-05-28",
+          "start": "2024-10-22"
+        }
+      },
+      "what_failed_or_limits": [
+        "Coverage counts are not prediction performance or certification of survivorship-free membership.",
+        "Coverage is not predictive performance.",
+        "Source survivor-selection remains."
+      ],
+      "what_it_predicts": "Causal raw feature-panel coverage, not a skill score."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Group-bootstrap risk-control hypothesis, chronological controls and exposure reporting"
+        ],
+        "status": "exploratory_signal"
+      },
+      "baseline": "ANN, logistic, ANN+downside, ANN+downside/group bootstrap and direct-pattern score.",
+      "canonical_id": "market_pattern_group_generalization_walk_forward_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "market-pattern-group-generalization-walk-forward-v1:h5:source-top1000:rank7+marketstate3:identity-free:5x50d:purge5:logit+relu48x24+downside+groupmc500:volxmom9:top5:cost25:preholdout-only:no-consumed-holdout:no-retune"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "risk-gates",
+      "family_title": "Downside and group risk gates",
+      "friendly_title": "Group Scenario Gate",
+      "has_positive_finding": true,
+      "inputs_and_method": "Identity-free return/risk/activity ranks and market-state features; ANN, logistic and downside/group-bootstrap gates over five chronological folds.",
+      "metrics": [
+        {
+          "comparability_group": "experiment:market_pattern_group_generalization_walk_forward_v1",
+          "definition": "Saved within-experiment aggregate; cash exposure changes the economic interpretation.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "ANN target AUC",
+          "scope": "250 pre-cutoff dates,5 folds; historical validation not blind.",
+          "unit": "AUC",
+          "value": 0.689853
+        },
+        {
+          "comparability_group": "experiment:market_pattern_group_generalization_walk_forward_v1",
+          "definition": "Saved within-experiment aggregate; cash exposure changes the economic interpretation.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "Logistic target AUC",
+          "scope": "250 pre-cutoff dates,5 folds; historical validation not blind.",
+          "unit": "AUC",
+          "value": 0.706831
+        },
+        {
+          "comparability_group": "experiment:market_pattern_group_generalization_walk_forward_v1",
+          "definition": "Saved within-experiment aggregate; cash exposure changes the economic interpretation.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "ANN worst-fold drawdown",
+          "scope": "250 pre-cutoff dates,5 folds; historical validation not blind.",
+          "unit": "%",
+          "value": -31.6645
+        },
+        {
+          "comparability_group": "experiment:market_pattern_group_generalization_walk_forward_v1",
+          "definition": "Saved within-experiment aggregate; cash exposure changes the economic interpretation.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "Group-MC worst-fold drawdown",
+          "scope": "250 pre-cutoff dates,5 folds; historical validation not blind.",
+          "unit": "%",
+          "value": -4.5981000000000005
+        },
+        {
+          "comparability_group": "experiment:market_pattern_group_generalization_walk_forward_v1",
+          "definition": "Saved within-experiment aggregate; cash exposure changes the economic interpretation.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "Group-MC mean cash allocation",
+          "scope": "250 pre-cutoff dates,5 folds; historical validation not blind.",
+          "unit": "%",
+          "value": 73.68
+        },
+        {
+          "comparability_group": "experiment:market_pattern_group_generalization_walk_forward_v1",
+          "definition": "Saved within-experiment aggregate; cash exposure changes the economic interpretation.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "Group-MC mean five-day net excess",
+          "scope": "250 pre-cutoff dates,5 folds; historical validation not blind.",
+          "unit": "%",
+          "value": -0.29819999999999997
+        }
+      ],
+      "model_promoted": false,
+      "positive_finding": "Within this saved validation, the group-MC gate reduced worst-fold drawdown from the ANN's 31.66% loss to 4.60%.",
+      "positive_finding_type": "exploratory_risk_exposure",
+      "question_title": "Can group risk gates reduce losses?",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "completed_experiments",
+          "design_signature": "market-pattern-group-generalization-walk-forward-v1:h5:source-top1000:rank7+marketstate3:identity-free:5x50d:purge5:logit+relu48x24+downside+groupmc500:volxmom9:top5:cost25:preholdout-only:no-consumed-holdout:no-retune",
+          "index": 6,
+          "source_pointer": "/completed_experiments/6",
+          "status": "complete_reviewed_historical_validation_no_promotion"
+        },
+        {
+          "bucket": "next_experiments",
+          "design_signature": "market-pattern-group-generalization-walk-forward-v1:h5:source-top1000:rank7+marketstate3:identity-free:5x50d:purge5:logit+relu48x24+downside+groupmc500:volxmom9:top5:cost25:preholdout-only:no-consumed-holdout:no-retune",
+          "index": 0,
+          "source_pointer": "/next_experiments/0",
+          "status": "complete_reviewed_historical_validation_no_promotion"
+        }
+      ],
+      "reviewed_verdict": "No promotion. Retain the group bootstrap only as a frozen risk-control hypothesis for genuinely future data; reject the direct score and do not tune thresholds on this historical validation.",
+      "scope": {
+        "costs": {
+          "configuredCostBps": 25,
+          "economicSampling": "Every fifth decision for nonoverlapping totals; mean_nonoverlap_total_return is mean fold return, not one full-period compound."
+        },
+        "counts": {
+          "folds": 5,
+          "patternGroups": 9,
+          "testDatesPerFold": 50,
+          "tradingDates": 250
+        },
+        "date_windows": {
+          "end": "2026-05-20",
+          "pattern_groups": 9,
+          "purge_dates": 5,
+          "start": "2025-05-21",
+          "test_dates_per_fold": 50,
+          "trading_dates": 250,
+          "walk_forward_folds": 5
+        }
+      },
+      "what_failed_or_limits": [
+        "The gate held about 73.68% cash on average and mean five-session net excess was negative. Smaller drawdown partly reflects much less exposure.",
+        "Target AUC is not a probability that a trade profits. No promotion or threshold retuning.",
+        "The evaluation year influenced prior research choices and is not genuinely blind.",
+        "Historical security-master and delisting coverage remain incompletely certified.",
+        "Five-day labels overlap; economic totals use every fifth decision date.",
+        "No result authorizes live trading."
+      ],
+      "what_it_predicts": "Five-session cross-sectional ranking and downside-aware paper policies using identity-free rank/market-state features."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Streaming merge, warmup preservation and bounded-date data plumbing"
+        ],
+        "status": "reusable_software"
+      },
+      "baseline": "Source archive plus observed membership/warmup preservation.",
+      "canonical_id": "materialized_eligible_prices_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "materialized-eligible-prices-v1:researchprices+membership:streaming-merge:warmup-preserved:preholdout2026-05-29"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "data-foundation",
+      "family_title": "Data qualification and Architecture v3",
+      "friendly_title": "Eligible Price Table Builder",
+      "has_positive_finding": true,
+      "inputs_and_method": "Stream-merge existing research prices and eligibility records, retaining warmup and the pre-holdout boundary; no fitting.",
+      "metrics": [],
+      "model_promoted": false,
+      "positive_finding": "The engineering stage completed and can support auditable data handling.",
+      "positive_finding_type": "completed_software_or_data",
+      "question_title": "Materialize the eligible research price table",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "completed_experiments",
+          "design_signature": "materialized-eligible-prices-v1:researchprices+membership:streaming-merge:warmup-preserved:preholdout2026-05-29",
+          "index": 19,
+          "source_pointer": "/completed_experiments/19",
+          "status": "completed_reviewed"
+        }
+      ],
+      "reviewed_verdict": "The immutable staged price database is complete and safe for bounded pre-holdout loader validation; it does not resolve historical security-master or survivorship concerns.",
+      "scope": {
+        "costs": {
+          "applicable": false
+        },
+        "counts": {
+          "eligible_rows": 2951410,
+          "rows_materialized": 3104633,
+          "tickers": 2597,
+          "warmup_or_ineligible_rows": 153223
+        },
+        "date_windows": {
+          "end": "2026-05-28",
+          "start": "2021-08-23"
+        }
+      },
+      "what_failed_or_limits": [
+        "An eligibility table does not certify historical identity, membership, listing history or terminal returns.",
+        "Observed eligibility does not certify historical membership or delisted exits."
+      ],
+      "what_it_predicts": "Safe staged row/eligibility coverage, not a prediction."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Historical audit record only"
+        ],
+        "status": "diagnostic_only"
+      },
+      "baseline": "Not eligible for a new comparison.",
+      "canonical_id": "one_time_sealed_holdout_evaluation_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "one-time-sealed-holdout-evaluation-v1:h5:source-ann-primary+additive-ann-mature180-cap10:relu48x24:platt20:purge5:top50:cost10-25-50:holdout20260529-20260824:locked-before-labels"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "confirmation",
+      "family_title": "Archived evaluation and future locks",
+      "friendly_title": "Consumed Holdout Audit",
+      "has_positive_finding": false,
+      "inputs_and_method": "The previously locked one-time evaluation of primary and additive ANN policies on 2026-05-29 through 2026-08-24.",
+      "metrics": [],
+      "model_promoted": false,
+      "positive_finding": "The historical verdict is preserved: neither model was promoted.",
+      "positive_finding_type": "no_confirmed_positive_result",
+      "question_title": "The one consumed holdout evaluation",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "completed_experiments",
+          "design_signature": null,
+          "index": 20,
+          "source_pointer": "/completed_experiments/20",
+          "status": "complete_post_lock_recovery"
+        },
+        {
+          "bucket": "next_experiments",
+          "design_signature": "one-time-sealed-holdout-evaluation-v1:h5:source-ann-primary+additive-ann-mature180-cap10:relu48x24:platt20:purge5:top50:cost10-25-50:holdout20260529-20260824:locked-before-labels",
+          "index": 6,
+          "source_pointer": "/next_experiments/6",
+          "status": "completed_no_promotion"
+        }
+      ],
+      "reviewed_verdict": "The recorded frozen evaluation promoted no model. Consumed dates may never be reused for selection, confirmation or tuning.",
+      "scope": {
+        "costs": {
+          "status": "Cost basis not restated in the available local reviewed summary."
+        },
+        "counts": {
+          "status": "Exact independent date/ticker counts not preserved in the available local reviewed summary."
+        },
+        "date_windows": {
+          "archivedConsumedEnd": "2026-08-24",
+          "archivedConsumedStart": "2026-05-29"
+        }
+      },
+      "what_failed_or_limits": [
+        "Archive only. Consumed once; never reuse observations for training, tuning, feature selection, model comparison, confirmation or visualization-driven decisions.",
+        "No holdout numeric metrics are copied here or used to choose reusable candidates.",
+        "No holdout observations read, recomputed or chart-selected in this review.",
+        "Archived verdict is excluded from all new comparison groups."
+      ],
+      "what_it_predicts": "Archived one-time frozen evaluation; documentary verdict only."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Residual-target construction, maturity checks and panel materialization"
+        ],
+        "status": "reusable_software"
+      },
+      "baseline": "Original survivor-selected price source, causal features before universe filtering.",
+      "canonical_id": "point_in_time_residual_panel_5y_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "point-in-time-residual-panel-5y-v1:h5:1250d:top1000:loo-market:optional-pit-sector:holdout60"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "data-foundation",
+      "family_title": "Data qualification and Architecture v3",
+      "friendly_title": "Residual Label Panel Builder",
+      "has_positive_finding": true,
+      "inputs_and_method": "Materialize five-session leave-one-out-market residual labels and optional dated-sector adjustments on the existing archive.",
+      "metrics": [],
+      "model_promoted": false,
+      "positive_finding": "The data stage produced a long residual-label panel for later ANN comparisons.",
+      "positive_finding_type": "completed_software_or_data",
+      "question_title": "Build stock-specific residual return labels",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "next_experiments",
+          "design_signature": "point-in-time-residual-panel-5y-v1:h5:1250d:top1000:loo-market:optional-pit-sector:holdout60",
+          "index": 13,
+          "source_pointer": "/next_experiments/13",
+          "status": "completed_data_stage"
+        }
+      ],
+      "reviewed_verdict": "Large residual target panel built; sector neutralization correctly disabled without dated ownership.",
+      "scope": {
+        "costs": {
+          "applicable": false
+        },
+        "counts": {
+          "panel_dates": 1131,
+          "panel_rows": 1131000,
+          "panel_tickers": 1676,
+          "sector_target_rows": 0
+        },
+        "date_windows": {
+          "decisionEnd": "2026-05-20",
+          "decisionStart": "2021-11-16",
+          "lastOutcome": "2026-05-28"
+        }
+      },
+      "what_failed_or_limits": [
+        "The name does not certify historical membership or delisted exits. Dated sector ownership was absent, so no sector coverage was supplied.",
+        "Data volume and causal timing do not pass Architecture v3 historical lineage requirements.",
+        "Point-in-time feature timing is not the same as certified point-in-time security membership."
+      ],
+      "what_it_predicts": "Past-only residual target panel; not a certified historical security master."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Bounded entitlement/coverage probes and collision quarantine"
+        ],
+        "status": "failed"
+      },
+      "baseline": "Existing2597-label source archive.",
+      "canonical_id": "polygon_lineage_coverage_probe_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "polygon-lineage-coverage-probe-v1:3dates:grouped-daily+dated-tickers:source-comparison:preholdout-only:no-model"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "data-foundation",
+      "family_title": "Data qualification and Architecture v3",
+      "friendly_title": "Historical Access Probe",
+      "has_positive_finding": false,
+      "inputs_and_method": "Three anchor dates compare grouped daily bars and dated ticker references, with no model or bulk reconstruction.",
+      "metrics": [],
+      "model_promoted": false,
+      "positive_finding": "Recent access worked and explicitly exposed source gaps and normalization collisions.",
+      "positive_finding_type": "no_confirmed_positive_result",
+      "question_title": "Can the free provider supply the needed history?",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "next_experiments",
+          "design_signature": "polygon-lineage-coverage-probe-v1:3dates:grouped-daily+dated-tickers:source-comparison:preholdout-only:no-model",
+          "index": 18,
+          "source_pointer": "/next_experiments/18",
+          "status": "completed_recent_coverage_historical_entitlement_failed"
+        }
+      ],
+      "reviewed_verdict": "Recent ingestion works after ambiguous normalized-symbol collisions are quarantined, but the current plan cannot access 2021-08-23 or 2024-01-02. Do not bulk-backfill or fit Architecture v3.",
+      "scope": {
+        "costs": {
+          "applicable": false
+        },
+        "counts": {
+          "provider_bars_missing_from_source": 9742,
+          "quarantined_bar_case_collisions": 2,
+          "recent_ticker_snapshot_rows": 12663,
+          "recent_usable_daily_bars": 12284,
+          "source_tickers_missing_provider_bars": 55
+        },
+        "date_windows": {
+          "anchors": [
+            "2021-08-23",
+            "2024-01-02",
+            "2026-05-28"
+          ]
+        }
+      },
+      "what_failed_or_limits": [
+        "Early 2021 and middle 2024 requests returned 403. Recent coverage does not establish historical entitlement or lineage.",
+        "Do not repeat completed qualification requests, buy access or infer stable identities from ticker strings.",
+        "Recent requests worked; early and middle requests returned403.",
+        "No bulk qualification or model edge follows from recent access."
+      ],
+      "what_it_predicts": "Bounded early/middle/recent provider coverage and stable-identity qualification."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Documentary future-confirmation dependency"
+        ],
+        "status": "blocked/notrun"
+      },
+      "baseline": "Previously frozen reference/control policies, unchanged.",
+      "canonical_id": "prospective_post_holdout_shadow_confirmation_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "confirmation",
+      "family_title": "Archived evaluation and future locks",
+      "friendly_title": "Future Shadow Confirmation Plan",
+      "has_positive_finding": false,
+      "inputs_and_method": "Registry placeholder for frozen-policy forecasts locked before genuinely new outcomes; no newly measured result.",
+      "metrics": [],
+      "model_promoted": false,
+      "positive_finding": "Records the intention to obtain prospective evidence instead of reusing consumed dates.",
+      "positive_finding_type": "no_confirmed_positive_result",
+      "question_title": "Future-only shadow confirmation placeholder",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "next_experiments",
+          "design_signature": null,
+          "index": 21,
+          "source_pointer": "/next_experiments/21",
+          "status": null
+        }
+      ],
+      "reviewed_verdict": "A frozen/approved prospective plan is not proof of a continuous completed collection or mature confirmation. No interim outcome inspection performed.",
+      "scope": {
+        "costs": {
+          "configuredCostBps": "Check frozen policy specification."
+        },
+        "counts": {
+          "minimumNewTradingDates": 60,
+          "minimumNonoverlapFiveDayCohorts": 11
+        },
+        "date_windows": {
+          "eligibleAfterConsumedEnd": "2026-08-24",
+          "matureCurrentContinuity": "Not verified in this presentation audit."
+        }
+      },
+      "what_failed_or_limits": [
+        "No recorded status or signature in this entry; do not manufacture a completed or approved lifecycle.",
+        "Continuity, pre-outcome timing, frozen identity and mature 60-date/11-cohort evidence remain separate requirements.",
+        "Source records include dated readiness/lock assertions; current complete locked continuity is unverified.",
+        "Calendar dates arriving after the holdout are not automatically genuinely prospective evidence.",
+        "No forecast outcomes or protected interim labels read."
+      ],
+      "what_it_predicts": "Future timestamped forecasts under frozen policy; not a newly measured performance result."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Purged walk-forward controls, train-only processing and residual-target hypothesis"
+        ],
+        "status": "exploratory_signal"
+      },
+      "baseline": "Matched linear/logistic, random-top50 and equal-weight controls as specified; policy test uses the same saved ANN predictions.",
+      "canonical_id": "purged_walk_forward_residual_baselines_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "purged-walk-forward-residual-baselines-v1:h5:4x63d:purge5:top50:cost10:ridge-logit-mlprelu-mlptanh"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "residual-ann",
+      "family_title": "Predicting stock-specific returns",
+      "friendly_title": "Residual Return ANN Baselines",
+      "has_positive_finding": true,
+      "inputs_and_method": "Ridge/logistic and ReLU/tanh baselines use four 63-date chronological folds, a five-session purge and top-50 after-cost residual cohorts.",
+      "metrics": [
+        {
+          "comparability_group": "experiment:purged_walk_forward_residual_baselines_v1",
+          "definition": "Saved reviewed aggregate; compare only within this experiment.",
+          "evidence_ids": [
+            "gate"
+          ],
+          "label": "Tanh residual top-decile AUC",
+          "scope": "Exact source-defined sample/target; see experiment scope.",
+          "unit": "AUC",
+          "value": 0.695971
+        },
+        {
+          "comparability_group": "experiment:purged_walk_forward_residual_baselines_v1",
+          "definition": "Saved reviewed aggregate; compare only within this experiment.",
+          "evidence_ids": [
+            "gate"
+          ],
+          "label": "Tanh residual rank IC",
+          "scope": "Exact source-defined sample/target; see experiment scope.",
+          "unit": "correlation",
+          "value": 0.045713
+        },
+        {
+          "comparability_group": "experiment:purged_walk_forward_residual_baselines_v1",
+          "definition": "Saved reviewed aggregate; compare only within this experiment.",
+          "evidence_ids": [
+            "gate"
+          ],
+          "label": "Tanh mean five-day residual cohort return",
+          "scope": "Exact source-defined sample/target; see experiment scope.",
+          "unit": "%",
+          "value": 0.7674000000000001
+        },
+        {
+          "comparability_group": "experiment:purged_walk_forward_residual_baselines_v1",
+          "definition": "Saved reviewed aggregate; compare only within this experiment.",
+          "evidence_ids": [
+            "gate"
+          ],
+          "label": "ReLU residual top-decile AUC",
+          "scope": "Exact source-defined sample/target; see experiment scope.",
+          "unit": "AUC",
+          "value": 0.696352
+        }
+      ],
+      "model_promoted": false,
+      "positive_finding": "Saved development results were promising for residual TOP-DECILE ranking: tanh AUC 0.695971, rank IC 0.045713 and a positive mean five-session residual cohort return.",
+      "positive_finding_type": "exploratory_residual_ranking",
+      "question_title": "Residual-return ANN versus simple baselines",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "next_experiments",
+          "design_signature": "purged-walk-forward-residual-baselines-v1:h5:4x63d:purge5:top50:cost10:ridge-logit-mlprelu-mlptanh",
+          "index": 14,
+          "source_pointer": "/next_experiments/14",
+          "status": "completed_promising_not_promoted"
+        }
+      ],
+      "reviewed_verdict": "Promising development result versus the registered logistic control, not promoted; capital-sleeve/family confirmation was still required.",
+      "scope": {
+        "costs": {
+          "basis": "Turnover charged at a one-way rate; sleeve confirmation explicitly declares10bps one way.",
+          "configuredCostBps": 10
+        },
+        "counts": {
+          "activeSleeves": "Not yet capital-sleeve tested in this stage.",
+          "chronologicalSplits": 4,
+          "testDatesPerSplit": 63
+        },
+        "date_windows": {
+          "exactFirstTestDate": "Not emitted in local reviewed registry copy.",
+          "lastDecision": "2026-05-20",
+          "lastOutcome": "2026-05-28",
+          "splits": 4,
+          "testDatesPerSplit": 63
+        }
+      },
+      "what_failed_or_limits": [
+        "This is cross-sectional residual top-decile classification, not a 69.6% chance of a profitable trade or ordinary direction accuracy.",
+        "Sleeve/family confirmation did not promote any family. Historical lineage remains unqualified and original numeric directories are not pinned locally.",
+        "Overlapping five-session labels and common-date dependence.",
+        "Historical universe and delisted exits incompletely certified.",
+        "Exact original result directories not present locally; metrics come from reviewed registry, definitions from the specification."
+      ],
+      "what_it_predicts": "Five-session leave-one-out market residual return; classifier label is same-date residual TOP DECILE, not ordinary up/down direction."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Exposure-policy accounting and explicit post-selection caveats"
+        ],
+        "status": "exploratory_signal"
+      },
+      "baseline": "Matched linear/logistic, random-top50 and equal-weight controls as specified; policy test uses the same saved ANN predictions.",
+      "canonical_id": "regime_exposure_policy_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "regime-exposure-policy-v1:saved-predictions:5sleeves:stress-only:trend-down-cash:lean-volatility:cost0-40:posthoc"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "residual-ann",
+      "family_title": "Predicting stock-specific returns",
+      "friendly_title": "Trend and Volatility Exposure Gate",
+      "has_positive_finding": true,
+      "inputs_and_method": "Post-hoc stress, trend-down cash and volatility exposure policies use already-saved residual ANN predictions.",
+      "metrics": [
+        {
+          "comparability_group": "experiment:regime_exposure_policy_v1",
+          "definition": "Saved reviewed aggregate; compare only within this experiment.",
+          "evidence_ids": [
+            "gate"
+          ],
+          "label": "Trend-down-cash mean daily residual return",
+          "scope": "Exact source-defined sample/target; see experiment scope.",
+          "unit": "%",
+          "value": 0.118735
+        }
+      ],
+      "model_promoted": false,
+      "positive_finding": "The trend-down cash policy improved a historical point estimate in its own saved comparison; it remains a hypothesis.",
+      "positive_finding_type": "posthoc_point_estimate",
+      "question_title": "Can cash and volatility controls improve the residual model?",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "completed_experiments",
+          "design_signature": "regime-exposure-policy-v1:saved-predictions:5sleeves:stress-only:trend-down-cash:lean-volatility:cost0-40:posthoc",
+          "index": 18,
+          "source_pointer": "/completed_experiments/18",
+          "status": "completed_exploratory_not_promotable"
+        }
+      ],
+      "reviewed_verdict": "Post-selection regime policies were hypotheses only; both reported policy-effect intervals crossed zero.",
+      "scope": {
+        "costs": {
+          "basis": "Turnover charged at a one-way rate; sleeve confirmation explicitly declares10bps one way.",
+          "configuredCostBps": 10
+        },
+        "counts": {
+          "activeSleeves": 5,
+          "chronologicalSplits": 4,
+          "testDatesPerSplit": 63
+        },
+        "date_windows": {
+          "exactFirstTestDate": "Not emitted in local reviewed registry copy.",
+          "lastDecision": "2026-05-20",
+          "lastOutcome": "2026-05-28",
+          "splits": 4,
+          "testDatesPerSplit": 63
+        }
+      },
+      "what_failed_or_limits": [
+        "Both reported policy-effect intervals crossed zero. Post-selection analysis is not independent confirmation.",
+        "No permission to tune a rule, recycle these dates for selection or interpret residual return as total account return.",
+        "Overlapping five-session labels and common-date dependence.",
+        "Historical universe and delisted exits incompletely certified.",
+        "Exact original result directories not present locally; metrics come from reviewed registry, definitions from the specification.",
+        "Post-selection bias is explicitly recorded; do not describe policy gates as independently confirmed."
+      ],
+      "what_it_predicts": "Five-session leave-one-out market residual return; classifier label is same-date residual TOP DECILE, not ordinary up/down direction."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Frozen prospective confirmation protocol"
+        ],
+        "status": "blocked/notrun"
+      },
+      "baseline": "Previously frozen reference/control policies, unchanged.",
+      "canonical_id": "residual_ann_future_confirmation_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "confirmation",
+      "family_title": "Archived evaluation and future locks",
+      "friendly_title": "Residual ANN Confirmation Plan",
+      "has_positive_finding": false,
+      "inputs_and_method": "Unchanged-policy future confirmation after its freeze, with no interim outcome inspection; minimum 60 new dates and 11 nonoverlapping five-day cohorts.",
+      "metrics": [],
+      "model_promoted": false,
+      "positive_finding": "The design protects against recycling promising development dates.",
+      "positive_finding_type": "no_confirmed_positive_result",
+      "question_title": "Freeze the residual ANN for genuinely new outcomes",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "next_experiments",
+          "design_signature": null,
+          "index": 16,
+          "source_pointer": "/next_experiments/16",
+          "status": "frozen_waiting_for_future_unseen_dates"
+        }
+      ],
+      "reviewed_verdict": "A frozen/approved prospective plan is not proof of a continuous completed collection or mature confirmation. No interim outcome inspection performed.",
+      "scope": {
+        "costs": {
+          "configuredCostBps": "Check frozen policy specification."
+        },
+        "counts": {
+          "minimumNewTradingDates": 60,
+          "minimumNonoverlapFiveDayCohorts": 11
+        },
+        "date_windows": {
+          "eligibleAfterConsumedEnd": "2026-08-24",
+          "matureCurrentContinuity": "Not verified in this presentation audit."
+        }
+      },
+      "what_failed_or_limits": [
+        "No mature continuous confirmation is verified here. Calendar time passing does not prove forecasts were locked before outcomes.",
+        "No new score, numeric result or promotion is inferred from this plan.",
+        "Source records include dated readiness/lock assertions; current complete locked continuity is unverified.",
+        "Calendar dates arriving after the holdout are not automatically genuinely prospective evidence.",
+        "No forecast outcomes or protected interim labels read."
+      ],
+      "what_it_predicts": "Future timestamped forecasts under frozen policy; not a newly measured performance result."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Capital-sleeve accounting, family ablations and lean-volatility research hypothesis"
+        ],
+        "status": "exploratory_signal"
+      },
+      "baseline": "Matched linear/logistic, random-top50 and equal-weight controls as specified; policy test uses the same saved ANN predictions.",
+      "canonical_id": "residual_sleeve_family_confirmation_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "residual-sleeve-family-confirmation-v1:h5:4x63d:5sleeves:top50:tanh:families:regimes:cost10"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "residual-ann",
+      "family_title": "Predicting stock-specific returns",
+      "friendly_title": "Lean Volatility ANN",
+      "has_positive_finding": true,
+      "inputs_and_method": "Five capital sleeves, top-50 selection and four chronological folds test residual ANN feature additions/removals/shuffles after costs.",
+      "metrics": [
+        {
+          "comparability_group": "experiment:residual_sleeve_family_confirmation_v1",
+          "definition": "Saved reviewed aggregate; compare only within this experiment.",
+          "evidence_ids": [
+            "gate"
+          ],
+          "label": "Lean-volatility residual top-decile AUC",
+          "scope": "Exact source-defined sample/target; see experiment scope.",
+          "unit": "AUC",
+          "value": 0.6964126
+        },
+        {
+          "comparability_group": "experiment:residual_sleeve_family_confirmation_v1",
+          "definition": "Saved reviewed aggregate; compare only within this experiment.",
+          "evidence_ids": [
+            "gate"
+          ],
+          "label": "All-family mean daily sleeve residual return",
+          "scope": "Exact source-defined sample/target; see experiment scope.",
+          "unit": "%",
+          "value": 0.099931
+        },
+        {
+          "comparability_group": "experiment:residual_sleeve_family_confirmation_v1",
+          "definition": "Saved cohort residual return after the recorded10 bps cost, not total stock-price return or daily sleeve profit.",
+          "evidence_ids": [
+            "gate"
+          ],
+          "label": "Lean-volatility mean five-day residual cohort return",
+          "scope": "Four 63-date folds; five-session residual top-decile task and top 50 selection.",
+          "unit": "%",
+          "value": 0.621984
+        }
+      ],
+      "model_promoted": false,
+      "positive_finding": "Lean volatility retained a saved residual top-decile AUC of 0.6964126 and a positive mean five-session residual cohort return.",
+      "positive_finding_type": "exploratory_residual_ranking",
+      "question_title": "Which feature families survive a capital-sleeve check?",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "completed_experiments",
+          "design_signature": "residual-sleeve-family-confirmation-v1:h5:4x63d:5sleeves:top50:tanh:families:regimes:cost10",
+          "index": 17,
+          "source_pointer": "/completed_experiments/17",
+          "status": "completed_promising_not_promoted"
+        },
+        {
+          "bucket": "next_experiments",
+          "design_signature": "residual-sleeve-family-confirmation-v1:h5:4x63d:5sleeves:top50:tanh:families:regimes:cost10",
+          "index": 15,
+          "source_pointer": "/next_experiments/15",
+          "status": "completed_promising_not_promoted"
+        }
+      ],
+      "reviewed_verdict": "No feature family passed every addition/removal/shuffle/economic gate; volatility remained a lean candidate rather than a promoted predictor.",
+      "scope": {
+        "costs": {
+          "basis": "Turnover charged at a one-way rate; sleeve confirmation explicitly declares10bps one way.",
+          "configuredCostBps": 10
+        },
+        "counts": {
+          "activeSleeves": 5,
+          "chronologicalSplits": 4,
+          "testDatesPerSplit": 63
+        },
+        "date_windows": {
+          "exactFirstTestDate": "Not emitted in local reviewed registry copy.",
+          "lastDecision": "2026-05-20",
+          "lastOutcome": "2026-05-28",
+          "splits": 4,
+          "testDatesPerSplit": 63
+        }
+      },
+      "what_failed_or_limits": [
+        "No feature family passed every addition/removal/shuffle/economic gate; one chronological split was negative.",
+        "Residual top-decile ranking is not ordinary up/down accuracy. Historical identities, membership and delisted exits remain unverified; no promotion.",
+        "Overlapping five-session labels and common-date dependence.",
+        "Historical universe and delisted exits incompletely certified.",
+        "Exact original result directories not present locally; metrics come from reviewed registry, definitions from the specification."
+      ],
+      "what_it_predicts": "Five-session leave-one-out market residual return; classifier label is same-date residual TOP DECILE, not ordinary up/down direction."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Challenger, placebo and cost stress-test framework; not a promoted selected model"
+        ],
+        "status": "exploratory_signal"
+      },
+      "baseline": "Linear/ANN challengers, label placebos, feature drops, regime/portfolio/cost variants.",
+      "canonical_id": "robustness_battery_5d_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "robustness-battery-v1:h5:challengers+lofo+placebo+segments+costs+bootstrap:holdout60"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "features",
+      "family_title": "ANNs and feature importance",
+      "friendly_title": "Five-Day Robustness Audit",
+      "has_positive_finding": true,
+      "inputs_and_method": "Compare challengers, feature removals, placebos, market segments, costs and uncertainty for the early five-session task.",
+      "metrics": [
+        {
+          "comparability_group": "experiment:robustness_battery_5d_v1",
+          "definition": "Saved reviewed aggregate; compare only within this experiment.",
+          "evidence_ids": [
+            "gate"
+          ],
+          "label": "Reported elastic challenger AUC",
+          "scope": "Exact source-defined sample/target; see experiment scope.",
+          "unit": "AUC",
+          "value": 0.51013
+        },
+        {
+          "comparability_group": "experiment:robustness_battery_5d_v1",
+          "definition": "Saved reviewed aggregate; compare only within this experiment.",
+          "evidence_ids": [
+            "gate"
+          ],
+          "label": "Reported elastic challenger Brier",
+          "scope": "Exact source-defined sample/target; see experiment scope.",
+          "unit": "squared probability error",
+          "value": 0.25163
+        },
+        {
+          "comparability_group": "experiment:robustness_battery_5d_v1",
+          "definition": "Saved reviewed aggregate; compare only within this experiment.",
+          "evidence_ids": [
+            "gate"
+          ],
+          "label": "Shuffled-label placebo AUC",
+          "scope": "Exact source-defined sample/target; see experiment scope.",
+          "unit": "AUC",
+          "value": 0.49772
+        },
+        {
+          "comparability_group": "experiment:robustness_battery_5d_v1",
+          "definition": "Saved reviewed aggregate; compare only within this experiment.",
+          "evidence_ids": [
+            "gate"
+          ],
+          "label": "Reported challenger mean excess return",
+          "scope": "Exact source-defined sample/target; see experiment scope.",
+          "unit": "%",
+          "value": 0.549
+        }
+      ],
+      "model_promoted": false,
+      "positive_finding": "Elastic linear was a provisional challenger: saved AUC 0.51013 versus 0.49772 shuffled-label placebo, with a positive reported paper-excess point estimate.",
+      "positive_finding_type": "weak_exploratory_classification",
+      "question_title": "Stress-test the early five-day classifiers",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "next_experiments",
+          "design_signature": "robustness-battery-v1:h5:challengers+lofo+placebo+segments+costs+bootstrap:holdout60",
+          "index": 8,
+          "source_pointer": "/next_experiments/8",
+          "status": "completed_reviewed_provisional"
+        }
+      ],
+      "reviewed_verdict": "Elastic linear was the provisional challenger; direction ranking stayed slight. Early similarity gains were not a universal or later-confirmed edge.",
+      "scope": {
+        "costs": {
+          "basis": "Scenario configurations differ; preserve source-specific cost labels.",
+          "sensitivityReportedThroughBps": 50
+        },
+        "counts": {
+          "source": "Local reviewed registry does not state total fits or independent date count."
+        },
+        "date_windows": {
+          "endBefore": "2026-05-29",
+          "reviewedOn": "2026-08-27"
+        }
+      },
+      "what_failed_or_limits": [
+        "Discrimination remained slight, analysis followed exploratory scenario search and later similarity confirmation did not establish a general edge.",
+        "Do not rank the old target-specific excess return against newer portfolio returns with different costs and scope.",
+        "Scenario search and multiple-testing risk.",
+        "The later fixed400-date similarity rule has its own negative result; do not combine the two estimates.",
+        "Original result files are not attached in this registry entry."
+      ],
+      "what_it_predicts": "Source-defined five-day direction/ranking and paper excess return under robustness variants."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Neighbor construction and paired/placebo evaluation software"
+        ],
+        "status": "failed"
+      },
+      "baseline": "Plain fixed elastic ranker versus20-neighbor training-only adjustment; neighbor-label placebo.",
+      "canonical_id": "similarity_weighted_linear_400d_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "similarity-weighted-linear-400d-v1:h5:elastic-c1-l25:train-knn20:alpha025:p10:r5:cost10:6walkforward:block-bootstrap:neighbor-placebo:holdout60"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "similarity",
+      "family_title": "Neighbors and similarity graphs",
+      "friendly_title": "Neighbor-Adjusted Linear Model",
+      "has_positive_finding": false,
+      "inputs_and_method": "Add a frozen train-neighbor label adjustment to an elastic baseline, with neighbor placebo and paired walk-forward comparisons.",
+      "metrics": [
+        {
+          "comparability_group": "experiment:similarity_weighted_linear_400d_v1",
+          "definition": "Saved paired date-block summary for the fixed neighbor adjustment.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "Paired similarity minus plain AUC",
+          "scope": "395 dates,922 tickers,6 splits.",
+          "unit": "AUC difference",
+          "value": -0.003974264987179676
+        },
+        {
+          "comparability_group": "experiment:similarity_weighted_linear_400d_v1",
+          "definition": "Saved paired mean excess-return difference, not a compounded total return.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "Paired after-cost excess delta",
+          "scope": "Same experiment;10 bps primary cost.",
+          "unit": "percentage points",
+          "value": -0.54180471676883
+        },
+        {
+          "comparability_group": "experiment:similarity_weighted_linear_400d_v1",
+          "definition": "Saved baseline-minus-adjusted Brier gain; a negative value means calibration error worsened.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate"
+          ],
+          "label": "Paired Brier gain",
+          "scope": "Same fixed395-date similarity experiment; target and fitting rules unchanged.",
+          "unit": "squared probability error",
+          "value": -0.0003459676382543219
+        }
+      ],
+      "model_promoted": false,
+      "positive_finding": "No confirmed improvement; the useful result is a documented negative result for this particular neighbor adjustment.",
+      "positive_finding_type": "no_confirmed_positive_result",
+      "question_title": "Can similar historical neighbors improve a linear forecast?",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "completed_experiments",
+          "design_signature": "similarity-weighted-linear-400d-v1:h5:elastic-c1-l25:train-knn20:alpha025:p10:r5:cost10:6walkforward:block-bootstrap:neighbor-placebo:holdout60",
+          "index": 16,
+          "source_pointer": "/completed_experiments/16",
+          "status": "completed_not_promoted"
+        },
+        {
+          "bucket": "next_experiments",
+          "design_signature": "similarity-weighted-linear-400d-v1:h5:elastic-c1-l25:train-knn20:alpha025:p10:r5:cost10:6walkforward:block-bootstrap:neighbor-placebo:holdout60",
+          "index": 12,
+          "source_pointer": "/next_experiments/12",
+          "status": "completed_not_promoted_do_not_repeat"
+        }
+      ],
+      "reviewed_verdict": "The frozen neighbor adjustment did not confirm an edge; Brier worsened and paired return interval crossed zero.",
+      "scope": {
+        "costs": {
+          "portfolioSize": 10,
+          "primaryConfiguredBps": 10,
+          "rebalanceSessions": 5,
+          "sensitivityBps": [
+            0,
+            10,
+            25,
+            50
+          ]
+        },
+        "counts": {
+          "dates": 395,
+          "rows": 237000,
+          "splits": 6,
+          "tickers": 922
+        },
+        "date_windows": {
+          "exactTestStart": "Not restated in local compact manifest.",
+          "lastOutcome": "2026-05-28",
+          "panelStart": "2024-10-22"
+        }
+      },
+      "what_failed_or_limits": [
+        "Paired AUC and return deltas were negative with intervals crossing zero; Brier worsened.",
+        "This rejects the frozen adjustment, not every possible cross-stock relationship model.",
+        "Use the original saved paired summary; do not derive a new paired estimate from rounded readout endpoints.",
+        "This result does not license inversion or retuning."
+      ],
+      "what_it_predicts": "Five-session direction/ranking and after-cost excess versus eligible same-date universe."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Bounded loader checks and date guards"
+        ],
+        "status": "reusable_software"
+      },
+      "baseline": "Materialized source stage.",
+      "canonical_id": "staged_eligible_loader_smoke_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "staged-eligible-loader-smoke-v1:h5:90d:top100:warmup60:materialized-v1:holdout60:no-model"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "data-foundation",
+      "family_title": "Data qualification and Architecture v3",
+      "friendly_title": "Staged Loader Check",
+      "has_positive_finding": true,
+      "inputs_and_method": "A bounded 90-date, top-100 loader smoke check with 60-session warmup; no model.",
+      "metrics": [],
+      "model_promoted": false,
+      "positive_finding": "The loader produced the specified bounded panel and kept mature outcomes before the consumed holdout.",
+      "positive_finding_type": "completed_software_or_data",
+      "question_title": "Check that the staged eligible loader works",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "next_experiments",
+          "design_signature": "staged-eligible-loader-smoke-v1:h5:90d:top100:warmup60:materialized-v1:holdout60:no-model",
+          "index": 17,
+          "source_pointer": "/next_experiments/17",
+          "status": "completed_reviewed"
+        }
+      ],
+      "reviewed_verdict": "Loader validation completed; no model trained or scored.",
+      "scope": {
+        "costs": {
+          "applicable": false
+        },
+        "counts": {
+          "panel_dates": 90,
+          "panel_rows": 9000,
+          "panel_tickers": 140,
+          "source_dates_loaded": 155,
+          "source_rows_loaded": 402535,
+          "source_tickers_loaded": 2597
+        },
+        "date_windows": {
+          "firstDecision": "2026-01-12",
+          "lastDecision": "2026-05-20",
+          "lastOutcome": "2026-05-28"
+        }
+      },
+      "what_failed_or_limits": [
+        "Software/data check only, not predictive performance or qualification of historical membership.",
+        "A smoke check is not a whole-market historical lineage certification."
+      ],
+      "what_it_predicts": "Bounded loader/warmup and past-only eligibility mechanics."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Time animation, trails, scenario display and causal motion definitions"
+        ],
+        "status": "reusable_software"
+      },
+      "baseline": "Not a predictive model benchmark for the visual/scenario component.",
+      "canonical_id": "temporal_3d_mc_loss_activation_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "temporal-3d-mc-loss-activation-v1:h5:slider+trails+derived-motion+regime-block-mc+loss-activation-ablation:holdout60"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "trajectories",
+      "family_title": "Forecasting variable motion",
+      "friendly_title": "Motion Scenario Explorer",
+      "has_positive_finding": true,
+      "inputs_and_method": "A 3D time slider, trails and conditional regime-block Monte Carlo paths for the registered temporal research package.",
+      "metrics": [],
+      "model_promoted": false,
+      "positive_finding": "The display/scenario component was built; predictive motion was examined in its separately completed ablation record.",
+      "positive_finding_type": "completed_software_or_data",
+      "question_title": "Animate the map and generate conditional scenarios",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "next_experiments",
+          "design_signature": "temporal-3d-mc-loss-activation-v1:h5:slider+trails+derived-motion+regime-block-mc+loss-activation-ablation:holdout60",
+          "index": 9,
+          "source_pointer": "/next_experiments/9",
+          "status": "completed_reviewed_provisional"
+        }
+      ],
+      "reviewed_verdict": "Visualization/scenario machinery completed; conditional paths are not independent observations or proof of forecast calibration.",
+      "scope": {
+        "costs": {
+          "applicable": false,
+          "reason": "Display/scenario explorer metrics are not a trading replay."
+        },
+        "counts": {
+          "animationFrames": 90,
+          "displayRows": 10800,
+          "stocks": 120
+        },
+        "date_windows": {
+          "end": "2026-05-28"
+        }
+      },
+      "what_failed_or_limits": [
+        "Scenarios are conditional illustrations, not calibrated independent future observations or trading forecasts.",
+        "This ID shares its signature with temporal_motion_predictive_ablation_v1; preserve both lifecycle records without claiming two independent successful tests.",
+        "Original manifest said ablation pending at creation; the later registered ablation is complete.",
+        "Older source wording sealed/unopened is historical and does not override current consumed-holdout prohibition."
+      ],
+      "what_it_predicts": "Historical latent display and conditional Monte Carlo scenarios; predictive ablation has a separate registered child."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Motion-feature definitions, placebo comparisons and ablation reports"
+        ],
+        "status": "failed"
+      },
+      "baseline": "Base-only features, restricted graph motion, raw kinematics and shuffled-label placebo.",
+      "canonical_id": "temporal_motion_predictive_ablation_v1",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "temporal-3d-mc-loss-activation-v1:h5:slider+trails+derived-motion+regime-block-mc+loss-activation-ablation:holdout60"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "trajectories",
+      "family_title": "Forecasting variable motion",
+      "friendly_title": "Motion Feature Ablation Audit",
+      "has_positive_finding": false,
+      "inputs_and_method": "Ablate motion/kinematic features, activations and losses for five-session classification, with conditional scenarios and a label-placebo control.",
+      "metrics": [
+        {
+          "comparability_group": "experiment:temporal_motion_predictive_ablation_v1",
+          "definition": "Saved reviewed aggregate; compare only within this experiment.",
+          "evidence_ids": [
+            "gate"
+          ],
+          "label": "Reported tanh/focal AUC",
+          "scope": "Exact source-defined sample/target; see experiment scope.",
+          "unit": "AUC",
+          "value": 0.513004
+        },
+        {
+          "comparability_group": "experiment:temporal_motion_predictive_ablation_v1",
+          "definition": "Saved reviewed aggregate; compare only within this experiment.",
+          "evidence_ids": [
+            "gate"
+          ],
+          "label": "Label-placebo AUC",
+          "scope": "Exact source-defined sample/target; see experiment scope.",
+          "unit": "AUC",
+          "value": 0.511923
+        },
+        {
+          "comparability_group": "experiment:temporal_motion_predictive_ablation_v1",
+          "definition": "Saved reviewed aggregate; compare only within this experiment.",
+          "evidence_ids": [
+            "gate"
+          ],
+          "label": "Reported mean excess return",
+          "scope": "Exact source-defined sample/target; see experiment scope.",
+          "unit": "%",
+          "value": 0.7898999999999999
+        }
+      ],
+      "model_promoted": false,
+      "positive_finding": "A narrow exploratory tanh/focal configuration was recorded; it did not establish motion-based trading skill.",
+      "positive_finding_type": "no_confirmed_positive_result",
+      "question_title": "Do slopes and 3D motion features add predictive value?",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "completed_experiments",
+          "design_signature": "temporal-3d-mc-loss-activation-v1:h5:slider+trails+derived-motion+regime-block-mc+loss-activation-ablation:holdout60",
+          "index": 13,
+          "source_pointer": "/completed_experiments/13",
+          "status": "completed_reviewed_provisional"
+        }
+      ],
+      "reviewed_verdict": "Reported tanh/focal configuration was barely above its label placebo; broad raw kinematics not supported for promotion.",
+      "scope": {
+        "costs": {
+          "basis": "Configured transaction cost and5-date rebalance spacing; exact bps not restated in compact result."
+        },
+        "counts": {
+          "dates": 85,
+          "modelFits": 327,
+          "rows": 10200,
+          "tickers": 120
+        },
+        "date_windows": {
+          "endBefore": "2026-05-29",
+          "exactStart": "Not emitted in compact manifest."
+        }
+      },
+      "what_failed_or_limits": [
+        "AUC 0.513004 was barely above placebo 0.511923. Broad motion slightly improved AUC while reducing after-cost excess versus base in the saved account.",
+        "Multiple choices were inspected. Conditional paths are not independent future outcomes; no promotion.",
+        "Selected configuration is exploratory after many activation/loss/feature tests.",
+        "All-motion features improved AUC slightly but reduced the saved after-cost excess return relative to base-only."
+      ],
+      "what_it_predicts": "Five-session classification/ranking after motion features, with activation/loss choices."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Lagged-variable baseline, persistence control and explicit slope/flip definitions; a research hypothesis only"
+        ],
+        "status": "exploratory_signal"
+      },
+      "baseline": "Persistence, recent slope and current-state ridge; ordered TCN has a scrambled control.",
+      "canonical_id": "trajectory_master_month_v1_20261108",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "trajectory-master-v1:252lookback:7raw:trainpca3:4x20d:embargo20:top24atcutoff:direct5-10-20:static+lagridge+hgb+tcn+scrambled:seed442:survivor-exploratory:no-holdout:no-trading"
+      ],
+      "evidence_ids": [
+        "document:fe3bb5707f976b9b",
+        "gate",
+        "geometry_cohort_provenance"
+      ],
+      "family_id": "trajectories",
+      "family_title": "Forecasting variable motion",
+      "friendly_title": "Motion Memory Ridge",
+      "has_positive_finding": true,
+      "inputs_and_method": "Seven rolling variables, training-fitted 3D projection and lagged histories; persistence, static ridge, lag ridge, boosted lags and temporal convolution at 5/10/20-session horizons.",
+      "metrics": [
+        {
+          "comparability_group": "experiment:trajectory_master_month_v1_20261108",
+          "definition": "Mean absolute error of predicted future rolling-variable states.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate",
+            "geometry_cohort_provenance"
+          ],
+          "label": "persistence variable MAE",
+          "scope": "96 stock-months; four 20-session cohorts;24liquid names per cutoff; evaluation2026-02-02 through2026-05-28.",
+          "unit": "training SD",
+          "value": 0.5667467257007957
+        },
+        {
+          "comparability_group": "experiment:trajectory_master_month_v1_20261108",
+          "definition": "Mean absolute error of predicted future rolling-variable states.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate",
+            "geometry_cohort_provenance"
+          ],
+          "label": "static ridge variable MAE",
+          "scope": "96 stock-months; four 20-session cohorts;24liquid names per cutoff; evaluation2026-02-02 through2026-05-28.",
+          "unit": "training SD",
+          "value": 0.4542679823935032
+        },
+        {
+          "comparability_group": "experiment:trajectory_master_month_v1_20261108",
+          "definition": "Mean absolute error of predicted future rolling-variable states.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate",
+            "geometry_cohort_provenance"
+          ],
+          "label": "lag ridge variable MAE",
+          "scope": "96 stock-months; four 20-session cohorts;24liquid names per cutoff; evaluation2026-02-02 through2026-05-28.",
+          "unit": "training SD",
+          "value": 0.4309672114128868
+        },
+        {
+          "comparability_group": "experiment:trajectory_master_month_v1_20261108",
+          "definition": "Mean absolute error of predicted future rolling-variable states.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate",
+            "geometry_cohort_provenance"
+          ],
+          "label": "boosted lags variable MAE",
+          "scope": "96 stock-months; four 20-session cohorts;24liquid names per cutoff; evaluation2026-02-02 through2026-05-28.",
+          "unit": "training SD",
+          "value": 0.4575715629283786
+        },
+        {
+          "comparability_group": "experiment:trajectory_master_month_v1_20261108",
+          "definition": "Mean absolute error of predicted future rolling-variable states.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate",
+            "geometry_cohort_provenance"
+          ],
+          "label": "tcn variable MAE",
+          "scope": "96 stock-months; four 20-session cohorts;24liquid names per cutoff; evaluation2026-02-02 through2026-05-28.",
+          "unit": "training SD",
+          "value": 0.5680556880931059
+        },
+        {
+          "comparability_group": "experiment:trajectory_master_month_v1_20261108",
+          "definition": "Mean absolute error of predicted future rolling-variable states.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate",
+            "geometry_cohort_provenance"
+          ],
+          "label": "tcn scrambled variable MAE",
+          "scope": "96 stock-months; four 20-session cohorts;24liquid names per cutoff; evaluation2026-02-02 through2026-05-28.",
+          "unit": "training SD",
+          "value": 0.5680557860371968
+        },
+        {
+          "comparability_group": "experiment:trajectory_master_month_v1_20261108",
+          "definition": "Precision/recall for the saved prespecified variable-reversal definition.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate",
+            "geometry_cohort_provenance"
+          ],
+          "label": "Lag ridge flip precision",
+          "scope": "96 stock-months; four 20-session cohorts;24liquid names per cutoff; evaluation2026-02-02 through2026-05-28.",
+          "unit": "%",
+          "value": 71.0801393728223
+        },
+        {
+          "comparability_group": "experiment:trajectory_master_month_v1_20261108",
+          "definition": "Precision/recall for the saved prespecified variable-reversal definition.",
+          "evidence_ids": [
+            "document:fe3bb5707f976b9b",
+            "gate",
+            "geometry_cohort_provenance"
+          ],
+          "label": "Lag ridge flip recall",
+          "scope": "96 stock-months; four 20-session cohorts;24liquid names per cutoff; evaluation2026-02-02 through2026-05-28.",
+          "unit": "%",
+          "value": 72.59786476868328
+        }
+      ],
+      "model_promoted": false,
+      "positive_finding": "The saved lag-ridge result reports about 24% lower standardized variable MAE than persistence and about 5% lower than static ridge. Saved slope-flip precision and recall were about 71% and 73%.",
+      "positive_finding_type": "exploratory_variable_forecast",
+      "question_title": "Can a year of history forecast variable motion?",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "completed_experiments",
+          "design_signature": "trajectory-master-v1:252lookback:7raw:trainpca3:4x20d:embargo20:top24atcutoff:direct5-10-20:static+lagridge+hgb+tcn+scrambled:seed442:survivor-exploratory:no-holdout:no-trading",
+          "index": 5,
+          "source_pointer": "/completed_experiments/5",
+          "status": "complete_reviewed_exploratory_no_promotion"
+        }
+      ],
+      "reviewed_verdict": "No promotion or trading inference. Survivor-selected, previously explored periods, unresolved identities, four dependent market cohorts. Forecasts target rolling variables, whose window mechanics can create predictability. Do not rerun or tune this batch.",
+      "scope": {
+        "costs": {
+          "applicable": false,
+          "reason": "Variable forecasting, not a trading replay."
+        },
+        "counts": {
+          "actualDefinedFlips": 281,
+          "cohorts": 4,
+          "stockMonths": 96,
+          "stocksPerCohort": 24
+        },
+        "date_windows": {
+          "cohorts": 4,
+          "firstCutoff": "2026-02-02",
+          "lastOutcome": "2026-05-28"
+        }
+      },
+      "what_failed_or_limits": [
+        "This forecasts rolling variables and prespecified endpoint/slope reversals, not executable profit or the exact turning day.",
+        "Only four previously explored monthly cohorts, 32 unique liquid stocks and 96 stock-months. Rolling-window overlap can create mechanical predictability; per-ticker grades are not reliable.",
+        "The earlier 0.74 R-squared claim has no verified target/source in this review and must not headline performance.",
+        "Survivor-selected historical source",
+        "Unresolved historical identities beyond known exclusions",
+        "Previously explored historical periods, not a blind confirmation",
+        "Overlapping training sequences and common market dependence",
+        "Liquidity does not guarantee survival",
+        "No returns/trading benefit inferred from variable forecasts",
+        "A flip is opposite prior20-session slope and endpoint displacement, both exceeding0.1 training SD; not exact turn-date timing."
+      ],
+      "what_it_predicts": "Seven future rolling variables at5,10,20 sessions, in training-standardized units; slopes and prespecified reversals. Not next-month profit."
+    },
+    {
+      "appropriate_use": {
+        "live_signal_or_order_use_allowed": false,
+        "requires_registered_design_before_new_model_compute": true,
+        "reusable_parts": [
+          "Display export, axis explanations, contribution inspection and date controls"
+        ],
+        "status": "reusable_software"
+      },
+      "baseline": "Not applicable.",
+      "canonical_id": "universe_geometry_display_v1_20261108",
+      "cross_experiment_ranking_allowed": false,
+      "design_signatures": [
+        "universe-geometry-display-v1:all-source-symbols:all-pre20260529-dates:8causal-raw-features:fixed-physical-references:manual-weights:daily-int32:no-fit:no-prediction:no-holdout"
+      ],
+      "evidence_ids": [
+        "display",
+        "document:fe3bb5707f976b9b",
+        "gate"
+      ],
+      "family_id": "stock-map",
+      "family_title": "The market map",
+      "friendly_title": "Historical Market Map",
+      "has_positive_finding": true,
+      "inputs_and_method": "Display-only export combines eight past-only measurements into return, risk and activity axes; no fitted predictive weights.",
+      "metrics": [
+        {
+          "comparability_group": "coverage:universe_geometry_display_v1_20261108",
+          "definition": "Labels in the saved source, not a certified whole-market or survivorship-free universe.",
+          "evidence_ids": [
+            "gate"
+          ],
+          "label": "Stored source labels displayed",
+          "scope": "Pre-cutoff historical display only; no model fit.",
+          "unit": "labels",
+          "value": 2597
+        }
+      ],
+      "model_promoted": false,
+      "positive_finding": "The display covers 2,597 stored source labels before the consumed-holdout boundary and supports inspecting variable contributions.",
+      "positive_finding_type": "completed_software_or_data",
+      "question_title": "The historical 3D stock map",
+      "registry_lifecycle_records": [
+        {
+          "bucket": "completed_experiments",
+          "design_signature": "universe-geometry-display-v1:all-source-symbols:all-pre20260529-dates:8causal-raw-features:fixed-physical-references:manual-weights:daily-int32:no-fit:no-prediction:no-holdout",
+          "index": 4,
+          "source_pointer": "/completed_experiments/4",
+          "status": "complete_display_only_no_model"
+        }
+      ],
+      "reviewed_verdict": "Complete historical display export; no learned predictive weights or ticker grades.",
+      "scope": {
+        "costs": {
+          "applicable": false
+        },
+        "counts": {
+          "dates": 1196,
+          "sourceRows": 3104633,
+          "sourceTickers": 2597
+        },
+        "date_windows": {
+          "firstCompleteState": "2021-11-16",
+          "sourceEnd": "2026-05-28",
+          "sourceStart": "2021-08-23"
+        }
+      },
+      "what_failed_or_limits": [
+        "A coherent visual movement is not a demonstrated forecast. Manual display weights are not learned importance.",
+        "Historical membership, identities, delisted exits and adjustments remain incompletely certified. The stock 3D view is paused; retain its software and history.",
+        "Survivor-selected source and unresolved identities.",
+        "Split/dividend adjustment not certified.",
+        "Missing rolling states are preserved, not filled."
+      ],
+      "what_it_predicts": "Observed eight-variable daily states for display; no prediction."
+    }
+  ]
+}
