@@ -1,14 +1,14 @@
 # Movable project graph
 
-The graph workspace is a presentation of the reviewed workflow and its detailed parts. It uses the same five public JSON documents as the reading view. It does not add research assertions, recalculate results or connect to a database. Its default Connected branches mode expands specific parts around persistent main boxes in the same network; see RADIAL_EXPANSION.md for field-level detail and connection provenance.
+The graph workspace is a presentation of the reviewed workflow and its detailed parts. It uses the same five public JSON documents as the reading view. It does not add research assertions, recalculate results or connect to a database. Its default Connected branches mode uses a top-to-bottom Roadmap, with specific parts in side bays beside persistent main boxes. See ROADMAP_LAYOUT.md for the route and RADIAL_EXPANSION.md for field-level detail and connection provenance.
 
 ## Explore
 
-- Drag a node to give it room. Its edges follow it.
+- Drag a detailed node to give it room. Its edges follow it. Roadmap main boxes stay anchored to the route.
 - Drag an empty part of the canvas to pan. Zoom with the wheel, a trackpad or pinch; zoom buttons are also provided.
 - Select a node to highlight its direct connections and inspect its status, inputs, outputs and evidence.
 - In Connected branches, click a main box to unfold its detailed branch in place. Categories fold/unfold recorded descendants, and detailed parts reveal their exact fields. Multiple branches can stay open. Dragging does not toggle expansion.
-- Fit graph frames the current graph. Reset layout restores the current scope's initial placement. These are different actions.
+- The road guide focuses a readable stage. Fit network frames the wider graph. Restore roadmap returns the open sections to their organized positions. These are different actions.
 - Expand the canvas for more working space. Use the reading view and the part catalog for equivalent text navigation and keyboard access.
 
 Secondary scopes include the twelve-step workflow, a selected category, all parts in the current step, and all 303 detailed parts. The full-detail view contains 453 internal relationships plus one explicit cross-step relationship. Connected branches retains the twelve main boxes as anchors and adds visible parts, declared references and field annotations with separate counts. Main boxes and annotations are not extra detail-catalog parts. Search and the existing group selector provide smaller views of the same content.

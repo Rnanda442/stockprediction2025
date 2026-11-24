@@ -12,10 +12,13 @@ docs/research/index.html
 docs/research/map.css
 docs/research/map.js
 docs/research/knowledge-canvas.js
+docs/research/roadmap-navigation.js
+docs/research/roadmap-navigation.css
 docs/research/vendor/cytoscape.min.js
 docs/research/vendor/cytoscape.LICENSE
 docs/research/GRAPH_CANVAS.md
 docs/research/RADIAL_EXPANSION.md
+docs/research/ROADMAP_LAYOUT.md
 docs/research/THIRD_PARTY_NOTICES.md
 docs/research/project-graph.public.json
 docs/research/method-catalog.public.json

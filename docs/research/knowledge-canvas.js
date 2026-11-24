@@ -10,6 +10,7 @@
       this.cache = new Map();
       this.initialLayouts = new Map();
       this.connectedPositions = new Map();
+      this.roadmapPlan = new Map(); this.roadmapBandEnds = new Map(); this.showCrosslinks = false;
       this.currentKey = "";
       this.graph = null;
       this.suppressTapUntil = 0;
@@ -56,13 +57,19 @@
           { selector: "edge[kind = 'membership']", style: { "line-style": "dashed", "line-color": "#c5ccd4", "target-arrow-color": "#c5ccd4", "width": 1.1 } },
           { selector: "edge[kind = 'declared_reference']", style: { "line-style": "dotted", "line-color": "#539990", "target-arrow-color": "#539990", "width": 2 } },
           { selector: "edge[kind = 'annotation']", style: { "line-style": "dotted", "line-color": "#b9a774", "target-arrow-color": "#b9a774", "width": 1.2 } },
-          { selector: ".canvas-muted", style: { "opacity": 0.5 } },
+          { selector: "edge[kind = 'main']", style: { "width": 4, "line-color": "#244e67", "target-arrow-color": "#244e67", "target-arrow-shape": "triangle", "arrow-scale": 1.4, "curve-style": "taxi", "taxi-direction": "downward", "taxi-turn": "50%" } },
+          { selector: "edge[mainBypass = 1]", style: { "width": 2.2, "line-style": "dashed", "line-color": "#6e8797", "target-arrow-color": "#6e8797", "curve-style": "unbundled-bezier", "control-point-distances": 280, "control-point-weights": 0.5 } },
+          { selector: ".canvas-muted", style: { "opacity": 0.75 } },
           { selector: "node.canvas-neighbor", style: { "border-color": "#498e9e", "border-width": 2, "background-color": "#f1f8fb" } },
           { selector: "node.canvas-selected", style: { "border-color": "#147d73", "border-width": 4, "background-color": "#dff2eb", "z-index": 10 } },
           { selector: "edge.canvas-linked", style: { "width": 2.6, "label": "data(label)", "z-index": 8 } },
           { selector: "edge.canvas-incoming", style: { "line-color": "#6b87bc", "target-arrow-color": "#6b87bc" } },
           { selector: "edge.canvas-outgoing", style: { "line-color": "#238d81", "target-arrow-color": "#238d81" } },
           { selector: "edge.canvas-selected", style: { "width": 4, "line-color": "#147d73", "target-arrow-color": "#147d73", "label": "data(label)", "z-index": 12 } },
+          { selector: "edge[kind = 'main'].canvas-muted", style: { "opacity": 0.85 } },
+          { selector: "node[role = 'stage'].canvas-muted", style: { "opacity": 0.9 } },
+          { selector: "edge.roadmap-cross-quiet", style: { "opacity": 0.07, "width": 1, "label": "" } },
+          { selector: "edge.roadmap-cross-quiet.canvas-linked", style: { "opacity": 0.55, "label": "data(label)" } },
         ],
       });
       this.cy.on("grab", "node", () => { this.dragged = false; });
@@ -142,6 +149,7 @@
       const first = this.currentKey !== "connected-branches";
       if (first) { this.remember(); this.cy.elements().remove(); this.currentKey = "connected-branches"; }
       this.graph = graph;
+      if (graph.roadmap) this.prepareRoadmap(graph);
       this.cy.nodes().forEach((node) => this.connectedPositions.set(node.id(), { ...node.position() }));
       const wantedNodes = new Set(graph.nodes.map((node) => node.id)), wantedEdges = new Set(graph.edges.map((edge) => edge.id));
       this.cy.batch(() => {
@@ -151,10 +159,12 @@
           const existing = this.cy.getElementById(data.id);
           if (existing.length) { existing.data({ ...data }); continue; }
           let position = this.connectedPositions.get(data.id);
+          if (graph.roadmap && data.role === "stage") position = this.roadmapPlan.get(data.id);
           if (position && (!Number.isFinite(position.x) || !Number.isFinite(position.y) || data.role !== "stage" && this.positionOccupied(data, position))) position = null;
           if (!position && data.role === "stage") { const index = graph.nodes.filter((node) => node.role === "stage").findIndex((node) => node.id === data.id); position = { x: index % 3 * 300, y: Math.floor(index / 3) * 190 }; }
-          if (!position) position = this.placePetal(data, graph);
-          this.cy.add({ group: "nodes", data: { ...data }, position });
+          if (!position) position = graph.roadmap ? this.placeRoadmapNode(data) : this.placePetal(data, graph);
+          const added = this.cy.add({ group: "nodes", data: { ...data }, position });
+          if (graph.roadmap && data.role === "stage") added.lock();
           this.connectedPositions.set(data.id, { ...position });
         }
         for (const data of graph.edges) {
@@ -168,7 +178,54 @@
         if (cached) { this.cy.zoom(cached.zoom); this.cy.pan(cached.pan); } else this.initialViewport();
       }
       this.select(graph.selectedId);
+      this.setCrosslinks(this.showCrosslinks);
       this.remember();
+    }
+
+    prepareRoadmap(graph) {
+      const hubs = { market_data: [0, 0], availability_clock: [0, 600], forecast_contract: [0, 1200], features_universe: [0, 1800], model: [0, 2400], entry_review: [-300, 3000], holding_review: [300, 3000], constraints: [0, 3600], paper_report: [0, 4200], paper_ledger: [0, 4800], mature_outcomes: [0, 5400], portfolio_state: [900, 3000] };
+      this.roadmapPlan = new Map(Object.entries(hubs).map(([id, value]) => [id, { x: value[0], y: value[1] }])); this.roadmapBandEnds = new Map();
+      for (const [stageId, hub] of Object.entries(hubs)) {
+        const catalog = graph.roadmapCatalog.filter((node) => node.stageId === stageId), children = new Map();
+        for (const node of catalog) { const parent = node.parent_id || stageId; if (!children.has(parent)) children.set(parent, []); children.get(parent).push(node); }
+        for (const list of children.values()) list.sort((a, b) => (a.order || 0) - (b.order || 0) || a.id.localeCompare(b.id));
+        const direction = stageId === "entry_review" ? -1 : 1;
+        const offset = stageId === "holding_review" ? 1000 : stageId === "portfolio_state" ? (this.roadmapBandEnds.get("holding_review")?.x || 4500) - hub[0] + 600 : 550;
+        let column = 0;
+        for (const root of children.get(stageId) || []) {
+          const ordered = [], seen = new Set([root.id]);
+          const visit = (id) => { for (const child of children.get(id) || []) if (!seen.has(child.id)) { seen.add(child.id); ordered.push(child); visit(child.id); } }; visit(root.id);
+          this.roadmapPlan.set(root.id, { x: hub[0] + direction * (offset + column * 260), y: hub[1] });
+          ordered.forEach((node, index) => this.roadmapPlan.set(node.id, { x: hub[0] + direction * (offset + (column + 1 + Math.floor(index / 4)) * 260), y: hub[1] + (index % 4 - 1.5) * 130 }));
+          column += 2 + Math.ceil(ordered.length / 4);
+        }
+        this.roadmapBandEnds.set(stageId, { x: hub[0] + direction * (offset + column * 260), y: hub[1], direction });
+      }
+      const counters = new Map();
+      for (const node of graph.nodes.filter((node) => node.display_only).sort((a, b) => a.id.localeCompare(b.id))) {
+        const end = this.roadmapBandEnds.get(node.stageId); if (!end) continue;
+        const index = counters.get(node.stageId) || 0; counters.set(node.stageId, index + 1);
+        this.roadmapPlan.set(node.id, { x: end.x + end.direction * (300 + Math.floor(index / 4) * 340), y: end.y + (index % 4 - 1.5) * 130 });
+      }
+    }
+
+    placeRoadmapNode(data) {
+      const planned = this.roadmapPlan.get(data.id) || { x: 550, y: 0 }, result = { ...planned }, direction = this.roadmapBandEnds.get(data.stageId)?.direction || 1;
+      for (let attempt = 0; attempt < 500 && this.positionOccupied(data, result); attempt++) result.x += direction * 340;
+      return result;
+    }
+
+    focusRoadmapStop(stageId) {
+      const hub = this.cy.getElementById(stageId); if (!hub.length) return;
+      this.cy.resize(); const zoom = 0.75, pos = hub.position();
+      const height = this.cy.height();
+      const top = height < 420 ? Math.max(65, height * 0.4) : Math.min(230, Math.max(195 * zoom + 60, height - 600 * zoom - 45));
+      this.cy.zoom(zoom); this.cy.pan({ x: this.cy.width() * 0.32 - pos.x * zoom, y: top - pos.y * zoom }); this.remember();
+    }
+
+    setCrosslinks(show) {
+      this.showCrosslinks = Boolean(show);
+      this.cy.edges().forEach((edge) => edge.toggleClass("roadmap-cross-quiet", this.graph?.roadmap && !show && Boolean(edge.data("isCrosslink"))));
     }
 
     placePetal(data, graph) {
@@ -204,6 +261,7 @@
     }
 
     focusBranch(stageId, peek = false) {
+      if (this.graph?.roadmap && peek) { this.focusRoadmapStop(stageId); return; }
       const nodes = this.cy.nodes().filter((node) => node.id() === stageId || node.data("stageId") === stageId || (node.data("stageIds") || []).includes(stageId));
       if (nodes.length) { this.cy.fit(nodes, 65); if (peek && this.cy.zoom() < 0.6) { this.cy.zoom(0.6); this.cy.center(this.cy.getElementById(stageId)); } this.remember(); }
     }
@@ -242,6 +300,7 @@
     initialViewport() {
       if (this.element.clientWidth < 10 || this.element.clientHeight < 10) { this.pendingFit = true; return; }
       this.pendingFit = false;
+      if (this.graph?.roadmap) { this.focusRoadmapStop(this.graph.selectedStageId || "market_data"); return; }
       this.cy.fit(undefined, 50);
       const minimum = this.graph?.nodes.length > 100 ? 0 : this.element.clientWidth < 550 ? 0.8 : 0.65;
       if (this.cy.zoom() < minimum) {
@@ -280,7 +339,7 @@
     fit() { this.cy.resize(); this.cy.fit(undefined, 45); this.remember(); }
     resetLayout() {
       if (this.graph?.incremental) {
-        const graph = this.graph; this.connectedPositions.clear(); this.cache.delete("connected-branches"); this.currentKey = ""; this.cy.elements().remove(); this.updateConnectedGraph(graph); this.fit(); return;
+        const graph = this.graph; this.connectedPositions.clear(); this.cache.delete("connected-branches"); this.currentKey = ""; this.cy.elements().remove(); this.updateConnectedGraph(graph); if (graph.roadmap) this.focusRoadmapStop(graph.selectedStageId || "market_data"); else this.fit(); return;
       }
       const original = this.initialLayouts.get(this.currentKey);
       if (original) this.cy.nodes().positions((node) => original[node.id()]);

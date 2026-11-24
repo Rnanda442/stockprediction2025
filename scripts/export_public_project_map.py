@@ -43,8 +43,8 @@ WORKFLOW_KINDS = {
     "workflow", "collector", "component", "contract", "implementation_contract",
     "qualification_contract", "next_action", "blocker",
 }
-REVIEWED_VIEWER_FILES = {"index.html", "map.css", "map.js", "knowledge-canvas.js"}
-REVIEWED_SUPPLEMENTS = {"workflow-details.public.json", "WORKFLOW_DETAILS.md", "GRAPH_CANVAS.md", "RADIAL_EXPANSION.md", "THIRD_PARTY_NOTICES.md"}
+REVIEWED_VIEWER_FILES = {"index.html", "map.css", "map.js", "knowledge-canvas.js", "roadmap-navigation.js", "roadmap-navigation.css"}
+REVIEWED_SUPPLEMENTS = {"workflow-details.public.json", "WORKFLOW_DETAILS.md", "GRAPH_CANVAS.md", "RADIAL_EXPANSION.md", "ROADMAP_LAYOUT.md", "THIRD_PARTY_NOTICES.md"}
 FORBIDDEN_KEY_FRAGMENTS = {
     "url", "path", "uri", "notion", "instance", "database_name", "username",
     "password", "token", "secret", "credential", "local_repository",
@@ -464,6 +464,7 @@ It is not a trading system, model leaderboard, live database mirror, or complete
 - `knowledge-canvas.js` and `vendor/` — the movable graph workspace and its pinned local Cytoscape.js renderer.
 - `GRAPH_CANVAS.md` and `THIRD_PARTY_NOTICES.md` — graph controls, presentation limits and renderer attribution.
 - `RADIAL_EXPANSION.md` — in-place branches, exact field annotations and declared-reference provenance.
+- `roadmap-navigation.js`, `roadmap-navigation.css`, and `ROADMAP_LAYOUT.md` — the top-to-bottom road guide, stage navigation, and presentation contract.
 - `project-graph.public.json` — Neo4j/property-graph-compatible nodes and typed edges.
 - `method-catalog.public.json` — {methods_doc['counts']['studies']} saved-evidence study cards with metric scope and limitations.
 - `workflow-view.public.json` — the reviewed 12-stage decision flow, seven variable categories, 59 variable definitions, and public-safe workflow records.
@@ -526,10 +527,13 @@ docs/research/index.html
 docs/research/map.css
 docs/research/map.js
 docs/research/knowledge-canvas.js
+docs/research/roadmap-navigation.js
+docs/research/roadmap-navigation.css
 docs/research/vendor/cytoscape.min.js
 docs/research/vendor/cytoscape.LICENSE
 docs/research/GRAPH_CANVAS.md
 docs/research/RADIAL_EXPANSION.md
+docs/research/ROADMAP_LAYOUT.md
 docs/research/THIRD_PARTY_NOTICES.md
 docs/research/project-graph.public.json
 docs/research/method-catalog.public.json
@@ -596,7 +600,7 @@ def main() -> int:
             raise ValueError(f"Forbidden text in {name}")
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
-    # The viewer is authored and reviewed separately.  Permit exactly its three
+    # The viewer is authored and reviewed separately. Permit its reviewed
     # public files in the export directory, but never rewrite them here.
     allowed = set(documents) | set(texts) | REVIEWED_VIEWER_FILES | REVIEWED_SUPPLEMENTS
     unexpected = sorted(path.name for path in output.iterdir() if path.is_file() and path.name not in allowed)

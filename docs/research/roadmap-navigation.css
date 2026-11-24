@@ -1,0 +1,52 @@
+/* A readable route beside the movable map. Navigation never implies execution. */
+.roadmap-surface{display:grid;grid-template-columns:200px minmax(0,1fr);align-items:stretch;min-width:0;min-height:0}
+.roadmap-surface>.canvas-viewport{min-width:0}
+.roadmap-navigation{min-width:0;min-height:425px;max-height:min(69dvh,850px);overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;border-right:1px solid #c9d9e0;background:#f5f9fb;color:#183c4f}
+.roadmap-desktop{padding:17px 13px 18px}
+.roadmap-heading h3{margin:0;font-size:1.0625rem;font-weight:700;line-height:1.3;letter-spacing:-.02em}
+.roadmap-heading p{font-size:.875rem;color:#567080;line-height:1.5;margin:6px 0 20px}
+.roadmap-group{margin:0 0 20px}
+.roadmap-group h4,.roadmap-input h4{margin:0 0 10px;font-size:.875rem;font-weight:700;line-height:1.4;color:#486675}
+.roadmap-sequence,.roadmap-fork{list-style:none;margin:0;padding:0}
+.roadmap-sequence{position:relative;display:grid;gap:9px;padding-left:10px}
+.roadmap-sequence:before{content:"";position:absolute;top:17px;bottom:17px;left:3px;width:2px;background:#a7c7cf}
+.roadmap-sequence li{position:relative;min-width:0}
+.roadmap-sequence li:before{content:"";position:absolute;left:-10px;top:19px;width:8px;height:8px;box-sizing:border-box;background:#f5f9fb;border:2px solid #7faab3;border-radius:50%;z-index:1}
+.roadmap-stop{width:100%;min-width:0;display:block;text-align:left;padding:10px 10px 9px;border:1px solid #ccdce3;border-radius:7px;background:#fff;color:#214b5d;font:inherit;cursor:pointer;line-height:1.4;min-height:47px;appearance:none;-webkit-appearance:none;touch-action:manipulation}
+.roadmap-stop-title{display:block;overflow-wrap:anywhere;font-size:.9375rem;font-weight:600;line-height:1.4}
+.roadmap-stop-badges{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.roadmap-stop-badges:empty{display:none}
+.roadmap-stop-badges>span{font-size:.75rem;line-height:1.35;margin-top:6px;padding:2px 5px;border-radius:4px;font-weight:600}
+.roadmap-current-badge{color:#126e64;background:#dcefe9}.roadmap-open-badge{color:#466b7f;background:#edf3f7}
+.roadmap-stop.is-current{border-color:#1c8b7d;background:#eaf6f1;box-shadow:inset 3px 0 #1c8b7d}
+.roadmap-stop:hover{border-color:#6ca79e;background:#edf7f4}
+.roadmap-stop:focus-visible,.roadmap-compact button:focus-visible,.roadmap-compact select:focus-visible{outline:3px solid #d6a83e;outline-offset:3px}
+.roadmap-fork{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px;position:relative;padding-top:12px}
+.roadmap-fork:before{content:"";position:absolute;left:23%;right:23%;top:3px;height:8px;border:2px solid #a7c7cf;border-bottom:0;border-radius:4px 4px 0 0}
+.roadmap-fork .roadmap-stop{height:100%;padding:9px 7px;min-height:90px}
+.roadmap-fork .roadmap-stop-title{font-size:.875rem}
+.roadmap-fork .roadmap-stop-badges{gap:3px}
+.roadmap-input{padding:12px 10px;margin:0 0 20px;border:1px dashed #a8bac9;border-radius:8px;background:#edf3f8}
+.roadmap-input h4{color:#4a657d;margin-bottom:8px}
+.roadmap-input .roadmap-stop{background:#f9fcff;border-color:#b7cad8}
+.roadmap-input .roadmap-stop.is-current{background:#e4f1f4;border-color:#3a8e94}
+.roadmap-input p{font-size:.875rem;line-height:1.5;color:#5c7184;margin:9px 1px 0}
+.roadmap-note,.roadmap-empty{font-size:.875rem;line-height:1.55;color:#617886;margin:4px 0 0}
+.roadmap-compact{display:none}
+@media(max-width:1000px) and (min-width:851px){.roadmap-surface{grid-template-columns:180px minmax(0,1fr)}.roadmap-desktop{padding-right:10px;padding-left:10px}.roadmap-fork{grid-template-columns:1fr;gap:7px;padding-top:0}.roadmap-fork:before{display:none}.roadmap-fork .roadmap-stop{min-height:47px;height:auto}.roadmap-fork .roadmap-stop-title{font-size:.9375rem}}
+@media(max-width:850px){
+ .roadmap-surface{grid-template-columns:minmax(0,1fr)}
+ .roadmap-navigation{min-height:0;max-height:none;overflow:visible;scrollbar-gutter:auto;border-right:0;border-bottom:1px solid #c9d9e0;background:#f5f9fb}
+ .roadmap-desktop{display:none}
+ .roadmap-compact{display:grid;gap:9px;padding:12px 13px}
+ .roadmap-picker-label{display:grid;gap:6px;color:#486675;font-size:.875rem;font-weight:600;line-height:1.4}
+ .roadmap-picker-wrap{display:block;position:relative;min-width:0}
+ .roadmap-picker-wrap:after{content:"";position:absolute;right:14px;top:16px;width:7px;height:7px;border-right:2px solid #547487;border-bottom:2px solid #547487;transform:rotate(45deg);pointer-events:none}
+ .roadmap-compact select{appearance:none;-webkit-appearance:none;width:100%;max-width:100%;min-width:0;min-height:44px;border:1px solid #b8ced9;border-radius:7px;padding:10px 37px 10px 11px;background:white;color:#204a5e;font:inherit;font-weight:500;font-size:1rem;line-height:1.4;cursor:pointer}
+ .roadmap-location-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:9px}
+ .roadmap-compact button{appearance:none;-webkit-appearance:none;min-height:44px;border:1px solid #bfd0da;border-radius:6px;padding:9px 8px;background:white;color:#236b69;font:inherit;font-size:.875rem;font-weight:600;line-height:1.4;touch-action:manipulation;cursor:pointer}
+ .roadmap-compact button:disabled{color:#7e909b;background:#edf2f5;border-color:#d6e0e6;opacity:.8;cursor:default}
+ .roadmap-location-note{font-size:.875rem;line-height:1.5;color:#5a7484;margin:0}
+ .roadmap-location-note strong{font-weight:600;color:#355969}
+ .canvas-expanded .roadmap-navigation{max-height:none}
+}

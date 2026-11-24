@@ -1,6 +1,6 @@
 # Connected branches and exact field details
 
-The default graph expands in place. Its twelve main workflow boxes and their fifteen directed dependencies remain in the same network while detailed branches are opened. Opening another branch does not replace the first one. Radial placement is a reading aid, not a research result.
+The graph expands in place. Its twelve main workflow boxes and their fifteen directed dependencies remain in the same network while detailed branches are opened. Opening another branch does not replace the first one. The current default organizes the network as a top-to-bottom road with stage-owned side bays; see ROADMAP_LAYOUT.md. The earlier radial arrangement is historical. Placement is a reading aid, not a research result.
 
 Main boxes expose the existing section's specific parts. A category can fold or unfold its recorded descendants. A detailed part can reveal exact source fields such as its formula/rule, declared inputs and outputs, linked variable definition and code-component names. These field annotations carry their owner and source field; they are display detail, not newly collected data or additional scientific variables. Shared canonical definitions and code symbols use stable identities rather than copies for every owner.
 

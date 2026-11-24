@@ -529,7 +529,16 @@
     }
     state.displayFieldIndex = fields; nodes.push(...fields.values());
     const selectedId = fields.has(state.displaySelectionId) ? state.displaySelectionId : visible.has(state.partId) ? state.partId : state.stageId;
-    return { key: "connected-branches", incremental: true, nodes, edges, selectedId, counts: { hubs: 12, parts: visible.size, fields: fields.size, canonical: edges.filter((edge) => edge.kind === "canonical").length, references: edges.filter((edge) => edge.kind === "declared_reference").length, membership: edges.filter((edge) => edge.kind === "membership").length } };
+    for (const edge of edges) {
+      edge.isCrosslink = edge.kind === "declared_reference" || edge.kind === "canonical" && edge.relation !== "contains";
+      edge.mainBypass = edge.kind === "main" && (edge.source === "forecast_contract" && edge.target === "model" || edge.source === "portfolio_state" && edge.target === "constraints" || edge.source === "paper_report" && edge.target === "mature_outcomes") ? 1 : 0;
+    }
+    return { key: "connected-branches", incremental: true, roadmap: true, selectedStageId: state.stageId, roadmapCatalog: [...state.workflowPartIndex].map(([id, entry]) => ({ id, stageId: entry.stageId, parent_id: partParent(state.workflowSections.get(entry.stageId), entry.node) || entry.stageId, order: entry.node.order || 0 })), nodes, edges, selectedId, counts: { hubs: 12, parts: visible.size, fields: fields.size, canonical: edges.filter((edge) => edge.kind === "canonical").length, references: edges.filter((edge) => edge.kind === "declared_reference").length, membership: edges.filter((edge) => edge.kind === "membership").length } };
+  }
+  function focusRoadmapStop(id) {
+    if (!state.stages.some((stage) => stage.id === id)) return;
+    state.canvasScope = "connected"; state.openBranches.add(id); inspectCanvasNode(id);
+    requestAnimationFrame(() => state.canvas?.focusRoadmapStop(id));
   }
   function activateConnectedNode(id) {
     const field = state.displayFieldIndex.get(id); if (field) { inspectCanvasNode(id); return; }
@@ -575,7 +584,7 @@
     if (expanded && !wasExpanded) state.canvasExpandedScrollY = window.scrollY;
     layout.classList.toggle("canvas-expanded", expanded); document.body.classList.toggle("graph-expanded", expanded);
     $("canvas-expand").setAttribute("aria-pressed", String(expanded)); $("canvas-expand").textContent = expanded ? "Restore" : "Expand";
-    requestAnimationFrame(() => { state.canvas?.resize(); if (expanded) state.canvas?.fit(); else { window.scrollTo({ top: state.canvasExpandedScrollY || 0 }); state.canvas?.fit(); } });
+    requestAnimationFrame(() => { state.canvas?.resize(); if (!expanded) window.scrollTo({ top: state.canvasExpandedScrollY || 0 }); if (state.canvasScope === "connected") state.canvas?.focusRoadmapStop(state.stageId); else state.canvas?.fit(); });
   }
   function exploreCanvasNode(id) {
     if (state.canvasScope === "connected") { activateConnectedNode(id); return; }
@@ -628,12 +637,14 @@
     if (state.canvasScope === "all") { $("workflow-board-title").textContent = "All workflow details"; $("workflow-board-subtitle").textContent = `${graph.nodes.length} source-linked parts`; $("part-controls").hidden = true; }
     if (state.canvasScope === "connected") {
       $("workflow-breadcrumb").hidden = true; $("part-controls").hidden = true;
-      $("workflow-board-title").textContent = "One connected workflow"; $("workflow-board-subtitle").textContent = `${state.openBranches.size} open branches · all 12 steps stay connected`;
-      $("workflow-board-introduction").textContent = "Click a step to unfold its actual parts. Click a group to fold it; click a leaf to reveal its formula and code. Several branches can stay open.";
+      $("workflow-board-title").textContent = "The project roadmap"; $("workflow-board-subtitle").textContent = `${state.openBranches.size} open branches · follow the road from top to bottom`;
+      $("workflow-board-introduction").textContent = "Use the road stops to follow the pathway. Click a box to unfold its actual parts in a side bay; several branches can remain open.";
       $("canvas-count").textContent = `12 step hubs + ${graph.counts.parts} / 303 actual parts + ${graph.counts.fields} display annotations · 15 main links + ${graph.counts.canonical} / 454 source links + ${graph.counts.references} declared field references + ${graph.counts.membership} membership links`;
     }
     $("canvas-focus-branch").hidden = state.canvasScope !== "connected"; $("canvas-collapse-branch").hidden = state.canvasScope !== "connected"; $("canvas-collapse-all").hidden = state.canvasScope !== "connected";
     $("canvas-focus-branch").textContent = selected?.role === "leaf" || state.displayFieldIndex.has(selected?.id) ? "Focus selection" : "Focus branch";
+    if (state.canvasScope === "connected" && selected?.role === "stage") $("canvas-focus-branch").textContent = "Focus road stop";
+    $("canvas-reset").textContent = state.canvasScope === "connected" ? "Restore roadmap" : "Reset layout";
     if (!canvasMode && ["all", "connected"].includes(state.canvasScope)) {
       $("canvas-reading-all").innerHTML = '<p class="reading-mode-intro">All detail parts. Select a record to inspect its exact inputs, outputs and evidence.</p>' + graph.nodes.map((node) => `<button type="button" class="all-part-record" data-all-part="${esc(node.id)}"><strong>${esc(node.label)}</strong><span>${esc(shortStageTitle(state.stages.find((stage) => stage.id === node.stageId)))}</span></button>`).join("");
       $("canvas-reading-all").querySelectorAll("[data-all-part]").forEach((button) => button.onclick = () => { inspectCanvasNode(button.dataset.allPart); if (window.matchMedia("(max-width:850px)").matches) showWorkflowDetailSheet(); });
@@ -642,6 +653,9 @@
     try {
       if (!state.canvas) state.canvas = new window.ProjectKnowledgeCanvas($("canvas-viewport"), { onSelect: (id) => state.canvasScope === "connected" ? activateConnectedNode(id) : inspectCanvasNode(id), onExplore: exploreCanvasNode, onEdge: inspectCanvasEdge, onViewport: (zoom) => { $("canvas-zoom-label").textContent = `${Math.round(zoom * 100)}%`; } });
       state.canvas.setGraph(graph); $("canvas-fallback").hidden = true;
+      $("roadmap-navigation").hidden = state.canvasScope !== "connected";
+      if (!state.roadmapNavigation && window.ProjectRoadmapNavigation) state.roadmapNavigation = new window.ProjectRoadmapNavigation($("roadmap-navigation"), { onSelectStage: focusRoadmapStop });
+      state.roadmapNavigation?.update({ stages: state.stages.map((stage) => ({ id: stage.id, title: shortStageTitle(stage) })), stageId: state.stageId, openBranches: [...state.openBranches] });
     } catch {
       state.canvas?.destroy(); state.canvas = null; state.workflowView = "reading"; renderWorkflowCanvas(); $("canvas-fallback").hidden = false;
       announce("The movable renderer is unavailable. The accessible reading view contains the reviewed records.");
@@ -847,7 +861,8 @@
   $("canvas-zoom-in").onclick = () => state.canvas?.zoomBy(1.25);
   $("canvas-zoom-out").onclick = () => state.canvas?.zoomBy(0.8);
   $("canvas-fit").onclick = () => state.canvas?.fit();
-  $("canvas-focus-branch").onclick = () => { const selected = state.displaySelectionId || state.partId; if (selected) state.canvas?.focusSelection(selected, state.stageId); else state.canvas?.focusBranch(state.stageId); };
+  $("canvas-focus-branch").onclick = () => { const selected = state.displaySelectionId || state.partId; if (selected) state.canvas?.focusSelection(selected, state.stageId); else state.canvas?.focusRoadmapStop(state.stageId); };
+  $("roadmap-crosslinks").onchange = () => state.canvas?.setCrosslinks($("roadmap-crosslinks").checked);
   $("canvas-collapse-branch").onclick = () => { state.openBranches.delete(state.stageId); state.partId = ""; state.displaySelectionId = ""; inspectCanvasNode(state.stageId); };
   $("canvas-collapse-all").onclick = () => { state.openBranches.clear(); state.partId = ""; state.displaySelectionId = ""; inspectCanvasNode(state.stageId); };
   $("canvas-reset").onclick = () => state.canvas?.resetLayout();
