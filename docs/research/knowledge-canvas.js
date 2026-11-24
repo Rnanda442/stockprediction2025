@@ -61,15 +61,20 @@
           { selector: "edge[mainBypass = 1]", style: { "width": 2.2, "line-style": "dashed", "line-color": "#6e8797", "target-arrow-color": "#6e8797", "curve-style": "unbundled-bezier", "control-point-distances": 280, "control-point-weights": 0.5 } },
           { selector: ".canvas-muted", style: { "opacity": 0.75 } },
           { selector: "node.canvas-neighbor", style: { "border-color": "#498e9e", "border-width": 2, "background-color": "#f1f8fb" } },
-          { selector: "node.canvas-selected", style: { "border-color": "#147d73", "border-width": 4, "background-color": "#dff2eb", "z-index": 10 } },
+          { selector: "node.canvas-selected", style: { "border-color": "#173f59", "border-width": 4, "underlay-color": "#173f59", "underlay-opacity": 0.13, "underlay-padding": 6, "z-index": 10 } },
           { selector: "edge.canvas-linked", style: { "width": 2.6, "label": "data(label)", "z-index": 8 } },
-          { selector: "edge.canvas-incoming", style: { "line-color": "#6b87bc", "target-arrow-color": "#6b87bc" } },
-          { selector: "edge.canvas-outgoing", style: { "line-color": "#238d81", "target-arrow-color": "#238d81" } },
-          { selector: "edge.canvas-selected", style: { "width": 4, "line-color": "#147d73", "target-arrow-color": "#147d73", "label": "data(label)", "z-index": 12 } },
+          { selector: "edge.canvas-incoming", style: { "line-color": "#6b8197", "target-arrow-color": "#6b8197" } },
+          { selector: "edge.canvas-outgoing", style: { "line-color": "#365d79", "target-arrow-color": "#365d79" } },
+          { selector: "edge.canvas-selected", style: { "width": 4, "line-color": "#173f59", "target-arrow-color": "#173f59", "label": "data(label)", "z-index": 12 } },
           { selector: "edge[kind = 'main'].canvas-muted", style: { "opacity": 0.85 } },
           { selector: "node[role = 'stage'].canvas-muted", style: { "opacity": 0.9 } },
           { selector: "edge.roadmap-cross-quiet", style: { "opacity": 0.07, "width": 1, "label": "" } },
           { selector: "edge.roadmap-cross-quiet.canvas-linked", style: { "opacity": 0.55, "label": "data(label)" } },
+          ...Object.entries({ connected: ["#e7f4ec", "#397c58"], needs_connection: ["#fff3d9", "#a67321"], blocked: ["#faeae8", "#aa5250"], historical: ["#eff1f3", "#7b8995"], unknown: ["#ffffff", "#9aabb5"] }).flatMap(([status, colors]) => [
+            { selector: `node[readiness = '${status}']`, style: { "background-color": colors[0], "border-color": colors[1] } },
+            { selector: `edge[readiness = '${status}']`, style: { "line-color": colors[1], "target-arrow-color": colors[1] } },
+          ]),
+          { selector: "node[filterContext = true]", style: { "border-style": "dotted" } },
         ],
       });
       this.cy.on("grab", "node", () => { this.dragged = false; });
@@ -92,6 +97,11 @@
         this.selectEdge(event.target.id());
         this.callbacks.onEdge?.(event.target.data());
       });
+      this.cy.on("mouseover", "node, edge", (event) => {
+        const data = event.target.data();
+        this.element.title = `${data.title || data.label || "Project record"}\n${data.readinessLabel || "Documentary relation · operational connection not separately reviewed"}${data.filterContext ? " · retained context" : ""}${data.readinessReason ? `\n${data.readinessReason}` : ""}${data.readinessEvidenceIds?.length ? `\nEvidence: ${data.readinessEvidenceIds.join(", ")}` : ""}`;
+      });
+      this.cy.on("mouseout", "node, edge", () => { this.element.title = ""; });
       this.cy.on("tap", (event) => {
         if (event.target === this.cy && Date.now() >= this.suppressTapUntil) this.clearHighlight();
       });

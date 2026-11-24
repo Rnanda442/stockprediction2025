@@ -5,6 +5,7 @@ Only the following public documentation files belong to this export:
 ```text
 scripts/export_public_project_map.py
 scripts/build_workflow_detail_catalog.py
+scripts/build_workflow_readiness_catalog.py
 docs/research/README.md
 docs/research/ARCHITECTURE.md
 docs/research/EXPORT_ALLOWLIST.md
@@ -19,6 +20,8 @@ docs/research/vendor/cytoscape.LICENSE
 docs/research/GRAPH_CANVAS.md
 docs/research/RADIAL_EXPANSION.md
 docs/research/ROADMAP_LAYOUT.md
+docs/research/WORKFLOW_READINESS.md
+docs/research/workflow-readiness.public.json
 docs/research/THIRD_PARTY_NOTICES.md
 docs/research/project-graph.public.json
 docs/research/method-catalog.public.json

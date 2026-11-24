@@ -54,6 +54,43 @@ button{-webkit-appearance:none;appearance:none;color:inherit}.masthead{height:65
 /* A movable Canvas2D workspace; the source-linked reading diagram remains an alternative. */
 [hidden]{display:none!important}
 .sr-only{width:1px!important;height:1px!important;max-width:1px!important;min-width:0!important;padding:0!important;border:0!important}
+.readiness-strip{margin:3px 0 10px;padding:10px 0;border-top:1px solid #e0e8ec;border-bottom:1px solid #e0e8ec}.readiness-banner{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;margin:0 0 8px;font-size:.875rem;color:#526c7b;line-height:1.5}.readiness-banner strong{color:#2a4b5f;font-size:.875rem;font-weight:650}.readiness-tools{display:flex;gap:9px 13px;align-items:center;flex-wrap:wrap}.readiness-tools>label{display:flex;align-items:center;gap:7px;color:#486578;font-size:.875rem;font-weight:600}.readiness-tools select{max-width:100%;padding:7px 9px;font-size:.94rem;background:#fff;border:1px solid #bfced7;border-radius:6px;color:var(--ink)}.readiness-blocker-count{font-size:.875rem;color:#80544d;line-height:1.4}.readiness-tools .text-button{font-size:.875rem}.readiness-key{margin:8px 0 0;font-size:.875rem;color:#627c8c}.readiness-key>summary{font-size:.875rem;font-weight:600;cursor:pointer;color:#416679}.readiness-key p{font-size:.875rem;line-height:1.6;margin:9px 0}.readiness-legend{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 3px}.readiness-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border:1px solid;border-radius:5px;font-size:.875rem;line-height:1.35;font-weight:600;max-width:100%;overflow-wrap:anywhere}.readiness-pill::before{content:"";width:7px;height:7px;flex:none;border-radius:50%;background:currentColor}.readiness-connected{background:#e7f4ec;border-color:#97bca4;color:#30674b}.readiness-needs_connection{background:#fff3d9;border-color:#d3b373;color:#825c20}.readiness-blocked{background:#faeae8;border-color:#d5a29e;color:#934b49}.readiness-historical{background:#eff1f3;border-color:#b7c0c7;color:#5c6b79}.readiness-unknown{background:#fff;border-color:#c0ccd3;color:#617886}.readiness-card{border:1px solid #d1dfe6;border-radius:8px;background:#f9fbfc;padding:14px;margin:0 0 21px}.readiness-card-heading{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px}.evidence-separate{font-size:.8rem;line-height:1.5;color:#697d8c}.readiness-answer{padding:8px 0 0}.readiness-answer h5{font-size:.94rem;line-height:1.45;margin:0;color:#294f63;font-weight:650}.readiness-answer p{font-size:.94rem;line-height:1.6;margin:4px 0 3px;color:#4d6b7c;overflow-wrap:anywhere}.readiness-card details{margin-top:10px;border-top:1px solid #e1e9ed;padding-top:10px}.readiness-card summary{font-size:.875rem;color:#426e82;font-weight:600;cursor:pointer;line-height:1.55}.readiness-card .meta{font-size:.875rem;line-height:1.6}.canvas-expanded .readiness-strip{flex:none;margin:0 0 6px;padding:6px 0}.canvas-expanded .readiness-banner{margin-bottom:5px}.canvas-expanded .readiness-key{margin-top:5px;max-height:160px;overflow:auto}.readiness-card .evidence-list{padding-left:15px}
+.readiness-saved-results{border-top:1px solid #dce6eb;padding-top:7px;margin-top:9px}.readiness-saved-results article{padding:10px 0;border-bottom:1px solid #e0e8ec}.readiness-saved-results h5{margin:0 0 5px;font-size:1rem;color:#315b71}.readiness-saved-results p{margin:5px 0;font-size:.94rem;line-height:1.65;overflow-wrap:anywhere}
+.canvas-control-items{display:flex;flex-wrap:wrap;align-items:center;gap:0;row-gap:5px;min-width:0}#canvas-menu-toggle{display:none}
+@media(max-width:850px){
+ .canvas-expanded .readiness-strip{position:relative;padding:4px 0;margin:0 0 4px;flex:none}
+ .canvas-expanded .readiness-banner{display:flex;flex-wrap:wrap;gap:2px 9px;line-height:1.35;margin:0 0 3px}
+ .canvas-expanded #readiness-snapshot{font-size:0}.canvas-expanded #readiness-snapshot:after{content:attr(data-short-label);font-size:.875rem}
+ .canvas-expanded .readiness-banner>span{font-size:0}.canvas-expanded .readiness-banner>span:after{content:"No daily service verified";font-size:.875rem}
+ .canvas-expanded .readiness-tools{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 7px;align-items:center;padding-right:0}
+ .canvas-expanded .readiness-tools>label{grid-row:2;grid-column:1/-1;display:flex;gap:5px;min-width:0;width:auto;font-size:.875rem;padding-right:131px}
+ .canvas-expanded .readiness-tools select{width:100%;min-width:120px;max-width:180px;font-size:1rem;padding:5px 6px;min-height:32px}
+ .canvas-expanded .readiness-blocker-count{grid-row:1;grid-column:1;display:block;font-size:.875rem;white-space:nowrap;line-height:1.4}
+ .canvas-expanded #readiness-reset{grid-row:1;grid-column:2;font-size:.875rem;padding:2px 0;line-height:1.4}
+ .canvas-expanded .readiness-key{position:absolute;right:0;bottom:7px;margin:0;z-index:60;max-height:none;font-size:.875rem}
+ .canvas-expanded .readiness-key>summary{font-size:.875rem;line-height:1.4;max-width:125px}
+ .canvas-expanded .readiness-key:not([open])>summary{font-size:0}.canvas-expanded .readiness-key:not([open])>summary:after{content:"Key & coverage ▾";font-size:.875rem}
+ .canvas-expanded .readiness-key[open]{top:50px;bottom:auto;width:min(355px,calc(100vw - 32px));max-height:245px;overflow:auto;background:white;border:1px solid #bdcfd8;border-radius:7px;box-shadow:0 4px 22px #163e5229;padding:10px}
+ .canvas-expanded .readiness-key[open]>summary{max-width:none}
+ .canvas-expanded .canvas-tools{flex:none;padding:3px 0 5px;gap:6px}
+ .canvas-expanded .canvas-scope-field{display:none}.canvas-expanded #workflow-canvas-mode{display:none}.canvas-expanded .workspace-modes button{padding:6px 9px;min-height:32px}
+ .canvas-expanded .workspace-button{padding:6px 9px;min-height:32px}
+ .canvas-expanded .canvas-navigation{position:relative;flex:none;padding:4px 6px;min-height:38px;z-index:20}
+ .canvas-expanded #canvas-menu-toggle{display:block;min-height:30px;padding:4px 9px;font-size:.875rem;border:1px solid #b9ccd7;border-radius:5px}
+ .canvas-expanded .canvas-control-items{display:none}
+ .canvas-expanded .map-controls-open .canvas-control-items{display:flex;position:absolute;left:6px;right:6px;top:38px;z-index:30;max-height:210px;overflow:auto;border:1px solid #b9ccd7;border-radius:6px;background:#fff;padding:7px;box-shadow:0 5px 20px #173f5926}
+ .canvas-expanded .roadmap-compact{padding:5px 7px;gap:0}
+ .canvas-expanded .roadmap-picker-label{gap:0}.canvas-expanded .roadmap-picker-label>span:first-child{display:none}
+ .canvas-expanded .roadmap-compact select{min-height:36px;padding:6px 31px 6px 9px;font-size:1rem}
+ .canvas-expanded .roadmap-picker-wrap:after{top:13px}
+ .canvas-expanded .roadmap-location-controls,.canvas-expanded .roadmap-location-note{display:none}
+ .canvas-expanded .canvas-selection{padding-top:4px;gap:4px;flex:none}
+ .canvas-expanded .canvas-selection select{font-size:1rem;min-height:32px;padding:5px 7px}
+ .canvas-expanded .canvas-selection-actions{gap:5px}
+ .canvas-expanded .canvas-selection-actions .button{font-size:.875rem;min-height:30px;padding:5px 8px}
+ .canvas-expanded .roadmap-surface{min-height:0}.canvas-expanded .roadmap-surface>.canvas-viewport{min-height:150px}
+}
+@media(max-width:540px){.readiness-strip{padding:8px 0}.readiness-tools{gap:7px 10px}.readiness-tools>label{width:100%;font-size:.875rem}.readiness-tools select{flex:1;min-width:0;font-size:1rem;padding:7px 8px}.readiness-blocker-count{font-size:.875rem;flex:1}.readiness-tools .text-button{font-size:.875rem}.readiness-card{padding:12px}.readiness-card-heading{gap:5px}.readiness-answer p{font-size:1rem;line-height:1.6}.canvas-expanded .readiness-banner{font-size:.8rem}.canvas-expanded .readiness-tools>label{width:auto;flex:1}.canvas-expanded .readiness-blocker-count{display:block;flex-basis:100%;font-size:.8rem}.canvas-expanded .readiness-key{max-height:100px}}
 .workflow-layout{grid-template-columns:minmax(0,2fr) minmax(300px,1fr)}
 .workflow-board.canvas-mode{padding:18px 20px}.canvas-mode .flow-introduction{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;margin-bottom:10px}
 .canvas-mode #part-controls .part-actions,.canvas-mode #part-controls #part-find-field,.canvas-mode #part-view-note{display:none!important}.canvas-mode #part-controls{padding:0 0 10px;border-bottom:0}.canvas-mode #part-group-field{margin:0}.canvas-mode #part-group-field>span{font-size:.875rem}.canvas-mode #part-group-select{font-size:.94rem;padding:7px 10px}

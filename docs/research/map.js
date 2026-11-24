@@ -53,6 +53,65 @@
   let detailScrollEpoch = 0;
   state.workflowView = "canvas"; state.canvasScope = "connected"; state.canvas = null; state.canvasSelectedEdge = null;
   state.openBranches = new Set(); state.collapsedCategories = new Set(); state.openLeaves = new Set(); state.displayFieldIndex = new Map(); state.displaySelectionId = "";
+  state.readiness = null; state.stageReadiness = new Map(); state.partReadiness = new Map(); state.edgeReadiness = new Map(); state.readinessFilter = "current";
+  const readinessLabels = { connected: "Connected", needs_connection: "Needs connection", blocked: "Blocked", historical: "Historical", unknown: "Not reviewed" };
+  function readinessFor(id) { return state.stageReadiness.get(id) || state.partReadiness.get(id) || { operational_status: "unknown", reason: "No reviewed readiness statement is loaded for this record." }; }
+  function readinessPill(status, suffix = "") { return `<span class="readiness-pill readiness-${esc(status || "unknown")}">${esc(readinessLabels[status] || "Not reviewed")}${suffix ? ` · ${esc(suffix)}` : ""}</span>`; }
+  function readinessCard(id) {
+    const record = readinessFor(id), status = record.operational_status, missing = record.missing || record.reason || "No missing-work statement was recorded here.", done = record.done_when || "No completion criterion was recorded for this record.";
+    const answer = (title, value) => `<div class="readiness-answer"><h5>${esc(title)}</h5><p>${esc(plain(value || "Not established by the reviewed record."))}</p></div>`;
+    const saved = list(record.stored_study_results);
+    const results = saved.length ? `<div class="readiness-saved-results"><p class="meta">Saved study evidence is separate from operational readiness. No model is promoted; blocked or unrun plans are not completed tests.</p>${saved.map((study) => `<article><h5>${esc(plain(study.friendly_title || study.canonical_id || study.experiment_id))}</h5><p>${esc(plain(study.reviewed_verdict))}</p><p class="meta">Recorded use: ${esc(human(study.appropriate_use_status || "Not recorded"))} · model not promoted</p></article>`).join("")}</div>` : "";
+    return `<section class="readiness-card" aria-label="Reviewed workflow readiness"><div class="readiness-card-heading">${readinessPill(status)}<span class="evidence-separate">${saved.length ? `${saved.length} saved-study evidence links · separate` : "Research results are separate"}</span></div>${answer("What is missing?", missing)}${answer("When is this done?", done)}<details><summary>Purpose, inputs, existing work and learning</summary>${answer("What is this for?", record.purpose)}${answer("What does it need?", record.needs)}${answer("What already exists?", record.exists)}${answer("What did the research teach us?", record.research_result)}${results}</details><details><summary>Readiness evidence and review date</summary><p class="meta">Reviewed ${esc(record.last_reviewed || state.readiness?.as_of || "date unavailable")} · snapshot, not continuous monitoring.</p>${evidenceMarkup(list(record.evidence_ids))}<p class="meta">Green means a reviewed connection for this record’s displayed purpose. It does not mean a profitable model or an operating daily service.</p></details></section>`;
+  }
+  function bindReadiness(data) {
+    const statuses = new Set(["connected", "needs_connection", "blocked", "historical"]), stages = list(data.stage_cards), parts = list(data.part_readiness), edges = list(data.main_edge_statuses);
+    const edgeKey = (edge) => `${edge.source}\u0000${edge.target}\u0000${edge.relation}`;
+    if (["workflow-view.public.json", "workflow-details.public.json", "method-catalog.public.json", "project-graph.public.json", "evidence-index.public.json"].some((file) => !state.sourceContentHashes?.[file] || data.source_snapshot?.[file]?.content_sha256 !== state.sourceContentHashes[file])) return false;
+    if (stages.length !== state.stages.length || parts.length !== state.workflowPartIndex.size || edges.length !== state.pipelineEdges.length) return false;
+    if (new Set(stages.map((record) => record.stage_id)).size !== stages.length || new Set(parts.map((record) => record.part_id)).size !== parts.length || new Set(edges.map(edgeKey)).size !== edges.length) return false;
+    if (stages.some((record) => !state.stages.some((stage) => stage.id === record.stage_id) || !statuses.has(record.operational_status)) || parts.some((record) => !state.workflowPartIndex.has(record.part_id) || !statuses.has(record.operational_status)) || edges.some((record) => !state.pipelineEdges.some((edge) => edgeKey(edge) === edgeKey(record)) || !statuses.has(record.operational_status))) return false;
+    state.readiness = data; state.stageReadiness = new Map(stages.map((record) => [record.stage_id, record])); state.partReadiness = new Map(parts.map((record) => [record.part_id, record])); state.edgeReadiness = new Map(edges.map((record) => [edgeKey(record), record])); return true;
+  }
+  function readinessMatches(id) {
+    if (!state.readiness || state.readinessFilter === "everything") return true;
+    const facets = readinessFor(id).view_facets;
+    if (Array.isArray(facets)) return facets.includes({ current: "current_workflow", attention: "needs_attention", past: "past_research" }[state.readinessFilter]);
+    const status = readinessFor(id).operational_status;
+    return state.readinessFilter === "attention" ? ["blocked", "needs_connection"].includes(status) : state.readinessFilter === "past" ? status === "historical" : status !== "historical";
+  }
+  function readinessDetailFilter() {
+    const matched = new Set([...state.workflowPartIndex.keys()].filter(readinessMatches)), allowed = new Set(matched);
+    const retain = (id) => { const entry = state.workflowPartIndex.get(id); if (!entry) return; for (const node of partAncestors(state.workflowSections.get(entry.stageId), id)) allowed.add(node.id); };
+    for (const id of matched) { retain(id); const node = state.workflowPartIndex.get(id).node; for (const ref of [...list(node.inputs), ...list(node.outputs)]) if (typeof ref === "string" && state.workflowPartIndex.has(ref)) { allowed.add(ref); retain(ref); } }
+    if (state.readinessPinnedPart) { allowed.add(state.readinessPinnedPart); retain(state.readinessPinnedPart); }
+    return { matched, allowed };
+  }
+  function decorateReadiness(graph) {
+    for (const node of graph.nodes) {
+      let record = readinessFor(node.id);
+      if (node.display_only && node.owners?.length) {
+        const rank = { blocked: 4, needs_connection: 3, unknown: 2, connected: 1, historical: 0 };
+        record = node.owners.map(readinessFor).sort((a, b) => (rank[b.operational_status] || 0) - (rank[a.operational_status] || 0))[0];
+      }
+      node.title = node.title || node.label; node.readiness = record.operational_status || "unknown"; node.readinessLabel = readinessLabels[node.readiness] || "Not reviewed"; node.readinessReason = plain(record.reason || record.missing || "Read the reviewed readiness card.");
+      if (node.role === "stage") node.label = `${node.title}\n${node.readinessLabel}`;
+    }
+    for (const edge of graph.edges) {
+      const record = state.edgeReadiness.get(`${edge.source}\u0000${edge.target}\u0000${edge.relation}`);
+      if (record) { edge.readiness = record.operational_status; edge.readinessLabel = readinessLabels[record.operational_status]; edge.readinessReason = plain(record.reason); edge.readinessEvidenceIds = list(record.evidence_ids); }
+    }
+    return graph;
+  }
+  function renderReadinessControls() {
+    $("readiness-snapshot").textContent = state.readiness ? `Readiness snapshot · ${state.readiness.as_of}` : "Readiness review unavailable · no connection inferred";
+    const blocked = [...state.stageReadiness.values()].filter((record) => record.operational_status === "blocked").length, needs = [...state.stageReadiness.values()].filter((record) => record.operational_status === "needs_connection").length;
+    $("readiness-blockers").textContent = state.readiness ? `${blocked} stages blocked · ${needs} need connection` : "Readiness is not verified";
+    $("readiness-connections").textContent = state.readiness ? `${[...state.edgeReadiness.values()].filter((record) => record.operational_status === "connected").length} verified main connections; the 15 dependency arrows remain documentary context.` : "No connection status is inferred without the reviewed supplement.";
+    $("readiness-snapshot").dataset.shortLabel = state.readiness ? `Snapshot · ${state.readiness.as_of}` : "Readiness unavailable";
+    $("workflow-readiness-filter").value = state.readinessFilter; $("workflow-readiness-filter").disabled = !state.readiness || state.canvasScope !== "connected";
+    $("readiness-scope-note").textContent = state.canvasScope === "connected" ? state.partId && !readinessMatches(state.partId) ? "This linked record is outside the selected filter and remains visible as context." : "Filters affect detail records; all 12 road stops and 15 main arrows remain as context." : "Readiness filters apply to the ordered roadmap. This secondary scope keeps its complete selected record set.";
+  }
   function announce(value) { $("announcement").textContent = value; }
   function resetWorkflowDetailScroll() {
     detailScrollEpoch += 1;
@@ -218,7 +277,7 @@
     }).join("");
     const libraryAction = stage.id === "model" ? `<button class="button subtle workflow-library-link" data-workflow-library="models">View saved models and results (${state.studies.length})</button>` : stage.id === "features_universe" ? `<button class="button subtle workflow-library-link" data-workflow-library="variables">Explore the 59 variable definitions</button>` : "";
     const detailMarkup = `<div class="detail-kicker"><p class="eyebrow">Selected step</p>${pill(stageClass(stage) === "gap" ? "blocked" : "diagnostic_only", stageStatus(stage))}</div><h3>${esc(stageTitle(stage))}</h3><p class="detail-summary">${esc(stage.summary || stage.question || stage.description || stage.purpose || "Read the saved work and its limits for this stage.")}</p>${libraryAction}${section("What we already have", itemList(existing || ["See the linked reviewed project records."]))}${section("What remains", itemList(remaining || ["No additional implementation claim is inferred from this map."]))}${section("Connects with", connectionMarkup)}${studies.length ? section("Related studies", `<div class="linked-records">${linked}</div>`) : ""}${records.length ? section("Explore connections", `<div class="linked-records">${records.map((node) => `<button class="record-chip" data-open-node="${esc(node.id)}">${esc(nodeTitle(node))}</button>`).join("")}</div>`) : ""}<details class="detail-section"><summary>Source evidence</summary>${evidenceMarkup(evidenceIds(stage))}</details>`;
-    $("stage-detail").innerHTML = detailMarkup; $("stage-sheet-content").innerHTML = detailMarkup;
+    $("stage-detail").innerHTML = readinessCard(stage.id) + detailMarkup; $("stage-sheet-content").innerHTML = readinessCard(stage.id) + detailMarkup;
     resetWorkflowDetailScroll();
     $("stage-sheet-title").textContent = shortStageTitle(stage); $("mobile-stage-label").textContent = shortStageTitle(stage);
     for (const container of [$("stage-detail"), $("stage-sheet-content")]) {
@@ -448,7 +507,7 @@
       return `<button class="part-related" type="button" data-cross-part="${esc(other.node.id)}"><span>${incoming ? "From" : "To"} · ${esc(human(edge.relation))} · ${esc(otherStage ? shortStageTitle(otherStage) : other.stageId)}</span><strong>${esc(other.node.title)}</strong></button>`;
     }).join("");
     const markup = `<div class="detail-kicker"><p class="eyebrow">${isPartCategory(sectionData, part) ? "Connected group" : "Specific workflow part"}</p><span class="pill diagnostic">${esc(partStatus(part))}</span></div><h3>${esc(part.title)}</h3><p class="detail-summary">${esc(part.summary || "Read the recorded inputs, outputs and source evidence.")}</p>${section("Inputs", itemList(list(part.inputs).length ? part.inputs : ["No additional input was recorded for this part."]))}${section("Outputs", itemList(list(part.outputs).length ? part.outputs : ["No additional output was recorded for this part."]))}${part.formula ? section("Formula or rule", `<pre class="part-formula"><code>${esc(plain(part.formula))}</code></pre>${part.units ? `<p class="meta"><strong>Units:</strong> ${esc(plain(part.units))}</p>` : ""}`) : part.units ? section("Units", `<p>${esc(plain(part.units))}</p>`) : ""}${list(part.details).length ? section("Specific details and limits", itemList(part.details)) : ""}${variables.length ? section("Linked variable definitions", variables.map((node) => `<div class="part-variable"><button class="record-chip" data-open-node="${esc(node.id)}">${esc(nodeTitle(node))}</button><p class="file-path">${esc(node.formula || "No formula recorded")}</p></div>`).join("")) : ""}${studies.length ? section("Saved studies and results", `<div class="linked-records">${studies.map((study) => `<button class="record-chip" data-open-method="${esc(study.canonical_id)}">${esc(studyTitle(study))}</button>`).join("")}</div>`) : ""}${list(part.code_components).length ? section("Code and implementation components", itemList(part.code_components)) : ""}${canonical.length ? section("Project record connections", `<div class="linked-records">${canonical.map((node) => `<button class="record-chip" data-open-node="${esc(node.id)}">${esc(nodeTitle(node))}</button>`).join("")}</div>`) : ""}${related.length ? section("Connected parts", `<div class="part-related-list">${relations}</div>`) : ""}<details class="detail-section"><summary>Source evidence</summary>${evidenceMarkup(list(refs))}<p class="identifier">${esc(part.id)}<br>Recorded source status: ${esc(part.status || "Not recorded")}</p></details>`;
-    const completeMarkup = markup + (external ? section("Connections in other steps", `<div class="part-related-list">${external}</div>`) : "");
+    const completeMarkup = readinessCard(part.id) + markup + (external ? section("Connections in other steps", `<div class="part-related-list">${external}</div>`) : "");
     $("stage-detail").innerHTML = completeMarkup; $("stage-sheet-content").innerHTML = completeMarkup; $("stage-sheet-title").textContent = part.title; $("mobile-stage-label").textContent = part.title;
     resetWorkflowDetailScroll();
     for (const container of [$("stage-detail"), $("stage-sheet-content")]) {
@@ -483,14 +542,15 @@
   function connectedGraph() {
     const nodes = state.stages.map((stage) => ({ id: stage.id, label: shortStageTitle(stage), role: "stage", stageId: stage.id })), edges = [];
     const visible = new Set(), allCanonical = [];
+    const readinessFilter = readinessDetailFilter();
     for (const [stageId, sectionData] of state.workflowSections) {
       allCanonical.push(...sectionData.edges);
       if (!state.openBranches.has(stageId)) continue;
-      const parts = orderedParts(sectionData.nodes).filter((part) => !partAncestors(sectionData, part.id).slice(0, -1).some((ancestor) => state.collapsedCategories.has(ancestor.id)));
+      const parts = orderedParts(sectionData.nodes).filter((part) => readinessFilter.allowed.has(part.id) && !partAncestors(sectionData, part.id).slice(0, -1).some((ancestor) => state.collapsedCategories.has(ancestor.id)));
       parts.sort((a, b) => partAncestors(sectionData, a.id).length - partAncestors(sectionData, b.id).length);
       for (const part of parts) {
         visible.add(part.id); const parent = partParent(sectionData, part);
-        nodes.push({ id: part.id, label: part.title, role: isPartCategory(sectionData, part) ? "category" : "leaf", stageId, parent_id: parent || stageId, order: part.order || 0 });
+        nodes.push({ id: part.id, label: part.title, role: isPartCategory(sectionData, part) ? "category" : "leaf", stageId, parent_id: parent || stageId, order: part.order || 0, filterContext: !readinessFilter.matched.has(part.id) });
         if (!parent) edges.push({ id: `membership:${stageId}:${part.id}`, source: stageId, target: part.id, relation: "section_membership", label: "part of this step", kind: "membership", display_only: true });
       }
     }
@@ -533,7 +593,7 @@
       edge.isCrosslink = edge.kind === "declared_reference" || edge.kind === "canonical" && edge.relation !== "contains";
       edge.mainBypass = edge.kind === "main" && (edge.source === "forecast_contract" && edge.target === "model" || edge.source === "portfolio_state" && edge.target === "constraints" || edge.source === "paper_report" && edge.target === "mature_outcomes") ? 1 : 0;
     }
-    return { key: "connected-branches", incremental: true, roadmap: true, selectedStageId: state.stageId, roadmapCatalog: [...state.workflowPartIndex].map(([id, entry]) => ({ id, stageId: entry.stageId, parent_id: partParent(state.workflowSections.get(entry.stageId), entry.node) || entry.stageId, order: entry.node.order || 0 })), nodes, edges, selectedId, counts: { hubs: 12, parts: visible.size, fields: fields.size, canonical: edges.filter((edge) => edge.kind === "canonical").length, references: edges.filter((edge) => edge.kind === "declared_reference").length, membership: edges.filter((edge) => edge.kind === "membership").length } };
+    return decorateReadiness({ key: "connected-branches", incremental: true, roadmap: true, selectedStageId: state.stageId, roadmapCatalog: [...state.workflowPartIndex].map(([id, entry]) => ({ id, stageId: entry.stageId, parent_id: partParent(state.workflowSections.get(entry.stageId), entry.node) || entry.stageId, order: entry.node.order || 0 })), nodes, edges, selectedId, counts: { hubs: 12, parts: visible.size, matchedVisible: [...visible].filter((id) => readinessFilter.matched.has(id)).length, contextVisible: [...visible].filter((id) => !readinessFilter.matched.has(id)).length, catalogMatched: readinessFilter.matched.size, fields: fields.size, canonical: edges.filter((edge) => edge.kind === "canonical").length, references: edges.filter((edge) => edge.kind === "declared_reference").length, membership: edges.filter((edge) => edge.kind === "membership").length } });
   }
   function focusRoadmapStop(id) {
     if (!state.stages.some((stage) => stage.id === id)) return;
@@ -554,7 +614,9 @@
     const owner = state.workflowPartIndex.get(field.owner_id);
     const fieldEvidence = [...new Set(field.owners.flatMap((id) => list(state.workflowPartIndex.get(id)?.node.evidence_ids)))];
     const markup = `<p class="eyebrow">Display annotation · exact recorded field</p><h3>${esc(field.role === "formula" ? "Formula / rule" : field.role === "component" ? "Code component" : "Linked variable definition")}</h3><pre class="part-formula"><code>${esc(field.value)}</code></pre><p class="scope-note">This annotation exposes a recorded formula, code name or definition. It adds no market observation or predictive claim.</p>${section("Recorded by", `<div class="linked-records">${field.owners.map((id) => `<button class="record-chip" data-field-owner="${esc(id)}">${esc(state.workflowPartIndex.get(id)?.node.title || id)}</button>`).join("")}</div>`)}${field.canonicalId ? `<button class="record-chip" data-field-variable="${esc(field.canonicalId)}">Open canonical variable definition</button>` : ""}<p class="identifier">${field.source_refs.map((ref) => `${esc(ref.owner_id)} · ${esc(ref.field)}[${ref.index}]`).join("<br>")}</p>${evidenceMarkup(fieldEvidence)}`;
-    $("stage-detail").innerHTML = markup; $("stage-sheet-content").innerHTML = markup; $("stage-sheet-title").textContent = field.role === "formula" ? "Formula / rule" : field.label; $("mobile-stage-label").textContent = "Selected recorded field"; resetWorkflowDetailScroll();
+    const ownerStatuses = [...new Set(field.owners.map((id) => readinessFor(id).operational_status))];
+    const inherited = `<section class="readiness-card"><p class="meta">Display annotation · owner readiness</p>${ownerStatuses.map((status) => readinessPill(status, "inherited")).join(" ")}<p class="meta">This formula, code name or definition inherits its owning records’ reviewed status. The annotation is not an additional implemented connection or research result.</p></section>`;
+    $("stage-detail").innerHTML = inherited + markup; $("stage-sheet-content").innerHTML = inherited + markup; $("stage-sheet-title").textContent = field.role === "formula" ? "Formula / rule" : field.label; $("mobile-stage-label").textContent = "Selected recorded field"; resetWorkflowDetailScroll();
     for (const container of [$("stage-detail"), $("stage-sheet-content")]) {
       container.querySelectorAll("[data-field-owner]").forEach((button) => button.onclick = () => inspectCanvasNode(button.dataset.fieldOwner));
       container.querySelectorAll("[data-field-variable]").forEach((button) => button.onclick = () => { if ($("stage-sheet").open) $("stage-sheet").close(); openNode(button.dataset.fieldVariable); });
@@ -573,6 +635,10 @@
     state.displaySelectionId = "";
     const entry = state.workflowPartIndex.get(id);
     if (entry) {
+      if (state.canvasScope === "connected") {
+        state.readinessPinnedPart = readinessMatches(id) ? "" : id; state.openBranches.add(entry.stageId);
+        for (const ancestor of partAncestors(state.workflowSections.get(entry.stageId), id).slice(0, -1)) state.collapsedCategories.delete(ancestor.id);
+      }
       if (state.childStageId !== entry.stageId) { state.partFocusId = partParent(state.workflowSections.get(entry.stageId), entry.node); state.showAllParts = false; }
       state.stageId = entry.stageId; state.childStageId = entry.stageId; state.partId = id; state.detailMode = "part";
     } else if (state.stages.some((stage) => stage.id === id)) { state.stageId = id; state.detailMode = "stage"; if (state.canvasScope === "connected") { state.childStageId = ""; state.partId = ""; state.partFocusId = ""; } }
@@ -609,25 +675,27 @@
       nodes = state.stages.map((stage) => canvasNode(stage.id)); edges = state.pipelineEdges; key = "workflow"; selectedId = state.stageId;
     }
     const ids = new Set(nodes.filter(Boolean).map((node) => node.id));
-    return { key, nodes: nodes.filter(Boolean), selectedId, edges: edges.filter((edge) => ids.has(edgeSource(edge)) && ids.has(edgeTarget(edge))).map((edge, index) => ({ id: `canvas-edge:${key}:${index}`, source: edgeSource(edge), target: edgeTarget(edge), relation: edge.relation || edge.type || "connects_to", label: flowRelationLabels[edge.relation] || human(edge.relation || edge.type || "connects to") })) };
+    return decorateReadiness({ key, nodes: nodes.filter(Boolean), selectedId, edges: edges.filter((edge) => ids.has(edgeSource(edge)) && ids.has(edgeTarget(edge))).map((edge, index) => ({ id: `canvas-edge:${key}:${index}`, source: edgeSource(edge), target: edgeTarget(edge), relation: edge.relation || edge.type || "connects_to", label: flowRelationLabels[edge.relation] || human(edge.relation || edge.type || "connects to") })) });
   }
   function inspectCanvasEdge(edge) {
     state.canvasSelectedEdge = edge;
     const source = canvasNode(edge.source), target = canvasNode(edge.target);
     const provenance = list(edge.references).map((ref) => `${state.workflowPartIndex.get(ref.owner_id)?.node.title || ref.owner_id} · ${ref.field}[${ref.index}]`);
     const markup = `<p class="eyebrow">${edge.kind === "membership" ? "Display structure · section membership" : edge.kind === "annotation" ? "Display annotation · exact recorded field" : edge.kind === "declared_reference" ? "Display reference · declared input / output" : "Source-defined relationship"}</p><h3>${esc(source?.label || edge.source)} → ${esc(target?.label || edge.target)}</h3><p class="detail-summary">${esc(edge.label)}</p><p class="scope-note">The arrow records a documented project relationship. It does not establish predictive influence or a working connection.</p>${provenance.length ? section("Exact field declarations", itemList(provenance)) : ""}<div class="linked-records"><button class="record-chip" data-canvas-inspect="${esc(edge.source)}">Inspect source</button><button class="record-chip" data-canvas-inspect="${esc(edge.target)}">Inspect destination</button></div><p class="identifier">Recorded type: ${esc(edge.relation)}<br>${esc(edge.source)} → ${esc(edge.target)}</p>`;
-    $("stage-detail").innerHTML = markup; $("stage-sheet-content").innerHTML = markup; $("stage-sheet-title").textContent = "Connection details"; $("mobile-stage-label").textContent = "Selected connection"; resetWorkflowDetailScroll();
+    const readinessMarkup = edge.readiness ? `<section class="readiness-card">${readinessPill(edge.readiness)}<p>${esc(edge.readinessReason)}</p><details><summary>Connection review evidence</summary>${evidenceMarkup(list(edge.readinessEvidenceIds))}<p class="meta">Snapshot ${esc(state.readiness?.as_of || "date unavailable")} · the dependency arrow does not prove an implemented connection.</p></details></section>` : '<p class="scope-note">Documentary relationship · no separate operational connection has been verified for this arrow.</p>';
+    $("stage-detail").innerHTML = readinessMarkup + markup; $("stage-sheet-content").innerHTML = readinessMarkup + markup; $("stage-sheet-title").textContent = "Connection details"; $("mobile-stage-label").textContent = "Selected connection"; resetWorkflowDetailScroll();
     for (const container of [$("stage-detail"), $("stage-sheet-content")]) container.querySelectorAll("[data-canvas-inspect]").forEach((button) => button.onclick = () => { if ($("stage-sheet").open) $("stage-sheet").close(); inspectCanvasNode(button.dataset.canvasInspect); });
     $("canvas-node-picker").value = ""; $("canvas-explore").disabled = true; $("canvas-details").disabled = false;
   }
   function renderWorkflowCanvas() {
+    renderReadinessControls();
     const graph = workflowCanvasGraph(), canvasMode = state.workflowView === "canvas";
     $("workflow-canvas-mode").setAttribute("aria-pressed", String(canvasMode)); $("workflow-reading-mode").setAttribute("aria-pressed", String(!canvasMode));
     $("canvas-workspace").hidden = !canvasMode; $("workflow-reading").hidden = canvasMode || ["all", "connected"].includes(state.canvasScope);
     $("canvas-reading-all").hidden = canvasMode || !["all", "connected"].includes(state.canvasScope);
     document.querySelector(".workflow-board").classList.toggle("canvas-mode", canvasMode);
     $("canvas-scope").value = state.canvasScope === "connected" ? "connected" : state.canvasScope === "all" ? "all" : !state.childStageId ? "workflow" : state.showAllParts ? "step" : "focus";
-    $("canvas-node-picker").innerHTML = '<option value="">Choose a record…</option>' + [...graph.nodes].sort((a, b) => a.label.localeCompare(b.label)).map((node) => `<option value="${esc(node.id)}">${esc(node.label)}${state.canvasScope === "all" ? ` · ${esc(shortStageTitle(state.stages.find((stage) => stage.id === node.stageId)))}` : ""}</option>`).join("");
+    $("canvas-node-picker").innerHTML = '<option value="">Choose a record…</option>' + [...graph.nodes].sort((a, b) => a.label.localeCompare(b.label)).map((node) => `<option value="${esc(node.id)}">${esc(node.title || node.label)} · ${esc(node.readinessLabel || "Not reviewed")}${node.filterContext ? " · Context" : ""}${state.canvasScope === "all" ? ` · ${esc(shortStageTitle(state.stages.find((stage) => stage.id === node.stageId)))}` : ""}</option>`).join("");
     $("canvas-node-picker").value = graph.selectedId || "";
     const selected = canvasNode(graph.selectedId);
     $("canvas-explore").disabled = !selected; $("canvas-details").disabled = !selected;
@@ -639,7 +707,7 @@
       $("workflow-breadcrumb").hidden = true; $("part-controls").hidden = true;
       $("workflow-board-title").textContent = "The project roadmap"; $("workflow-board-subtitle").textContent = `${state.openBranches.size} open branches · follow the road from top to bottom`;
       $("workflow-board-introduction").textContent = "Use the road stops to follow the pathway. Click a box to unfold its actual parts in a side bay; several branches can remain open.";
-      $("canvas-count").textContent = `12 step hubs + ${graph.counts.parts} / 303 actual parts + ${graph.counts.fields} display annotations · 15 main links + ${graph.counts.canonical} / 454 source links + ${graph.counts.references} declared field references + ${graph.counts.membership} membership links`;
+      $("canvas-count").textContent = `12 road stops · ${graph.counts.parts} visible catalog parts (${graph.counts.matchedVisible} matched + ${graph.counts.contextVisible} context) · ${graph.counts.catalogMatched} filter matches /303 catalog parts · ${graph.counts.fields} display annotations · all15 main arrows retained`;
     }
     $("canvas-focus-branch").hidden = state.canvasScope !== "connected"; $("canvas-collapse-branch").hidden = state.canvasScope !== "connected"; $("canvas-collapse-all").hidden = state.canvasScope !== "connected";
     $("canvas-focus-branch").textContent = selected?.role === "leaf" || state.displayFieldIndex.has(selected?.id) ? "Focus selection" : "Focus branch";
@@ -803,15 +871,18 @@
       if (state.partId) { const entry = state.workflowPartIndex.get(state.partId); if (entry) state.openBranches.add(entry.stageId); }
     }
     state.detailMode = state.partId ? "part" : "stage";
+    state.readinessPinnedPart = state.partId && !readinessMatches(state.partId) ? state.partId : "";
     renderWorkflow(); renderModels(); renderRecords(); renderRecordDetail();
     setView(params.get("view") || (node ? "relations" : method ? "models" : "workflow"), false);
   }
   function populateSelect(element, values) { element.querySelectorAll("option:not(:first-child)").forEach((option) => option.remove()); for (const [value, label] of values) element.add(new Option(label, value)); }
   async function load() {
     $("loading").hidden = false; $("load-error").hidden = true; $("app").hidden = true;
+    state.readiness = null; state.stageReadiness.clear(); state.partReadiness.clear(); state.edgeReadiness.clear();
     try {
       const files = ["workflow-view.public.json", "method-catalog.public.json", "project-graph.public.json", "evidence-index.public.json"];
       const [workflow, catalog, graph, evidence] = await Promise.all(files.map(async (file) => { const response = await fetch(`./${file}`, { cache: "no-store", credentials: "same-origin" }); if (!response.ok) throw Error("Reviewed data file unavailable"); return response.json(); }));
+      state.sourceContentHashes = Object.fromEntries(files.map((file, index) => [file, [workflow, catalog, graph, evidence][index].content_sha256]));
       if (!Array.isArray(graph.nodes) || !Array.isArray(graph.edges) || !Array.isArray(catalog.studies)) throw Error("Unsupported reviewed data format");
       state.graph = graph; state.nodes = graph.nodes; state.edges = graph.edges; state.studies = catalog.studies;
       state.nodeById = new Map(state.nodes.map((node) => [node.id, node])); state.studyById = new Map(state.studies.map((study) => [study.canonical_id, study]));
@@ -823,6 +894,7 @@
         const response = await fetch("./workflow-details.public.json", { cache: "no-store", credentials: "same-origin" });
         if (response.ok) {
           const details = await response.json();
+          state.sourceContentHashes["workflow-details.public.json"] = details.content_sha256;
           state.workflowSections = new Map(list(details.sections).filter((sectionData) => state.stages.some((stage) => stage.id === sectionData.stage_id) && Array.isArray(sectionData.nodes) && Array.isArray(sectionData.edges)).map((sectionData) => [sectionData.stage_id, sectionData]));
           for (const [stageId, sectionData] of state.workflowSections) for (const node of sectionData.nodes) state.workflowPartIndex.set(node.id, { node, stageId });
           state.crossSectionEdges = list(details.cross_section_edges).filter((edge) => state.workflowPartIndex.has(edge.source) && state.workflowPartIndex.has(edge.target));
@@ -830,6 +902,7 @@
           $("detail-content-hash").title = details.content_sha256 || "Content digest not recorded"; $("detail-content-hash").hidden = false;
         }
       } catch { /* A missing optional child snapshot is stated explicitly when that step is opened. */ }
+      try { const response = await fetch("./workflow-readiness.public.json", { cache: "no-store", credentials: "same-origin" }); if (response.ok) bindReadiness(await response.json()); } catch { /* Missing or stale readiness is shown as unreviewed, never connected. */ }
       $("study-count").textContent = state.studies.length; $("variable-count").textContent = state.nodes.filter((node) => node.kind === "variable").length; $("relation-count").textContent = state.edges.length;
       const date = graph.as_of || catalog.as_of || workflow.as_of;
       $("as-of").textContent = date ? `Public documentary snapshot · ${String(date).slice(0, 10)}` : "Public documentary snapshot";
@@ -853,6 +926,12 @@
   $("clear-relations").onclick = () => { $("relation-search").value = ""; $("relation-type").value = "all"; renderRecords(); };
   $("more-connections").onclick = () => { state.expandedConnections = true; drawRelations(); };
   $("retry-load").onclick = load;
+  $("workflow-readiness-filter").onchange = () => {
+    state.readinessFilter = $("workflow-readiness-filter").value; state.readinessPinnedPart = ""; state.partId = ""; state.displaySelectionId = "";
+    for (const [id, entry] of state.workflowPartIndex) if (readinessMatches(id)) state.openBranches.add(entry.stageId);
+    inspectCanvasNode(state.stageId);
+  };
+  $("readiness-reset").onclick = () => { state.readinessFilter = "current"; state.readinessPinnedPart = ""; state.partId = ""; state.displaySelectionId = ""; inspectCanvasNode(state.stageId); };
   $("workflow-canvas-mode").onclick = () => { state.workflowView = "canvas"; renderWorkflow(); requestAnimationFrame(() => state.canvas?.resize()); };
   $("workflow-reading-mode").onclick = () => { if (document.querySelector(".workflow-layout").classList.contains("canvas-expanded")) setCanvasExpanded(false); state.workflowView = "reading"; renderWorkflow(); };
   $("canvas-node-picker").onchange = () => { if ($("canvas-node-picker").value) inspectCanvasNode($("canvas-node-picker").value); };
@@ -866,6 +945,7 @@
   $("canvas-collapse-branch").onclick = () => { state.openBranches.delete(state.stageId); state.partId = ""; state.displaySelectionId = ""; inspectCanvasNode(state.stageId); };
   $("canvas-collapse-all").onclick = () => { state.openBranches.clear(); state.partId = ""; state.displaySelectionId = ""; inspectCanvasNode(state.stageId); };
   $("canvas-reset").onclick = () => state.canvas?.resetLayout();
+  $("canvas-menu-toggle").onclick = () => { const open = document.querySelector(".canvas-navigation").classList.toggle("map-controls-open"); $("canvas-menu-toggle").setAttribute("aria-expanded", String(open)); };
   $("canvas-expand").onclick = () => setCanvasExpanded(!document.querySelector(".workflow-layout").classList.contains("canvas-expanded"));
   document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !$("stage-sheet").open && document.querySelector(".workflow-layout").classList.contains("canvas-expanded")) { event.preventDefault(); setCanvasExpanded(false); } });
   $("canvas-scope").onchange = () => {

@@ -1,6 +1,6 @@
 # Movable project graph
 
-The graph workspace is a presentation of the reviewed workflow and its detailed parts. It uses the same five public JSON documents as the reading view. It does not add research assertions, recalculate results or connect to a database. Its default Connected branches mode uses a top-to-bottom Roadmap, with specific parts in side bays beside persistent main boxes. See ROADMAP_LAYOUT.md for the route and RADIAL_EXPANSION.md for field-level detail and connection provenance.
+The graph workspace is a presentation of the reviewed workflow and its detailed parts. It uses the same five frozen public projections as the reading view, plus a separate reviewed readiness supplement. It does not recalculate results or connect to a database. Its default Ordered roadmap uses a top-to-bottom route, with specific parts in side bays beside persistent main boxes. See ROADMAP_LAYOUT.md for the route, RADIAL_EXPANSION.md for field-level connection provenance, and WORKFLOW_READINESS.md for operational colors and filters.
 
 ## Explore
 

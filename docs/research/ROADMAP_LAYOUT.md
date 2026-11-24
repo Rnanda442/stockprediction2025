@@ -23,4 +23,6 @@ On narrow screens the road guide becomes a location picker with Previous and Nex
 
 The five reviewed public JSON documents are unchanged. The catalog still contains 76 categories and 227 leaves, 454 curated detailed assertions, 59 legacy variable definitions, 67 exact formula fields and 30 unique code-component names. Thirty-six additional display-reference pairs are derived only from exact declared input/output IDs; see RADIAL_EXPANSION.md for their provenance rules. Structural and annotation links have separate counts.
 
+The readiness view adds separately reviewed operational colors and completion conditions; see WORKFLOW_READINESS.md. Colors and filters do not change the underlying research results or verify new operating connections.
+
 This is a viewer organization change. It does not rerun models, collect market data, update Neo4j or Notion, change research readiness, or authorize trading. No model is promoted.

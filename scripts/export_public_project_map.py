@@ -44,7 +44,7 @@ WORKFLOW_KINDS = {
     "qualification_contract", "next_action", "blocker",
 }
 REVIEWED_VIEWER_FILES = {"index.html", "map.css", "map.js", "knowledge-canvas.js", "roadmap-navigation.js", "roadmap-navigation.css"}
-REVIEWED_SUPPLEMENTS = {"workflow-details.public.json", "WORKFLOW_DETAILS.md", "GRAPH_CANVAS.md", "RADIAL_EXPANSION.md", "ROADMAP_LAYOUT.md", "THIRD_PARTY_NOTICES.md"}
+REVIEWED_SUPPLEMENTS = {"workflow-details.public.json", "WORKFLOW_DETAILS.md", "GRAPH_CANVAS.md", "RADIAL_EXPANSION.md", "ROADMAP_LAYOUT.md", "WORKFLOW_READINESS.md", "workflow-readiness.public.json", "THIRD_PARTY_NOTICES.md"}
 FORBIDDEN_KEY_FRAGMENTS = {
     "url", "path", "uri", "notion", "instance", "database_name", "username",
     "password", "token", "secret", "credential", "local_repository",
@@ -465,6 +465,7 @@ It is not a trading system, model leaderboard, live database mirror, or complete
 - `GRAPH_CANVAS.md` and `THIRD_PARTY_NOTICES.md` — graph controls, presentation limits and renderer attribution.
 - `RADIAL_EXPANSION.md` — in-place branches, exact field annotations and declared-reference provenance.
 - `roadmap-navigation.js`, `roadmap-navigation.css`, and `ROADMAP_LAYOUT.md` — the top-to-bottom road guide, stage navigation, and presentation contract.
+- `workflow-readiness.public.json` and `WORKFLOW_READINESS.md` — separately reviewed operational statuses, completion conditions, filters and scope; research results remain separate.
 - `project-graph.public.json` — Neo4j/property-graph-compatible nodes and typed edges.
 - `method-catalog.public.json` — {methods_doc['counts']['studies']} saved-evidence study cards with metric scope and limitations.
 - `workflow-view.public.json` — the reviewed 12-stage decision flow, seven variable categories, 59 variable definitions, and public-safe workflow records.
@@ -520,6 +521,7 @@ Only the following public documentation files belong to this export:
 ```text
 scripts/export_public_project_map.py
 scripts/build_workflow_detail_catalog.py
+scripts/build_workflow_readiness_catalog.py
 docs/research/README.md
 docs/research/ARCHITECTURE.md
 docs/research/EXPORT_ALLOWLIST.md
@@ -534,6 +536,8 @@ docs/research/vendor/cytoscape.LICENSE
 docs/research/GRAPH_CANVAS.md
 docs/research/RADIAL_EXPANSION.md
 docs/research/ROADMAP_LAYOUT.md
+docs/research/WORKFLOW_READINESS.md
+docs/research/workflow-readiness.public.json
 docs/research/THIRD_PARTY_NOTICES.md
 docs/research/project-graph.public.json
 docs/research/method-catalog.public.json
